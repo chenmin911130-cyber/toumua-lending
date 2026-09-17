@@ -1,0 +1,13 @@
+{
+  "name": "@toumua/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/main.cjs",
+  "scripts": {
+    "dev": "electron .",
+    "build": "echo \"Desktop packages the shared web app; use pnpm --filter @toumua/web build\""
+  },
+  "devDependencies": {
+    "electron": "37.10.3"
+  }
+}

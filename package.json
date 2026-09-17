@@ -1,0 +1,30 @@
+{
+  "name": "toumua-lending",
+  "private": true,
+  "packageManager": "pnpm@10.17.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @toumua/api --filter @toumua/web dev",
+    "dev:api": "pnpm --filter @toumua/api dev",
+    "dev:web": "pnpm --filter @toumua/web dev",
+    "dev:desktop": "pnpm --filter @toumua/desktop dev",
+    "build": "pnpm --filter @toumua/contracts build && pnpm --filter @toumua/api build && pnpm --filter @toumua/web build && pnpm --filter @toumua/desktop build",
+    "test": "pnpm --filter @toumua/api test && pnpm --filter @toumua/e2e test",
+    "test:api": "pnpm --filter @toumua/api test",
+    "test:e2e": "pnpm --filter @toumua/e2e test",
+    "db:migrate": "pnpm --filter @toumua/api prisma:migrate",
+    "db:generate": "pnpm --filter @toumua/api prisma:generate"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "prisma",
+      "@prisma/engines",
+      "@prisma/client",
+      "argon2",
+      "electron",
+      "esbuild"
+    ]
+  }
+}

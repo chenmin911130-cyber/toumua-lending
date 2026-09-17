@@ -1,0 +1,43 @@
+# Toumu’a Lending Workspace
+
+Batch 01–02 implementation: local engineering scaffold plus authentication, invitations, and permissions. Design remains in `design/v2/`. This is not a production funds system.
+
+## Start
+
+```bash
+# PostgreSQL 16 and Mailpit
+# Option A — already used on this Mac:
+brew services start postgresql@16
+brew services start mailpit
+
+# Option B
+docker compose up -d
+
+cp .env.example .env
+pnpm install
+pnpm db:generate
+pnpm db:migrate
+pnpm dev
+```
+
+- Web: http://127.0.0.1:5173
+- API / OpenAPI: http://127.0.0.1:3001/api/docs
+- Mailpit: http://127.0.0.1:8025
+- Desktop: `pnpm dev:desktop` (loads the staff login)
+
+Bootstrap admin comes from `BOOTSTRAP_ADMIN_*` in `.env` (`admin@example.com` / `ChangeMeAdmin12` locally). Public registration only creates Customer accounts.
+
+## Test
+
+```bash
+pnpm test:api
+pnpm test:e2e
+```
+
+API tests use `toumua_test` and a memory mail adapter. They do not touch Railway.
+
+## Notes
+
+- Do not migrate or overwrite the existing Railway database.
+- Official interest, fees, and default rules are not implemented.
+- Production mail sender and contact details are unset on purpose.

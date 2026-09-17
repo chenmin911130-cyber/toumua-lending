@@ -1,0 +1,430 @@
+[
+  {
+    "id": "C01",
+    "title": "客户首页",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  PUBLIC CUSTOMER HOMEPAGE. Use attached homepage as strong visual reference, preserve hero photograph concept of Pacific Islander adult couple with loan officer and elegant serif headline. Header Toumu’a, How it works, My loan, Contact, Log in. Hero headline 'A little support. For what matters.' text explains secured loans for personal family community needs. Primary 'Contact our team', secondary 'How it works'. No online booking workflow. Returning borrower strip 'Already have a loan?' link 'View my loan'. Three clear steps Meet our team / Assessment and review / Receive your loan after approval and receipt inspection storage of security assets. Bottom note repayments through cashier, subtle footer contact link. No fictitious address or phone.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-3086e263-4fe0-4d20-ba25-0735e66ce882.png",
+    "group": "客户网站",
+    "role": "公开客户首页",
+    "note": "介绍贷款流程，入口连接帮助页 C07 和登录 C02。在线预约不在本版范围。",
+    "file": "screens/C01.png"
+  },
+  {
+    "id": "C02",
+    "title": "登录",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  SHARED LOGIN screen, customer default. Reference brand typography and teal. Sparse full-page layout, 45% navy left brand panel with Toumu’a and warm headline 'Your loan, clearly in view.' plus short reassuring line and subtle real ocean shoreline photo strip; right white form unboxed width400, 'Welcome back', 'Sign in to your account'. Labeled Email address, Password with eye icon, Log in primary full width, Forgot password link, Back to home. Small 'Need access? Contact our team.' Footer 'Staff sign-in' discreet link, no role dropdown or self-register action. Include restrained inline invalid login alert above fields 'We couldn’t sign you in. Check your details and try again.' visually clearly recoverable. No real credentials, no active sensitive value.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-ec3b6188-3882-4908-b8cd-720f1396e0d7.png",
+    "group": "客户网站",
+    "role": "客户／员工",
+    "note": "邮箱和密码登录。创建账户 → A03；忘记密码 → A01；邮箱未验证 → A04。员工入口不开放员工自助注册。",
+    "file": "screens/C02-email-login.png",
+    "revisionPrompt": "Edit this exact Toumu’a login screenshot preserving the layout typography colors coastal photo and all form controls. Replace the lower helper 'Need access? Contact our team.' with 'New here? Create an account' and make Create an account an underlined teal link. Remove the red incorrect-login alert to show a normal initial login state; move form fields slightly upward naturally without altering overall split layout. Keep Forgot password, Back to home, Staff sign-in. Keep everything else unchanged. No role dropdown."
+  },
+  {
+    "id": "C03",
+    "title": "客户个人中心",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  BORROWER SIGNED-IN HOME. Match reference public brand but no promotional hero photo. White horizontal header Toumu’a, My overview selected, Application, Repayments, My security, Help; profile Sione T. No staff sidebar. Heading 'Good morning, Sione.' subtext 'Here is where your loan stands.' Upper dominant pale seafoam block 'Your next repayment' huge 'NZ$250.00', 'Due 22 September 2026', primary 'View repayment plan', small 'Please make your repayment with our cashier.' Alongside tidy loan summary LN-2026-0108 Active; Principal remaining NZ$1,800.00, Interest & fees NZ$100.00, Total outstanding NZ$1,900.00, original loan NZ$2,000.00. Supporting below timeline strip 'Your loan is active' Application completed > Approved > Security stored > Funds disbursed all completed. Bottom two simple sections recent repayments with 08 Sep NZ$250 paid, 01 Sep NZ$250 paid; 'Your security' Gold jewellery set, Securely stored, 'View details'. No pay-now button, no new loan CTA, no credit score. Clear friendly readable consumer app.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-ac6997e7-3c79-4619-b0fd-94abdc95fc27.png",
+    "group": "客户网站",
+    "role": "借款人",
+    "note": "个人贷款概况；先看下次还款，再看余额。图中历史记录为节选，金额仅用于布局展示。",
+    "file": "screens/C03.png"
+  },
+  {
+    "id": "C04",
+    "title": "申请进度",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  BORROWER APPLICATION PROGRESS page using attached customer portal header and visual system. Header Application selected. Heading 'Your application', identifier AP-2026-0142; subtext 'Submitted with your loan officer on 14 September 2026.' Main large amber 'Under manager review', calm message 'Your valuation is complete. Our manager will review your application.' Horizontal stages Application completed [done] / Security valued [done] / Manager review [current] / Security received [future] / Disbursement [future]. Two-column lower: application summary requested NZ$2,000.00, purpose Family expenses, security Gold jewellery set, estimated security value NZ$5,500.00. Right 'What happens next?' text approval decision then staff arrange receipt inspection storage of security before disbursement, link Contact our team. Bottom simple history with 15 Sep 10:30 Valuation completed;14 Sep 14:20 Application submitted. No approve/reject or edit controls for borrower. One primary 'Contact our team'. Spacious.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-064db95c-3f22-4103-b1ca-0afa2b919804.png",
+    "group": "客户网站",
+    "role": "借款人",
+    "note": "示例是另一笔处于审批阶段的申请，不与 C03 的已放款贷款混为同一状态。批准、拒绝、等待入库作为同页状态变体。",
+    "file": "screens/C04.png"
+  },
+  {
+    "id": "C05",
+    "title": "还款计划与记录",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  BORROWER REPAYMENT PLAN screen. Preserve attached portal header with Repayments active and Sione T. Heading 'Your repayments' loan LN-2026-0108. Compact prominent summary next repayment NZ$250.00 due 22 Sep 2026; total outstanding NZ$1,900.00. Clear note 'Make repayments with our cashier. Payments appear here once recorded.' Tabs 'Upcoming schedule' active / 'Payment history'. Table columns Due date, Principal, Interest & fees, Total due, Status. Exactly 5 rows:22 Sep 2026 / NZ$230 / NZ$20 / NZ$250 / Next due;29 Sep /230/20/250/Upcoming;06 Oct /230/20/250/Upcoming;13 Oct /230/20/250/Upcoming;20 Oct /230/20/250/Upcoming. Footer 'Showing 5 of 8 scheduled payments' pagination. Right top secondary 'Contact our team'. Under table quiet section 'Most recent receipt' 08 Sep 2026 NZ$250 received by cashier receipt RCP-2026-0308, link View receipt. No editable amounts, no pay now, no unsupported interest rate. Clean consumer hierarchy.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-56f3bad5-191c-4e2e-ac77-51890c43c8ae.png",
+    "group": "客户网站",
+    "role": "借款人",
+    "note": "计划与历史使用同一表格结构；回执沿用 S13 的内容，客户只能查看自己的记录。金额并非正式还款计算结果。",
+    "file": "screens/C05.png"
+  },
+  {
+    "id": "C06",
+    "title": "客户抵押品详情",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  BORROWER MY SECURITY DETAIL page consistent attached portal header My security active. Heading 'Your security', small loan LN-2026-0108. Single asset Gold jewellery set, asset COL-2026-0084. Left 420px tasteful real product photograph gold necklace and bracelet on neutral tray, caption 'Recorded at intake'. Right read-only key facts Estimated value NZ$5,500.00, Status 'In storage', Received 25 August 2026, Condition 'Checked at intake', associated borrower Sione T. Below simple custody timeline Received > Inspected > Stored completed, Return pending muted. Prominent calm explanatory strip 'Your security will be returned once your loan is fully settled.' Contact our team link. Lower 'Asset description' gold necklace and bracelet, matching intake record. No exposed vault location, no self-service release/sell action, no editing, no unnecessary valuation approval wording.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-8716880d-fd6a-4b92-a70d-560a00786139.png",
+    "group": "客户网站",
+    "role": "借款人",
+    "note": "只展示自己的抵押品状态；内部仓库位置对客户隐藏。资产照片为生成的占位视觉。",
+    "file": "screens/C06.png"
+  },
+  {
+    "id": "C07",
+    "title": "联系与帮助",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  BORROWER HELP AND CONTACT page matching reference customer portal header Help active. Heading 'We’re here to help.' Lead 'Speak with your loan officer about your application, repayments or security assets.' Two-column layout main 'Common questions' accessible accordion with first open 'How do I apply?' answer 'Meet with a loan officer to complete your application together. Your security assets will be valued before manager review.' Other closed rows 'Where do I make repayments?', 'When is my security returned?', 'How can I check my application?'. Side quiet contact section 'Your loan officer', 'Please use the contact details provided with your loan agreement.' no invented phone email address or business hours. Link 'View my application'. Lower strip 'Need to update your details?' 'Contact our team to update the information on your loan record.' No chat widget or message sending form or booking. Below simple 'How it works' four concise steps apply with officer / valuation / manager decision / security intake then disbursement. Footer Back to my overview.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-5f40c367-50a0-475e-8e2c-259d29e01139.png",
+    "group": "客户网站",
+    "role": "公开访问／借款人",
+    "note": "公开访问时换成 C01 页头。上线联系信息由客户提供，当前没有真实联系电话、邮箱或营业时间。",
+    "file": "screens/C07.png"
+  },
+  {
+    "id": "C08",
+    "title": "客户个人中心手机版",
+    "prompt": "Create ONE high fidelity MOBILE responsive borrower portal for Toumu’a based exactly on attached desktop customer overview. Target 390x844 portrait natural mobile viewport, no device bezel, no notch or status bar, no home indicator, no collage. English readable 16px body, brand navy teal pale seafoam, white. Top compact Toumu’a wordmark and menu icon. Heading 'Hello, Sione.' small 'Your loan at a glance'. Dominant next repayment pale teal section NZ$250.00 / Due 22 Sep 2026 / full width teal 'View repayment plan' / 'Make repayments with our cashier.' Below unboxed Loan LN-2026-0108 Active, total outstanding NZ$1,900.00; principal NZ$1,800.00; interest & fees NZ$100.00. Then 'Latest repayment' 08 Sep 2026 NZ$250.00 Paid. Bottom fixed navigation Overview selected, Progress, Repayments, Help with thin line icons and text and enough content clearance. Small Demo data. Date anchor15 September2026. No pay-now, staff controls or charts. Prioritize thumb reach and 44px targets. Fit naturally without tiny type.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-c0697aba-90e5-490f-84ba-a37545ed5208.png",
+    "group": "客户网站",
+    "role": "借款人·手机",
+    "note": "C03 的响应式示例，其他客户页复用手机导航和单列布局。不是独立移动 App。",
+    "file": "screens/C08.png"
+  },
+  {
+    "id": "C09",
+    "title": "客户多笔贷款与历史",
+    "prompt": "One 1440x1024 high fidelity borrower My loans page for Toumu’a, match attached customer design navy serif titles teal white no staff sidebar. Header Toumu’a My overview Application Repayments My security Help profile Sione T. Heading 'Your loans', subtext 'Choose a loan to view its balance and repayment plan.' Tabs Active loans selected / Loan history. Two clear spacious unboxed rows with separators: LN-2026-0108 Active Outstanding NZ$1,900.00 Next payment NZ$250.00 Due22Sep2026 button View loan; LN-2026-0120 Active Outstanding NZ$800.00 Next payment NZ$100.00 Due24Sep2026 button View loan. Top aggregate 'Total outstanding across 2 loans NZ$2,700.00' with label explicitly across loans. Below quiet link View application progress. Header nav My overview active with Your loans context. Small note 'Repayments are handled by our cashier.' Date16Sep2026 Demo data. No new loan application button no online pay no fabricated scoring. Comfortable whitespace.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-4cc46d27-0d7a-4f47-b96d-cf1f0028c97f.png",
+    "file": "screens/C09.png",
+    "group": "客户网站",
+    "role": "借款人",
+    "note": "V2 新增。字段、按钮、权限与异常状态以 IMPLEMENTATION_SPEC.md 及 BUTTON_FUNCTIONS.md 为准。"
+  },
+  {
+    "id": "C10",
+    "title": "新客户与未关联贷款状态",
+    "prompt": "One 1440x1024 Toumu’a customer portal EMPTY STATE screen match attached navy serif teal white horizontal header. Title 'Welcome, Sione.' subtext 'Your account is ready.' Main centered minimal document outline icon and heading 'No loan is linked to your account yet.' Body 'If you already have a loan, contact our team to link your existing record. To apply for a loan, meet with a loan officer.' Primary Contact our team, secondary View application progress. Lower quiet guide Complete your account > Speak with our team > View your loan here. No fake loan balances, no zero totals, no apply-online or payment button. Header same My overview Application Repayments My security Help user menu. Small verified email label in profile area, Demo state. 16Sep2026 if date shown. Spacious accessible normal state not error.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-45715522-463b-49c8-b7ac-8d98fce97af6.png",
+    "file": "screens/C10.png",
+    "group": "客户网站",
+    "role": "未关联贷款的客户",
+    "note": "V2 新增。字段、按钮、权限与异常状态以 IMPLEMENTATION_SPEC.md 及 BUTTON_FUNCTIONS.md 为准。"
+  },
+  {
+    "id": "S01",
+    "title": "经理工作台",
+    "source": "/Users/minchen/Desktop/721项目/design/v1/screens/S01-manager-overview.png",
+    "prompt": "复用此前生成的经理工作台设计，深蓝导航、青绿色强调、贷款概况、待审批申请与近期交易。",
+    "group": "员工管理端",
+    "role": "经理；所有者只读变体",
+    "note": "工作台根据角色调整待办。经理可进入审批；所有者查看概况但本版不授予资金操作权限。",
+    "file": "screens/S01.png"
+  },
+  {
+    "id": "S02",
+    "title": "客户资料管理",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  STAFF BORROWERS directory with right-side selected borrower drawer. Match attached manager overview exactly, navy sidebar now Overview, Borrowers selected, Applications, Loans, Collateral, Transactions, Settings bottom; signed-in 'Lote • Loan officer'. Heading 'Borrowers' primary 'Add borrower', search Name or borrower ID. Main table 5 fictional abbreviated names and IDs, columns Borrower, ID, Active loans, Status. Right 400px detail drawer 'Sione T.' BR-2026-0048, contact sione@example.com placeholder domain, phone 'On file' not fake number, status Active, tabs Details / Loans, relevant fields preferred name Sione, loan LN-2026-0108, link View loan; primary 'Edit details', secondary 'Start application'. Rows readable behind, do not dim all table. Small notes restricted to staff, no sensitive ID numbers. Professional form/data directory layout.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-89db6dac-45b5-497f-994d-9cb32abd987c.png",
+    "group": "员工管理端",
+    "role": "贷款专员",
+    "note": "列表和详情抽屉。新增／编辑沿用抽屉，字段详见 DESIGN_SPEC.md。",
+    "file": "screens/S02.png"
+  },
+  {
+    "id": "S03",
+    "title": "贷款申请列表",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  STAFF APPLICATIONS LIST. Exact attached staff shell with Borrowers additionally in sidebar, Applications selected, Lote Loan officer bottom. Heading Applications, primary New application. Single horizontal filter row search borrower or application ID, Status dropdown All, date range This month. Tabs All 24 / Drafts 3 / Awaiting valuation 5 / Manager review 8 / Decided 8. Spacious six-row table Application, Borrower, Requested amount, Submitted, Status, Open arrow. Use AP-2026-0142 Sione T NZ$2000 14 Sep Manager review;0141 Ana M1500 14Sep Awaiting valuation;0140 Lote F3000 13Sep Draft;0139 Pita K1000 12Sep Approved;0138 Mele V2500 11Sep Declined;0137 Semi P1800 10Sep Disbursed. Colors teal amber grey restrained red with explicit text. Bottom pagination Showing 1–6 of24. No giant metrics or charts. Distinguish applications AP prefix from loans LN.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-5958d943-a61a-4725-8548-9fdabeae99cd.png",
+    "group": "员工管理端",
+    "role": "贷款专员／经理",
+    "note": "申请状态筛选，草稿显示最后修改时间而非正式提交时间；图中草稿日期按此规则解释。",
+    "file": "screens/S03.png"
+  },
+  {
+    "id": "S04",
+    "title": "贷款申请填写",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  STAFF NEW APPLICATION form. Exact staff shell sidebar order Overview Borrowers Applications(active) Loans Collateral Transactions. Lote Loan officer. Heading 'New application', Draft badge, quiet 'Complete this form together with the borrower.' Step navigation Borrower / Loan details(active) / Security assets / Repayment terms / Review. Main 720px form: selected borrower Sione T BR-2026-0048; Requested amount NZ$ input 2,000.00; Loan purpose dropdown Family expenses; Purpose details textarea blank placeholder 'Describe the borrowing need'; proposed term input blank 'Enter proposed term', inline red error 'Enter a proposed term to continue.' Below small linked asset summary Gold jewellery set, valuation Pending, 'Manage security assets'. Right 270px summary panel 'Application summary' borrower, amount NZ$2000, valuation pending; note 'Repayment terms are reviewed before approval.' Bottom fixed action bar Save draft secondary, Continue primary, Back text. Do not invent approved interest rate or policy threshold. Accessible form labels, roomy, validation visible.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-24467071-1bbe-4492-8844-0c7dc80f4478.png",
+    "group": "员工管理端",
+    "role": "贷款专员",
+    "note": "申请流程中贷款信息步骤；其他步骤布局与字段已在说明中定义。错误提示、草稿和继续操作均需实现。",
+    "file": "screens/S04.png"
+  },
+  {
+    "id": "S05",
+    "title": "抵押品估值",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  STAFF VALUATION EDITOR, navy shell with Overview Borrowers Applications Loans Collateral active Transactions, profile 'Ana • Valuation officer'. Heading 'Value security assets', AP-2026-0142 / Sione T. Split left asset photograph gold jewellery on neutral tray 260x180 with description Gold jewellery set COL-2026-0112 and upload photos secondary; right roomy labeled form estimated value NZ$5,500.00, valuation date15 Sep2026, condition Good, valuation basis textarea 'Physical inspection and current assessed resale value.' Below participation three rows Borrower Sione T Present; Loan officer Lote Present; Valuation officer Ana Recorded. Side or bottom summary loan requested NZ$2,000.00 security estimate NZ$5,500.00 note 'The manager makes the final lending decision.' Primary 'Save valuation', secondary Save draft. No automatic pass threshold, no risk scoring, no certify legally. Full readable clean workspace.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-ec7aace1-5a37-4865-81bb-7ceea5a559f4.png",
+    "revisionPrompt": "Edit this exact UI screenshot. Preserve all layout, colors, typography, forms, asset image and content. Only correct navigation: left sidebar Collateral must be selected with the teal highlight; Transactions must be unselected navy like other unselected items. Top breadcrumb must read 'Workspace / Collateral / Asset valuation / AP-2026-0142'. Keep image size and everything else unchanged.",
+    "group": "员工管理端",
+    "role": "估值专员",
+    "note": "保存估值及参与记录。抵押品价值比较不等于自动批准。导航已校正。",
+    "file": "screens/S05.png"
+  },
+  {
+    "id": "S06",
+    "title": "经理审批详情",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  MANAGER APPLICATION REVIEW DETAIL. Exact attached navy staff shell add Borrowers after Overview, Applications selected, Mele Manager. Header 'Review application' AP-2026-0142 Sione T and Awaiting decision badge. Two unboxed comparison metrics Requested NZ$2,000.00 / Security valuation NZ$5,500.00. Below tabs Application / Valuation / Repayment terms / History. Main active application details purpose Family expenses, valuation completed 15Sep by Ana with borrower and loan officer present. Right sticky decision section 'Manager decision', neutral textarea Decision notes, secondary outlined red 'Decline', primary teal 'Approve application'. Lower read-only terms section 'Repayment terms' 'Review agreed schedule and charges before approval' link Open repayment terms, no invented rate. Small checklist 'Application reviewed' 'Valuation reviewed' 'Repayment terms reviewed'. Emphasize 'Approval does not release funds. Security must be received, inspected and stored before the cashier disburses.' No automatic approve. Include mini valuation asset row Gold jewellery set and view details. Clear balanced layout.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-7ef851be-9f24-4b4a-b403-d75da229c57e.png",
+    "group": "员工管理端",
+    "role": "经理",
+    "note": "批准与拒绝使用确认面板；清单和必需条款未完成时禁用最终提交。批准不会触发放款。",
+    "file": "screens/S06.png"
+  },
+  {
+    "id": "S07",
+    "title": "抵押品仓库与入库",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  STAFF COLLATERAL INVENTORY with intake detail drawer. Exact navy shell consistent order Overview Borrowers Applications Loans Collateral selected Transactions. Ana Valuation officer. Heading 'Collateral', search asset or loan, tabs Awaiting intake / In storage / Returned / Sold. Main four-row table asset Gold jewellery set COL-0112 Sione T Awaiting intake; Television COL-0109 Ana M In storage; Power tools COL-0102 Pita K Returned; Bracelet COL-0096 Semi P Sold. Right 430px drawer 'Receive security' Gold jewellery set AP-2026-0142, loan approved badge. Three numbered form sections 1 Received date15 Sep2026 and received by Ana; 2 Inspection condition Good and checkbox Matches valuation record; 3 Storage location input 'Vault A / Shelf 02' sample. Note 'Complete all three steps before disbursement.' Primary 'Confirm intake', Cancel. Drawer clear on screen without dimming table. No money handling or automatic sale. Label fictional demo data.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-7f3a9fa3-10ba-4844-a2b5-5fed20f5ef92.png",
+    "revisionPrompt": "Edit this exact UI screenshot. Preserve all layout, intake drawer, photos, form content, typography and color. Only fix the filter tabs above the asset list: current selected 'Awaiting intake' incorrectly contains all statuses. Replace that selected first tab text with 'All assets' and preserve its teal underline. Insert a new unselected 'Awaiting intake' tab after All assets, followed by In storage, Returned, Sold. Fit all five tabs naturally in existing table width. Keep rest unchanged.",
+    "group": "员工管理端",
+    "role": "估值专员",
+    "note": "库存列表＋入库抽屉；接收、检查、存储三项齐备才能完成入库。已修正为 All assets 筛选。",
+    "file": "screens/S07.png"
+  },
+  {
+    "id": "S08",
+    "title": "贷款账户详情",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  STAFF LOAN ACCOUNT DETAIL. Exact navy sidebar Overview Borrowers Applications Loans selected Collateral Transactions, profile Mele Manager. Heading 'Loan LN-2026-0108' Sione T BR-2026-0048 Active. Back to loans link. Three clear financial columns Principal remaining NZ$1,800.00 / Interest & fees NZ$100.00 / Total outstanding NZ$1,900.00. Next due strip 22 Sep 2026 NZ$250.00. Tabs Account overview(active) / Repayment schedule / Transactions / Security / History. Main account details original principal NZ$2000, disbursed25Aug2026, loan officer Lote, cashier recorded; right associated collateral Gold jewellery set COL-2026-0084 In storage View asset. Lower transaction table 08Sep Repayment NZ$250 receipt0308;01Sep Repayment NZ$250 receipt0301;25Aug Disbursement NZ$2000 transaction0250. Small note 'Figures shown are illustrative.' No manager collect-payment action, no arbitrary interest adjustment. Primary 'View repayment schedule' and quiet View application. Calm ledger layout.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-3a72602e-f1ba-498e-8f87-ae675b38058b.png",
+    "group": "员工管理端",
+    "role": "授权员工",
+    "note": "贷款详情与计划、交易、抵押品、历史标签页；资金入口仅出纳可见。各图示例不构成完整账本。",
+    "file": "screens/S08.png"
+  },
+  {
+    "id": "S09",
+    "title": "出纳放款",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  CASHIER DISBURSEMENT PAGE. Match navy staff shell, sidebar Overview Borrowers Applications Loans selected Collateral Transactions, profile 'Pita • Cashier'. Heading 'Disburse loan' LN-2026-0142 Sione T. Main left read-only Approved amount NZ$2,000.00 bold, approval Mele15Sep2026, disbursement amount NZ$2000 read-only. Three green preconditions 'Manager approval recorded', 'Security received and inspected', 'Security stored'. Below form Disbursement date15Sep2026, method Cash dropdown, reference input 'Enter reference', Notes optional. Right review panel borrower Sione T, loan LN-2026-0142, asset COL-2026-0112, amount NZ$2000; strong primary 'Review disbursement', cancel link. Tiny instruction 'Review the details before recording the disbursement.' No direct money transfer integration, no actual bank numbers, no approve action. All payment entry belongs to cashier.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-a2121608-1844-421e-91ab-25db210f968e.png",
+    "group": "员工管理端",
+    "role": "出纳",
+    "note": "真实业务是记录已办理的放款；不接入实际转账。最终确认与回执复用 S10、S13 结构。",
+    "file": "screens/S09.png"
+  },
+  {
+    "id": "S10",
+    "title": "出纳收款与确认",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  CASHIER RECORD REPAYMENT screen with confirmation drawer open as single state. Exact navy staff shell Loans active, Pita Cashier. Main heading Record repayment, selected loan LN-2026-0108 Sione T, outstanding NZ$1900. Main form amount received NZ$250.00, received on15Sep2026, method Cash, optional reference, next due22Sep2026. Right white 440px drawer 'Confirm repayment' shows borrower Sione T / loan LN-2026-0108 / received NZ$250 / current outstanding NZ$1900 / remaining after payment NZ$1650, date15Sep, method Cash. Short text 'Check the amount and borrower before recording this payment.' Strong teal Confirm repayment and secondary Back to edit. No success message yet; no receipt before confirmed. Under summary small 'Recorded by Pita • Cashier'. Background lightly muted but labels readable. No editable calculated totals, no imaginary interest allocations.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-7eff6bae-03b7-43f5-83ea-26b2ba66cd54.png",
+    "group": "员工管理端",
+    "role": "出纳",
+    "note": "收款确认状态；提交成功后显示 S13 型回执。1900−250＝1650，示例不包含提交期间的新计提。",
+    "file": "screens/S10.png"
+  },
+  {
+    "id": "S11",
+    "title": "结清与抵押品归还",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  STAFF RETURN SECURITY screen. Navy staff shell Collateral selected, Ana Valuation officer. Heading 'Return security', asset COL-2026-0102 Power tools, borrower Pita K loan LN-2026-0094. Prominent seafoam eligibility banner 'Loan fully settled' / 'Outstanding balance NZ$0.00' / 'Ready for return'. Left asset thumbnail of drill and case, details current location Shelf B03, intake condition Good, received12Aug2026. Right form Return date15Sep2026, Returned to Pita K read-only, condition at return Good dropdown, notes, checkbox 'Borrower and asset checked against the loan record'. Bottom primary 'Review return', secondary Back to asset. Lower timeline Received / Inspected / Stored complete; Returned upcoming. Do not show already Returned while form pending. No release until balance zero. Clean clear finish workflow.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-708a8b4c-7288-420f-ba10-af497da66565.png",
+    "group": "员工管理端",
+    "role": "估值专员",
+    "note": "归还须账户结清；记录实际交还并二次确认。结清与已归还是不同状态。",
+    "file": "screens/S11.png"
+  },
+  {
+    "id": "S12",
+    "title": "违约与抵押品出售",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  STAFF DEFAULTED LOAN ASSET SALE RECORD. Navy shell Collateral selected Ana Valuation officer. Heading 'Record security sale', bracelet COL-2026-0096, loan LN-2026-0087, borrower Semi P. Amber top context 'Loan in default' and 'Record the disposal outcome and link the cashier’s receipt.' Main form Sale date15Sep2026, Sale amount NZ$1,200.00, Buyer reference input 'Enter buyer reference', Linked cashier receipt selector 'Select recorded receipt' empty, sale notes textarea. Right read-only asset summary Bracelet, stored Vault A02, assessed value NZ$1500, outstanding loan NZ$1300. Note 'The sale record does not automatically settle the loan. Funds must be recorded by the cashier.' Primary Review sale, secondary Save draft. No forced surplus allocation or assumed writeoff. Important destructive action handled as record and review, no celebratory copy. Plenty whitespace.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-eb7e4e13-a04a-474a-82a6-06e21b7c8f2b.png",
+    "group": "员工管理端",
+    "role": "估值专员／出纳",
+    "note": "估值专员记录处置，出纳记录资金。出售后余额、差额处理依据最终业务规则。",
+    "file": "screens/S12.png"
+  },
+  {
+    "id": "S13",
+    "title": "交易流水与回执",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  STAFF TRANSACTIONS LEDGER with RECEIPT DETAIL drawer open. Navy shell Transactions selected, profile 'Lina • Accountant', read-only. Heading Transactions, search transaction loan borrower, date15Sep2026, Type All. Main simple table Date / Reference / Type / Amount with four rows15Sep TXN-0315 Repayment NZ$250,15Sep TXN-0314 Disbursement NZ$2000,15Sep TXN-0313 Sale proceeds NZ$1200,14Sep TXN-0312 Repayment NZ$150. Right 420px drawer 'Repayment receipt' badge Recorded, 'RCP-2026-0315', amount NZ$250.00, borrower Sione T, loan LN-2026-0108, received15Sep2026 11:42AM, method Cash, recorded by Pita Cashier, transaction TXN-2026-0315, balance after NZ$1650.00. Buttons Print receipt and close. No New transaction button for accountant, no delete/edit posted transaction. Clean readable record not customer action.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-1c62af71-59e9-4395-b689-f1adc148cb5f.png",
+    "revisionPrompt": "Edit this exact transactions UI screenshot. Change only the date filter above the table: label 'Date' becomes 'Date range' and value '15 Sep 2026' becomes '14–15 Sep 2026', so it correctly includes both dates visible in the rows. Keep all other layout, text, receipt details and styling exactly unchanged.",
+    "group": "员工管理端",
+    "role": "会计／所有者／授权员工",
+    "note": "交易及回执只读。客户回执隐藏全局列表；会计访问范围为本版设计建议。日期筛选已校正。",
+    "file": "screens/S13.png"
+  },
+  {
+    "id": "S14",
+    "title": "贷款总列表",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  STAFF LOAN DIRECTORY. Exact navy shell Overview Borrowers Applications Loans(active) Collateral Transactions, manager Mele. Heading Loans. Search loan number or borrower, Status All. Tabs All loans selected, Active, Overdue, Settled, Default. Single clear six-row table Loan / Borrower / Outstanding / Next due / Status. LN-2026-0108 Sione T NZ$1900 22Sep2026 Active;0107 Ana M NZ$1250 18Sep2026 Active;0106 Lote F NZ$2800 14Sep2026 Overdue;0094 Pita K NZ$0 — Settled;0087 Semi P NZ$1300 — Default;0080 Mele V NZ$0 — Settled. Make Overdue and Default distinct statuses. Row arrows open details. One quiet upper note 'Select a loan to view its account and repayment schedule.' No New loan button because loans originate approved applications. Footer pagination, demo data. Clean typography 16px body.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-4a83f283-0a6a-4a64-9e48-af26a671e05e.png",
+    "group": "员工管理端",
+    "role": "授权员工",
+    "note": "贷款列表按状态筛选，逾期与违约分开。违约判定不由图中天数自动决定。",
+    "file": "screens/S14.png"
+  },
+  {
+    "id": "S15",
+    "title": "还款条款与计划预览",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  STAFF APPLICATION REPAYMENT TERMS design. Navy shell Applications active Lote Loan officer. Heading 'Repayment terms' AP-2026-0142 Sione T draft. Step nav Borrower / Loan details / Security assets / Repayment terms selected / Review. Left form Approved/requested principal read-only NZ$2000, repayment frequency dropdown Weekly, first repayment date22Sep2026, number of repayments blank, Interest calculation method dropdown 'Select agreed method', Interest rate empty input with adjacent period dropdown 'Select period', Fees table Fee name / Amount / Timing with Add fee link. Right schedule preview EMPTY STATE instead of invented computed values: small calendar icon, 'Your schedule will appear here', 'Complete the agreed terms to preview repayments.' Disabled grey Preview schedule button. Bottom Save draft secondary and Continue disabled. Helper 'Review the schedule and charges before submitting for manager approval.' No prefilled rates or fake calculation policy. Spacious forms no artificial charts.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-4c79353d-2fbd-4f66-bd9a-5ebfdb6245bb.png",
+    "group": "员工管理端",
+    "role": "贷款专员；经理审核",
+    "note": "条款录入及计划预览。费率、计算方式和周期没有预置政策值，待实际规则映射。",
+    "file": "screens/S15.png"
+  },
+  {
+    "id": "S16",
+    "title": "员工账户与邀请",
+    "prompt": "One production-quality desktop UI design 1440x1024 for Toumu’a staff account administration, match attached navy sidebar teal white staff reference exactly, no browser frame, English, date16September2026, fictional data. Sidebar Overview Borrowers Applications Loans Collateral Transactions Administration selected. Header Staff accounts, toolbar search name/email, status All. Table Name Email Role Status: Lote F lote@example.com Loan officer Active; Ana M ana@example.com Valuation officer Active; Pita K pita@example.com Cashier Active; Lina P lina@example.com Accountant Invited. Right 430px Invite staff drawer open. Fields Full name blank, Email blank, Role dropdown 'Select role' restricted list of business roles. No password field, invitation email sets password. Primary Send invitation, Cancel. Helper 'Account administration is granted separately from business roles.' Row actions menu expanded for selected staff with View details / Change role / Deactivate; disabled Resend invitation unless pending. Do not show real emails. Elegant 16px legible fields, no nested cards or decorative charts. One coherent screen.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-ec2f182b-2a10-4716-8a5b-8997026dd656.png",
+    "revision_prompt": "Edit this staff account administration screen ONLY correct role dropdown options to Loan officer, Valuation officer, Cashier, Manager, Accountant, Owner. Remove Credit manager, Operations manager, System administrator entirely. Administrator is a separate permission. Bottom left profile change to Mele, Account administrator. Keep same layout, styling, all other elements.",
+    "file": "screens/S16.png",
+    "group": "员工管理端",
+    "role": "账户管理员（独立权限）",
+    "note": "V2 新增。字段、按钮、权限与异常状态以 IMPLEMENTATION_SPEC.md 及 BUTTON_FUNCTIONS.md 为准。"
+  },
+  {
+    "id": "S17",
+    "title": "客户账户与借款人关联",
+    "prompt": "One high fidelity Toumu’a staff screen 1440x1024 navy sidebar white teal matching reference. Heading 'Link customer account', Borrowers nav selected. Main side-by-side comparison clearly separated: left 'Verified online account' Sione T sione@example.com Email verified Account USR-0048; right 'Borrower record' search name or borrower ID selected BR-2026-0048 Sione T contact email On file and two loan references masked until match reviewed. Center note 'Email verification alone does not confirm the borrower’s identity.' Below required Verification method dropdown 'In-person record check', Verification notes textarea, checkbox 'I have confirmed this account belongs to the borrower'. Primary 'Review link', secondary Cancel. Current link status Not linked. Top back to borrower. No automated matching, no identity document number. Profile Lote Loan officer. Exact available sidebar order Overview Borrowers Applications Loans Collateral Transactions. Fictional Demo data16Sep2026. No money action.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-8dc622ca-6e23-4215-bb67-6fa961931144.png",
+    "file": "screens/S17.png",
+    "group": "员工管理端",
+    "role": "贷款专员；经理可审核关联记录",
+    "note": "V2 新增。字段、按钮、权限与异常状态以 IMPLEMENTATION_SPEC.md 及 BUTTON_FUNCTIONS.md 为准。"
+  },
+  {
+    "id": "S18",
+    "title": "交易更正申请与审核",
+    "prompt": "One 1440x1024 high fidelity Toumu’a manager transaction correction review page match attached navy teal white staff design. Sidebar Transactions active, Manager Mele. Heading 'Review correction request', CR-2026-0012 Pending review. Main side by side Original transaction TXN-2026-0315 Repayment NZ$250.00 and Proposed replacement Repayment NZ$200.00, borrower Sione T loan LN-2026-0108. Reason 'Amount entered incorrectly' Requested by Pita Cashier16Sep2026. Prominent explanatory band 'The original transaction is retained. Approval allows the cashier to post linked correction entries.' Read-only preview reversal NZ$250 and replacement NZ$200, no balance calculation unless calculated by service. Right decision area Review notes textarea, Reject outlined red and Approve correction teal. Bottom audit timeline Requested > Manager review current > Cashier posting pending. Button View original receipt. No edit/delete original entry. Plenty whitespace readable text Demo data.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-0d5e5f53-a949-43ed-ad4a-3e020e1b1ee2.png",
+    "file": "screens/S18.png",
+    "group": "员工管理端",
+    "role": "出纳申请／经理审核／出纳记账",
+    "note": "V2 新增。字段、按钮、权限与异常状态以 IMPLEMENTATION_SPEC.md 及 BUTTON_FUNCTIONS.md 为准。"
+  },
+  {
+    "id": "S19",
+    "title": "操作日志与变更详情",
+    "prompt": "One 1440x1024 high fidelity Toumu’a read-only audit log screen same reference navy sidebar white teal. Heading 'Activity log', Administration selected. Filters search record/user, Date range 15–16Sep2026, Action All. Table Time / User / Action / Record / Result, 4 rows16Sep10:30 Mele Correction approved CR-0012 Success;16Sep10:24 Pita Correction requested CR-0012 Success;16Sep09:15 Lote Customer linked BR-0048 Success;15Sep11:42 Pita Repayment recorded TXN-0315 Success. Right detail drawer selected customer link event shows actor Lote, time, linked account USR-0048, borrower BR-0048, Before Not linked, After Linked, reason 'In-person record check', link View borrower. No edit/delete actions. Drawer close X, table pagination, read-only badge and Demo data. Profile Mele Manager with audit permission. No raw secrets or tokens.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-e889d3f4-f6bf-46ec-a71e-9dd72da10f54.png",
+    "file": "screens/S19.png",
+    "group": "员工管理端",
+    "role": "具有审计查看权限的员工",
+    "note": "V2 新增。字段、按钮、权限与异常状态以 IMPLEMENTATION_SPEC.md 及 BUTTON_FUNCTIONS.md 为准。"
+  },
+  {
+    "id": "S20",
+    "title": "新增与编辑借款人",
+    "prompt": "Create one 1440x1024 high-fidelity Toumu’a staff Add borrower page, match attached navy sidebar and teal staff accounts reference. English. Sidebar Borrowers active, all navigation Overview Borrowers Applications Loans Collateral Transactions. Profile Lote Loan officer. Breadcrumb Borrowers / Add borrower. Heading 'Add borrower', note 'Create a borrower record before preparing an application.' Fields full name required empty, preferred name optional, email optional, phone required, address textarea required, internal notes optional. Do not invent identity document requirements. Secondary quiet help 'An online customer account is linked separately after verification.' Bottom sticky footer Cancel and teal Save borrower. No role field no password no online registration. Form two columns with clear section labels Contact details and Internal notes, lots whitespace 16px labels. Do not show errors by default. Demo data badge. One coherent complete page no browser frame.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-1c609251-a2c2-4318-bba5-6d8e6a8f7abf.png",
+    "file": "screens/S20.png",
+    "group": "员工管理端",
+    "role": "贷款专员",
+    "note": "V2 新增。字段、按钮、权限与异常状态以 IMPLEMENTATION_SPEC.md 及 BUTTON_FUNCTIONS.md 为准。"
+  },
+  {
+    "id": "S21",
+    "title": "申请抵押品资料与照片",
+    "prompt": "Create one complete1440x1024 Toumu’a staff loan application Security assets step. Match navy sidebar teal white reference. English. Applications selected. Heading 'Prepare application' AP-2026-0142 Draft Sione T. Stepper Borrower > Loan details > Security assets active > Repayment terms > Review. Main list single asset Toyota Corolla2015, condition Used, valuation Awaiting assessment; buttons Edit / Remove / View valuation. Top Add asset. Right open Add asset drawer fields Asset name*, Description*, Condition* select, Photos 'Upload photos' accepts JPEG PNG up to10MB each with thumbnail preview and remove icon. Helper 'Valuation is completed by a valuation officer.' Primary Save asset, Cancel. Main footer Back / Save draft / Continue. No hand-entered estimated price or automatic approval. Lote Loan officer avatar L. Plenty whitespace clear16px text and required labels. Demo data.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-cb784f4d-e24d-41e8-9d71-37e4c0fa6f87.png",
+    "file": "screens/S21.png",
+    "group": "员工管理端",
+    "role": "贷款专员",
+    "note": "V2 新增。字段、按钮、权限与异常状态以 IMPLEMENTATION_SPEC.md 及 BUTTON_FUNCTIONS.md 为准。"
+  },
+  {
+    "id": "S22",
+    "title": "申请复核与提交条件",
+    "prompt": "One1440x1024 Toumu’a staff application Review final step high fidelity navy sidebar teal white matching reference. Applications selected. Lote Loan officer avatar L. Title 'Review application', AP-2026-0142 Draft. Five stepper Borrower Loan details Security assets Repayment terms Review selected. Three stacked review sections with Edit links: Borrower Sione T BR-0048; Loan details Requested NZ$2000 purpose Vehicle repairs; Security Toyota Corolla2015 Valuation pending, View valuation. Terms summary 'Repayment terms require an approved calculation policy' and View terms. Right readiness checklist Borrower details complete check, Loan details complete check, Asset details complete check, Valuation missing amber, Repayment schedule not ready amber. Banner 'Complete the items below before submitting.' Footer Back, Save draft, grey disabled Submit for review. No manager approve decline buttons. Demo data. No example interest numbers or fabricated schedule. Spacious readable English single complete screen.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-b3fa0356-d0cc-4a28-bcf0-5c954e9bca6b.png",
+    "revision_prompt": "Correct this existing application review screen only: Applications must be selected in navy left sidebar, not Administration. Remove Administration sidebar item entirely for this loan officer. Change bottom profile to Lote · Loan officer with L avatar. Maintain all main content and layout exactly.",
+    "file": "screens/S22.png",
+    "group": "员工管理端",
+    "role": "贷款专员",
+    "note": "V2 新增。字段、按钮、权限与异常状态以 IMPLEMENTATION_SPEC.md 及 BUTTON_FUNCTIONS.md 为准。"
+  },
+  {
+    "id": "A01",
+    "title": "密码恢复",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  SHARED FORGOT PASSWORD screen, public Toumu’a brand same serif wordmark and teal primary. White spacious full-page, simple header wordmark left Back to login right, no staff nav. Center-left aligned unboxed 440px form titled 'Reset your password' with concise 'Enter the email address linked to your account.' Email address input placeholder name@example.com. Primary 'Send reset link', secondary 'Back to login'. Beneath quiet support text 'Need help accessing your account? Contact our team.' Right pale seafoam area calm simple key line icon and short 'Get back to your loan details.' No security guarantees, no invented contact number, no actual user account shown. Footer demo design. Minimal purposeful accessible form. Exactly one state email entry before submission.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-b551b93a-b4c0-4d51-8d30-07de7074b42e.png",
+    "group": "共用账户",
+    "role": "客户／员工",
+    "note": "账户恢复是配套设计建议；邮箱发送、链接失效及新密码状态在说明中定义。",
+    "file": "screens/A01.png"
+  },
+  {
+    "id": "A02",
+    "title": "账户资料与安全",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  BORROWER ACCOUNT PROFILE page match attached customer portal header, Sione profile menu context. Heading 'Your account'. Main left section Personal details read-only Name Sione T, Email sione@example.com, Phone On file, Borrower ID BR-2026-0048. Small helper 'To update your loan record, contact our team.' Contact our team outline button. Right 'Password' form Current password, New password, Confirm new password with eye icons; primary Update password. Bottom clearly separate 'Sign out' outline action and Back to overview. No user role editing or financial terms, no invented privacy promises, no social profile elements. Calm white page with serif titles and dark blue body, teal action, minimal borders. Show new password mismatch inline under confirm 'Passwords do not match.' Fields contain masked dots only.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-bf4c3897-ef77-4fbe-92d4-c56e91876c3e.png",
+    "group": "共用账户",
+    "role": "客户／员工",
+    "note": "个人资料与密码。员工换为管理端外壳；角色只读，不自助更改。",
+    "file": "screens/A02.png"
+  },
+  {
+    "id": "A03",
+    "title": "客户邮箱注册",
+    "prompt": "Create one high fidelity 1440x1024 customer registration UI for Toumu’a. Match attached login page precisely in navy teal white palette, split layout with coastal photo left and serif headings. Left brand Toumu’a, heading 'Your next step starts here.' restrained coastal photo lower. Right registration form heading 'Create your account', subheading 'Register to view your application and loan details.' Four labeled fields Full name, Email address, Password with eye icon, Confirm password with eye icon, all blank. Primary teal 'Create account', below 'Already have an account? Log in'. Small helper 'We’ll send a link to verify your email.' Small note 'Creating an account does not submit a loan application.' No role selector, no staff registration, no fabricated terms checkbox or claims. Footer Back to home. Generous legible 16px body, concise field spacing fitting viewport. Design preview only, no real credentials. One single screen, no device bezel or collage. Date anchor16 September2026 if necessary but avoid dates.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-0ddc26af-0a21-461f-a5d0-1c60cb869179.png",
+    "group": "共用账户",
+    "role": "客户注册",
+    "note": "姓名、邮箱、密码及确认密码。公开注册仅创建客户账户，不创建贷款申请；提交后进入 A04。",
+    "file": "screens/A03.png"
+  },
+  {
+    "id": "A04",
+    "title": "等待邮箱验证",
+    "prompt": "Create ONE high-fidelity 1440x1024 Toumu’a email verification pending page, same navy teal white serif-heading visual system as attached reference. Simple white public header Toumu’a left and Back to login right. Center unboxed content 520px wide, small teal envelope icon, heading 'Check your email', body 'Open the verification link sent to your email address to continue.' Muted demo email s••••@example.com. Pale teal information strip 'Your account is waiting for email verification.' Primary outlined button 'Resend verification email', secondary text 'Use a different email'. Below 'Check your spam folder if the message has not arrived.' Bottom note 'You can return to log in after verifying your email.' Small 'Demo state' label, no simulated real delivery claim outside UI. Plenty whitespace, no money information, no external email provider button, no verification code because this is LINK verification. One viewport, no phone frame, no collage, no dated facts.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-21390c17-e930-4783-9c18-0c3cdc1807b6.png",
+    "group": "共用账户",
+    "role": "客户注册",
+    "note": "通过邮件中的链接验证，支持重发和修改待验证邮箱。此图为示例状态，尚未发送实际邮件。",
+    "file": "screens/A04.png"
+  },
+  {
+    "id": "A05",
+    "title": "邮箱验证结果",
+    "prompt": "Create ONE high fidelity 1440x1024 email verification SUCCESS screen for Toumu’a, preserve exact reference minimal centered white layout, navy serif typography teal accents, wordmark top left Back to login top right. Replace envelope with restrained teal circle checkmark, heading 'Email verified', subheading 'Your email address has been confirmed. You can now log in to your account.' Primary teal 'Continue to login'. Under thin separator explanatory text 'New to Toumu’a? Contact our team to start a loan application with a loan officer.' secondary Contact our team link. Small Demo state badge. No financial dashboard or invented existing loans, no automatic approved status, no confetti. One single successful state only, no panels for alternative states, no browser frame.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-8e53a025-27ba-49a5-8bae-52dc59dbb25e.png",
+    "group": "共用账户",
+    "role": "客户注册",
+    "note": "验证成功后返回 C02 登录；过期、无效、已使用及失败状态详见设计说明。",
+    "file": "screens/A05.png"
+  },
+  {
+    "id": "A06",
+    "title": "员工接受邀请与激活",
+    "prompt": "One high fidelity1440x1024 Toumu’a staff invitation acceptance screen match attached login design navy coastal photo left serif titles teal white. Left heading 'Welcome to the team.' Right heading 'Activate your staff account'. Read-only invitation summary Name Lina P Email lina@example.com Role Accountant. Form New password / Confirm password with eye icons. Primary Activate account. Secondary Back to staff login. Small 'Your role was assigned by your administrator.' No role editor or signup-as-admin. Show 'Invitation verified' calm check. Demo state fictional email. Spacious readable 16px body no terms checkbox no fabricated trust claims. Exact single initial form state.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-c86a35d7-4615-486b-a06b-4a5a10548929.png",
+    "file": "screens/A06.png",
+    "group": "共用账户",
+    "role": "受邀员工",
+    "note": "V2 新增。字段、按钮、权限与异常状态以 IMPLEMENTATION_SPEC.md 及 BUTTON_FUNCTIONS.md 为准。"
+  },
+  {
+    "id": "A07",
+    "title": "设置新密码",
+    "prompt": "Create one 1440x1024 Toumu’a Reset password screen in same visual system as attached invitation acceptance image. Navy photographic coastal left panel with serif heading 'A fresh start.' White right panel heading 'Set a new password'. Two blank fields New password / Confirm new password each eye icon. Visible helper 'Use at least 12 characters. Spaces and password managers are welcome.' Primary teal 'Reset password', quiet 'Back to login'. No current password field, no email editing no role chooser. Small explanatory text 'This link can only be used once.' English legible clean 16px. Form blank no passwords shown. This is valid reset link state. No false claim reset complete.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-0a282fea-b68e-4812-9fba-1065966af09b.png",
+    "file": "screens/A07.png",
+    "group": "共用账户",
+    "role": "有效重置链接持有者",
+    "note": "V2 新增。字段、按钮、权限与异常状态以 IMPLEMENTATION_SPEC.md 及 BUTTON_FUNCTIONS.md 为准。"
+  },
+  {
+    "id": "D01",
+    "title": "桌面端连接中断",
+    "prompt": "Create ONE production-quality high-fidelity UI screen for Toumu’a secured lending business, New Zealand. Flat 1440x1024 desktop viewport screenshot, no browser/device frame, no collage. Match attached reference's exact navy, teal, white visual language, readable typography, spacing and restrained row separators. English product interface, no developer implementation details. Crisp 14-16px body, generous spacing, no nested cards or ornamental charts. All financial examples fictional, discreet 'Demo data' badge. Date anchor Tuesday 15 September 2026, NZD currency. Don't invent rates, legal claims, automated approval, instant payouts or online borrower payments. Only requested screen, no multiple concepts. All controls within viewport.  ELECTRON OFFICE DESKTOP disconnected state. 1440x1024 full app screenshot, add narrow native-neutral title bar top 'Toumu’a — Office workspace' with minimize maximize close right, not browser address bar. Same navy staff sidebar, Loans active, Pita Cashier. Main top amber connectivity banner 'Connection interrupted'. Content spacious centered unboxed message with minimal disconnected link line icon, heading 'We can’t reach the service', body 'Reconnect to continue. Financial actions are unavailable while the connection is interrupted.' primary Retry connection, secondary Return to overview. Small line 'If a payment was being submitted, check its status after reconnecting before trying again.' Do not claim payment failed or show funds recorded. No old cached financial data, no offline queue or sync promise. White surface, navy text, teal button, clear accessible status. Footer 'Office workspace' and Demo data. Strong consistent professional design.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-3e9e43b8-e5ca-4032-aada-f2b59f63c092.png",
+    "group": "桌面应用",
+    "role": "办公室桌面用户",
+    "note": "复用 S 系列页面。断线禁止提交；若请求结果未知，重连后先查交易状态，不能直接重复提交。",
+    "file": "screens/D01.png"
+  },
+  {
+    "id": "G01",
+    "title": "交易结果未知与恢复",
+    "prompt": "One1440x1024 high fidelity Toumu’a cashier payment RESULT UNKNOWN screen matching attached navy staff shell. Loans selected. Heading 'Checking your payment', warning 'We haven’t confirmed the outcome yet.' Subtext 'Your connection was interrupted after submission. Check the result before recording another payment.' Read-only compact summary Loan LN-2026-0108 Borrower Sione T Amount NZ$250.00 reference Attempt PAY-0315, time16Sep2026 10:42. Large primary 'Check payment status', secondary 'View transaction history'. Disabled grey 'Record another payment' with helper 'Available when the previous outcome is confirmed.' No false paid or failed label. Show process Submitted complete > Checking outcome current > Receipt pending. No automatic retry payment button. Profile Pita Cashier, Demo state, clear 16px body generous whitespace.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-41ab8089-c41a-4851-a091-0f713985663b.png",
+    "revision_prompt": "Edit attached payment unknown-result screen: ensure BOTH top right AND bottom left profile say Pita · Cashier, avatar P. Retain every other element and high quality layout.",
+    "file": "screens/G01.png",
+    "group": "通用状态",
+    "role": "出纳",
+    "note": "V2 新增。字段、按钮、权限与异常状态以 IMPLEMENTATION_SPEC.md 及 BUTTON_FUNCTIONS.md 为准。"
+  },
+  {
+    "id": "G02",
+    "title": "通知与待办入口",
+    "prompt": "One1440x1024 Toumu’a staff Notifications page, navy sidebar teal white consistent reference. Sidebar Overview active; Manager Mele avatar M. Heading Notifications, tabs All / Unread selected. Top right 'Mark all as read'. Three separated rows: Application AP-0142 ready for review, today10:20, unread dot, View application and Mark as read; Correction CR-0012 awaiting review today10:10 View correction and Mark as read; Collateral intake completed SEC-0098 yesterday15:30 View asset and Mark as read. Toolbar bell selected, search icon. Small explanatory text 'Updates you have permission to view.' No marketing or chat no delete control. Footer pagination Previous 1 Next. Broad content left and calm right panel 'All caught up' shown only as small labelled alternative state? NO alternative just one consistent unread list. Simple single page ample whitespace strong readable16px labels Demo data. Keep no invitation drawer.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-bc088212-960c-4b9e-b9f7-5283a143efd0.png",
+    "revision_prompt": "Edit only notification second row explanatory sentence. Replace 'A borrower has submitted a correction request for your review.' with 'A cashier has submitted a correction request for your review.' All other content and layout exactly unchanged.",
+    "file": "screens/G02.png",
+    "group": "通用状态",
+    "role": "已登录用户；按权限分发",
+    "note": "V2 新增。字段、按钮、权限与异常状态以 IMPLEMENTATION_SPEC.md 及 BUTTON_FUNCTIONS.md 为准。"
+  }
+]

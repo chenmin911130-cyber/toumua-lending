@@ -1,0 +1,50 @@
+[
+  {
+    "id": "S16",
+    "title": "员工账户与邀请",
+    "prompt": "One production-quality desktop UI design 1440x1024 for Toumu’a staff account administration, match attached navy sidebar teal white staff reference exactly, no browser frame, English, date16September2026, fictional data. Sidebar Overview Borrowers Applications Loans Collateral Transactions Administration selected. Header Staff accounts, toolbar search name/email, status All. Table Name Email Role Status: Lote F lote@example.com Loan officer Active; Ana M ana@example.com Valuation officer Active; Pita K pita@example.com Cashier Active; Lina P lina@example.com Accountant Invited. Right 430px Invite staff drawer open. Fields Full name blank, Email blank, Role dropdown 'Select role' restricted list of business roles. No password field, invitation email sets password. Primary Send invitation, Cancel. Helper 'Account administration is granted separately from business roles.' Row actions menu expanded for selected staff with View details / Change role / Deactivate; disabled Resend invitation unless pending. Do not show real emails. Elegant 16px legible fields, no nested cards or decorative charts. One coherent screen.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-e56efccb-eaeb-4e11-97f5-c40b5f8163eb.png"
+  },
+  {
+    "id": "S17",
+    "title": "客户账户与借款人关联",
+    "prompt": "One high fidelity Toumu’a staff screen 1440x1024 navy sidebar white teal matching reference. Heading 'Link customer account', Borrowers nav selected. Main side-by-side comparison clearly separated: left 'Verified online account' Sione T sione@example.com Email verified Account USR-0048; right 'Borrower record' search name or borrower ID selected BR-2026-0048 Sione T contact email On file and two loan references masked until match reviewed. Center note 'Email verification alone does not confirm the borrower’s identity.' Below required Verification method dropdown 'In-person record check', Verification notes textarea, checkbox 'I have confirmed this account belongs to the borrower'. Primary 'Review link', secondary Cancel. Current link status Not linked. Top back to borrower. No automated matching, no identity document number. Profile Lote Loan officer. Exact available sidebar order Overview Borrowers Applications Loans Collateral Transactions. Fictional Demo data16Sep2026. No money action.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-8dc622ca-6e23-4215-bb67-6fa961931144.png"
+  },
+  {
+    "id": "S18",
+    "title": "交易更正申请与审核",
+    "prompt": "One 1440x1024 high fidelity Toumu’a manager transaction correction review page match attached navy teal white staff design. Sidebar Transactions active, Manager Mele. Heading 'Review correction request', CR-2026-0012 Pending review. Main side by side Original transaction TXN-2026-0315 Repayment NZ$250.00 and Proposed replacement Repayment NZ$200.00, borrower Sione T loan LN-2026-0108. Reason 'Amount entered incorrectly' Requested by Pita Cashier16Sep2026. Prominent explanatory band 'The original transaction is retained. Approval allows the cashier to post linked correction entries.' Read-only preview reversal NZ$250 and replacement NZ$200, no balance calculation unless calculated by service. Right decision area Review notes textarea, Reject outlined red and Approve correction teal. Bottom audit timeline Requested > Manager review current > Cashier posting pending. Button View original receipt. No edit/delete original entry. Plenty whitespace readable text Demo data.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-0d5e5f53-a949-43ed-ad4a-3e020e1b1ee2.png"
+  },
+  {
+    "id": "C09",
+    "title": "客户多笔贷款与历史",
+    "prompt": "One 1440x1024 high fidelity borrower My loans page for Toumu’a, match attached customer design navy serif titles teal white no staff sidebar. Header Toumu’a My overview Application Repayments My security Help profile Sione T. Heading 'Your loans', subtext 'Choose a loan to view its balance and repayment plan.' Tabs Active loans selected / Loan history. Two clear spacious unboxed rows with separators: LN-2026-0108 Active Outstanding NZ$1,900.00 Next payment NZ$250.00 Due22Sep2026 button View loan; LN-2026-0120 Active Outstanding NZ$800.00 Next payment NZ$100.00 Due24Sep2026 button View loan. Top aggregate 'Total outstanding across 2 loans NZ$2,700.00' with label explicitly across loans. Below quiet link View application progress. Header nav My overview active with Your loans context. Small note 'Repayments are handled by our cashier.' Date16Sep2026 Demo data. No new loan application button no online pay no fabricated scoring. Comfortable whitespace.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-4cc46d27-0d7a-4f47-b96d-cf1f0028c97f.png"
+  },
+  {
+    "id": "C10",
+    "title": "新客户与未关联贷款状态",
+    "prompt": "One 1440x1024 Toumu’a customer portal EMPTY STATE screen match attached navy serif teal white horizontal header. Title 'Welcome, Sione.' subtext 'Your account is ready.' Main centered minimal document outline icon and heading 'No loan is linked to your account yet.' Body 'If you already have a loan, contact our team to link your existing record. To apply for a loan, meet with a loan officer.' Primary Contact our team, secondary View application progress. Lower quiet guide Complete your account > Speak with our team > View your loan here. No fake loan balances, no zero totals, no apply-online or payment button. Header same My overview Application Repayments My security Help user menu. Small verified email label in profile area, Demo state. 16Sep2026 if date shown. Spacious accessible normal state not error.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-45715522-463b-49c8-b7ac-8d98fce97af6.png"
+  },
+  {
+    "id": "S19",
+    "title": "操作日志与变更详情",
+    "prompt": "One 1440x1024 high fidelity Toumu’a read-only audit log screen same reference navy sidebar white teal. Heading 'Activity log', Administration selected. Filters search record/user, Date range 15–16Sep2026, Action All. Table Time / User / Action / Record / Result, 4 rows16Sep10:30 Mele Correction approved CR-0012 Success;16Sep10:24 Pita Correction requested CR-0012 Success;16Sep09:15 Lote Customer linked BR-0048 Success;15Sep11:42 Pita Repayment recorded TXN-0315 Success. Right detail drawer selected customer link event shows actor Lote, time, linked account USR-0048, borrower BR-0048, Before Not linked, After Linked, reason 'In-person record check', link View borrower. No edit/delete actions. Drawer close X, table pagination, read-only badge and Demo data. Profile Mele Manager with audit permission. No raw secrets or tokens.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-e889d3f4-f6bf-46ec-a71e-9dd72da10f54.png"
+  },
+  {
+    "id": "A06",
+    "title": "员工接受邀请与激活",
+    "prompt": "One high fidelity1440x1024 Toumu’a staff invitation acceptance screen match attached login design navy coastal photo left serif titles teal white. Left heading 'Welcome to the team.' Right heading 'Activate your staff account'. Read-only invitation summary Name Lina P Email lina@example.com Role Accountant. Form New password / Confirm password with eye icons. Primary Activate account. Secondary Back to staff login. Small 'Your role was assigned by your administrator.' No role editor or signup-as-admin. Show 'Invitation verified' calm check. Demo state fictional email. Spacious readable 16px body no terms checkbox no fabricated trust claims. Exact single initial form state.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-c86a35d7-4615-486b-a06b-4a5a10548929.png"
+  },
+  {
+    "id": "G01",
+    "title": "交易结果未知与恢复",
+    "prompt": "One1440x1024 high fidelity Toumu’a cashier payment RESULT UNKNOWN screen matching attached navy staff shell. Loans selected. Heading 'Checking your payment', warning 'We haven’t confirmed the outcome yet.' Subtext 'Your connection was interrupted after submission. Check the result before recording another payment.' Read-only compact summary Loan LN-2026-0108 Borrower Sione T Amount NZ$250.00 reference Attempt PAY-0315, time16Sep2026 10:42. Large primary 'Check payment status', secondary 'View transaction history'. Disabled grey 'Record another payment' with helper 'Available when the previous outcome is confirmed.' No false paid or failed label. Show process Submitted complete > Checking outcome current > Receipt pending. No automatic retry payment button. Profile Pita Cashier, Demo state, clear 16px body generous whitespace.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-4dfc59ab-9729-456c-9638-157500dabf5e.png"
+  }
+]

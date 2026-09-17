@@ -1,0 +1,324 @@
+generator client {
+  provider     = "prisma-client-js"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum BusinessRole {
+  CUSTOMER
+  LOAN_OFFICER
+  VALUATION_OFFICER
+  MANAGER
+  CASHIER
+  ACCOUNTANT
+  OWNER
+}
+
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  INVITED
+  INACTIVE
+  INVITATION_REVOKED
+}
+
+enum TokenType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+  INVITATION
+}
+
+enum MailStatus {
+  QUEUED
+  ACCEPTED
+  FAILED
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  DECLINED
+}
+
+enum ApplicationStep {
+  BORROWER
+  LOAN_DETAILS
+  SECURITY
+  TERMS
+  REVIEW
+}
+
+enum ValuationStatus {
+  REQUESTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum AccountLinkStatus {
+  ACTIVE
+  REVOKED
+}
+
+model User {
+  id              String       @id @default(cuid())
+  email           String
+  emailNormalized String       @unique
+  passwordHash    String?
+  name            String
+  role            BusinessRole?
+  status          UserStatus
+  emailVerifiedAt DateTime?
+  lastLoginAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  sessions          Session[]
+  tokens            VerificationToken[]
+  permissions       StaffPermission[]
+  sentInvitations   Invitation[]        @relation("InvitedBy")
+  receivedInvitation Invitation?
+  auditEvents       AuditEvent[]
+  mailMessages      MailMessage[]
+  borrowersCreated  Borrower[]            @relation("BorrowerCreatedBy")
+  accountLinksLinked BorrowerAccountLink[] @relation("LinkLinkedBy")
+  customerLinks     BorrowerAccountLink[] @relation("LinkUser")
+  applicationsCreated Application[]       @relation("ApplicationCreatedBy")
+  valuationsAsLoanOfficer Valuation[]     @relation("ValuationLoanOfficer")
+  valuationsAsValuationOfficer Valuation[] @relation("ValuationOfficer")
+}
+
+model Session {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  restricted Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      TokenType
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, type])
+}
+
+model Invitation {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitedById String
+  invitedBy   User      @relation("InvitedBy", fields: [invitedById], references: [id])
+  role        BusinessRole
+  email       String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model StaffPermission {
+  id         String @id @default(cuid())
+  userId     String
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission String
+
+  @@unique([userId, permission])
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  objectType String
+  objectId   String
+  before     Json?
+  after      Json?
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([objectType, objectId])
+}
+
+model MailMessage {
+  id                String     @id @default(cuid())
+  userId            String?
+  user              User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  toEmail           String
+  subject           String
+  textBody          String
+  htmlBody          String
+  status            MailStatus @default(QUEUED)
+  providerAccepted  Boolean    @default(false)
+  error             String?
+  createdAt         DateTime   @default(now())
+}
+
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+
+model SequenceCounter {
+  key   String @id
+  value Int    @default(0)
+}
+
+model Borrower {
+  id          String   @id @default(cuid())
+  number      String   @unique
+  name        String
+  salutation  String?
+  email       String?
+  phone       String
+  address     String
+  notes       String?
+  createdById String?
+  createdBy   User?    @relation("BorrowerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  applications Application[]
+  accountLinks BorrowerAccountLink[]
+
+  @@index([name])
+  @@index([phone])
+}
+
+model BorrowerAccountLink {
+  id                 String            @id @default(cuid())
+  borrowerId         String
+  borrower           Borrower          @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User              @relation("LinkUser", fields: [userId], references: [id], onDelete: Cascade)
+  status             AccountLinkStatus @default(ACTIVE)
+  verificationMethod String
+  notes              String?
+  linkedById         String?
+  linkedBy           User?             @relation("LinkLinkedBy", fields: [linkedById], references: [id], onDelete: SetNull)
+  revokedAt          DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([userId, status])
+  @@index([borrowerId, status])
+}
+
+model Application {
+  id                 String            @id @default(cuid())
+  number             String            @unique
+  borrowerId         String?
+  borrower           Borrower?         @relation(fields: [borrowerId], references: [id], onDelete: SetNull)
+  status             ApplicationStatus @default(DRAFT)
+  currentStep        ApplicationStep   @default(BORROWER)
+  version            Int               @default(1)
+  requestedAmount    String?
+  purpose            String?
+  purposeDescription String?
+  proposedTermMonths Int?
+  createdById        String
+  createdBy          User              @relation("ApplicationCreatedBy", fields: [createdById], references: [id])
+  submittedAt        DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  assets     ApplicationAsset[]
+  terms      ApplicationTerms?
+  valuations Valuation[]
+
+  @@index([status, updatedAt])
+  @@index([borrowerId])
+}
+
+model ApplicationAsset {
+  id            String   @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  name          String
+  description   String
+  condition     String
+  category      String?
+  identifier    String?
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  photos     AssetPhoto[]
+  valuations Valuation[]
+
+  @@index([applicationId])
+}
+
+model AssetPhoto {
+  id         String           @id @default(cuid())
+  assetId    String
+  asset      ApplicationAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  filename   String
+  mimeType   String
+  sizeBytes  Int
+  storageKey String
+  createdAt  DateTime         @default(now())
+
+  @@index([assetId])
+}
+
+model ApplicationTerms {
+  id               String      @id @default(cuid())
+  applicationId    String      @unique
+  application      Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  version          Int         @default(1)
+  firstPaymentDate DateTime?
+  frequency        String?
+  periods          Int?
+  interestMethod   String?
+  policyConfigured Boolean     @default(false)
+  previewJson      Json?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+model Valuation {
+  id                   String           @id @default(cuid())
+  applicationId        String
+  application          Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  assetId              String
+  asset                ApplicationAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  status               ValuationStatus  @default(REQUESTED)
+  amount               String?
+  valuationDate        DateTime?
+  basis                String?
+  borrowerPresent      Boolean?
+  loanOfficerId        String?
+  loanOfficer          User?            @relation("ValuationLoanOfficer", fields: [loanOfficerId], references: [id], onDelete: SetNull)
+  valuationOfficerId   String?
+  valuationOfficer     User?            @relation("ValuationOfficer", fields: [valuationOfficerId], references: [id], onDelete: SetNull)
+  participatedAt       DateTime?
+  version              Int              @default(1)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@unique([assetId])
+  @@index([applicationId])
+  @@index([status])
+}

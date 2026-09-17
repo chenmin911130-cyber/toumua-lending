@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+.vite
+.turbo
+coverage
+*.log
+.env
+.env.local
+apps/api/src/generated
+apps/web/dist
+apps/desktop/dist
+apps/desktop/release
+.DS_Store
+.prisma
+playwright-report
+test-results

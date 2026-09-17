@@ -1,0 +1,26 @@
+{
+  "screens": [
+    {
+      "id": "A03",
+      "title": "客户邮箱注册",
+      "prompt": "Create one high fidelity 1440x1024 customer registration UI for Toumu’a. Match attached login page precisely in navy teal white palette, split layout with coastal photo left and serif headings. Left brand Toumu’a, heading 'Your next step starts here.' restrained coastal photo lower. Right registration form heading 'Create your account', subheading 'Register to view your application and loan details.' Four labeled fields Full name, Email address, Password with eye icon, Confirm password with eye icon, all blank. Primary teal 'Create account', below 'Already have an account? Log in'. Small helper 'We’ll send a link to verify your email.' Small note 'Creating an account does not submit a loan application.' No role selector, no staff registration, no fabricated terms checkbox or claims. Footer Back to home. Generous legible 16px body, concise field spacing fitting viewport. Design preview only, no real credentials. One single screen, no device bezel or collage. Date anchor16 September2026 if necessary but avoid dates.",
+      "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-0ddc26af-0a21-461f-a5d0-1c60cb869179.png"
+    },
+    {
+      "id": "A04",
+      "title": "等待邮箱验证",
+      "prompt": "Create ONE high-fidelity 1440x1024 Toumu’a email verification pending page, same navy teal white serif-heading visual system as attached reference. Simple white public header Toumu’a left and Back to login right. Center unboxed content 520px wide, small teal envelope icon, heading 'Check your email', body 'Open the verification link sent to your email address to continue.' Muted demo email s••••@example.com. Pale teal information strip 'Your account is waiting for email verification.' Primary outlined button 'Resend verification email', secondary text 'Use a different email'. Below 'Check your spam folder if the message has not arrived.' Bottom note 'You can return to log in after verifying your email.' Small 'Demo state' label, no simulated real delivery claim outside UI. Plenty whitespace, no money information, no external email provider button, no verification code because this is LINK verification. One viewport, no phone frame, no collage, no dated facts.",
+      "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-21390c17-e930-4783-9c18-0c3cdc1807b6.png"
+    },
+    {
+      "id": "A05",
+      "title": "邮箱验证结果",
+      "prompt": "Create ONE high fidelity 1440x1024 email verification SUCCESS screen for Toumu’a, preserve exact reference minimal centered white layout, navy serif typography teal accents, wordmark top left Back to login top right. Replace envelope with restrained teal circle checkmark, heading 'Email verified', subheading 'Your email address has been confirmed. You can now log in to your account.' Primary teal 'Continue to login'. Under thin separator explanatory text 'New to Toumu’a? Contact our team to start a loan application with a loan officer.' secondary Contact our team link. Small Demo state badge. No financial dashboard or invented existing loans, no automatic approved status, no confetti. One single successful state only, no panels for alternative states, no browser frame.",
+      "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-8e53a025-27ba-49a5-8bae-52dc59dbb25e.png"
+    }
+  ],
+  "login": {
+    "prompt": "Edit this exact Toumu’a login screenshot preserving the layout typography colors coastal photo and all form controls. Replace the lower helper 'Need access? Contact our team.' with 'New here? Create an account' and make Create an account an underlined teal link. Remove the red incorrect-login alert to show a normal initial login state; move form fields slightly upward naturally without altering overall split layout. Keep Forgot password, Back to home, Staff sign-in. Keep everything else unchanged. No role dropdown.",
+    "source": "/Users/minchen/.codex/generated_images/01a0a2df-de0e-76b0-9e63-98e4615ad947/exec-ec3b6188-3882-4908-b8cd-720f1396e0d7.png"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "date": "2026-09-16",
+  "screens": 42,
+  "png_crc_and_source_copy": "passed",
+  "unique_controls": 196,
+  "screen_control_coverage": "42/42",
+  "javascript_syntax": "passed",
+  "local_html_links_checked": 11,
+  "business_implementation": "not_started",
+  "business_tests": "not_run",
+  "browser_checks": [
+    "gallery_filter",
+    "G02_viewer",
+    "feedback_persists_after_reload",
+    "temporary_feedback_cleared",
+    "control_search",
+    "screen_filter",
+    "control_details",
+    "narrow_layout_review",
+    "control_to_design_deep_link"
+  ],
+  "zip_crc": "passed"
+}
