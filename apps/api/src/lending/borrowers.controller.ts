@@ -19,8 +19,11 @@ export class BorrowersController {
   constructor(@Inject(BorrowersService) private readonly borrowers: BorrowersService) {}
 
   @Get("borrowers")
-  list(@Query(new ZodValidationPipe(cursorListQuerySchema)) query: unknown) {
-    return this.borrowers.list(query as never);
+  list(
+    @CurrentUser() user: AuthUser,
+    @Query(new ZodValidationPipe(cursorListQuerySchema)) query: unknown,
+  ) {
+    return this.borrowers.list(user, query as never);
   }
 
   @Post("borrowers")
@@ -32,8 +35,8 @@ export class BorrowersController {
   }
 
   @Get("borrowers/:id")
-  get(@Param("id") id: string) {
-    return this.borrowers.get(id);
+  get(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    return this.borrowers.get(user, id);
   }
 
   @Patch("borrowers/:id")
@@ -46,8 +49,8 @@ export class BorrowersController {
   }
 
   @Get("verified-accounts")
-  verifiedAccounts(@Query("q") q?: string) {
-    return this.borrowers.searchVerifiedAccounts(q ?? "");
+  verifiedAccounts(@CurrentUser() user: AuthUser, @Query("q") q?: string) {
+    return this.borrowers.searchVerifiedAccounts(user, q ?? "");
   }
 
   @Post("borrowers/:id/account-link")

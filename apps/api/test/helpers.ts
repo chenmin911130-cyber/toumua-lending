@@ -98,6 +98,21 @@ export async function seedValuationOfficer(prisma: PrismaService, auth: AuthServ
   });
 }
 
+export async function seedCashier(prisma: PrismaService, auth: AuthService) {
+  const passwordHash = await auth.hashPassword("Cashier12345");
+  return prisma.user.create({
+    data: {
+      email: "cashier@example.com",
+      emailNormalized: "cashier@example.com",
+      name: "Cara Cashier",
+      passwordHash,
+      role: "CASHIER",
+      status: "ACTIVE",
+      emailVerifiedAt: new Date(),
+    },
+  });
+}
+
 export async function agentWithCsrf(app: INestApplication): Promise<Agent> {
   const agent = request.agent(app.getHttpServer());
   await agent.get("/api/v1/auth/csrf").expect(200);

@@ -18,6 +18,7 @@ import { assertManageLending } from "./access";
 import { NumbersService } from "./numbers.service";
 import { attachReadiness, buildReadiness, isReadyToSubmit } from "./readiness";
 import { buildTermsPreview, termsPolicyConfigured } from "./terms-policy";
+import { UploadsService } from "./uploads.service";
 
 @Injectable()
 export class ApplicationsService {
@@ -25,6 +26,7 @@ export class ApplicationsService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(NumbersService) private readonly numbers: NumbersService,
     @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(UploadsService) private readonly uploads: UploadsService,
   ) {}
 
   async list(user: AuthUser, query: CursorListQuery) {
@@ -154,12 +156,17 @@ export class ApplicationsService {
       : null;
     const policyConfigured = termsPolicyConfigured(input);
     const previewJson = buildTermsPreview(input, application.requestedAmount);
-    await this.prisma.$transaction([
-      this.prisma.application.update({
-        where: { id },
+    await this.prisma.$transaction(async (tx) => {
+      // Re-check the version inside the transaction so two concurrent saves
+      // cannot both pass the earlier check and silently overwrite each other.
+      const locked = await tx.application.updateMany({
+        where: { id, version: input.expectedVersion },
         data: { version: { increment: 1 } },
-      }),
-      this.prisma.applicationTerms.upsert({
+      });
+      if (locked.count === 0) {
+        throw conflict("This application was updated elsewhere. Reload and try again.");
+      }
+      await tx.applicationTerms.upsert({
         where: { applicationId: id },
         create: {
           applicationId: id,
@@ -180,8 +187,8 @@ export class ApplicationsService {
           previewJson: previewJson ?? undefined,
           version: { increment: 1 },
         },
-      }),
-    ]);
+      });
+    });
     return this.loadDetail(id);
   }
 
@@ -256,7 +263,12 @@ export class ApplicationsService {
       where: { id: assetId, applicationId },
     });
     if (!asset) throw notFound("Asset not found");
+    const photos = await this.prisma.assetPhoto.findMany({
+      where: { assetId },
+      select: { storageKey: true },
+    });
     await this.prisma.applicationAsset.delete({ where: { id: assetId } });
+    this.uploads.removeFilesForAsset(photos.map((photo) => photo.storageKey));
     await this.prisma.application.update({
       where: { id: applicationId },
       data: { version: { increment: 1 } },

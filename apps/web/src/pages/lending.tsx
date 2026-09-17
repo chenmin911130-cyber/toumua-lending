@@ -74,16 +74,17 @@ export function BorrowersPage() {
 
   async function save(event: FormEvent) {
     event.preventDefault();
+    if (!drawer) return;
+    const drawerId = drawer === "new" ? null : drawer.id;
     setError(null);
     try {
       const body = { name, phone, address, email, notes };
-      const saved =
-        drawer === "new"
-          ? await api<BorrowerDetail>("/borrowers", { method: "POST", body: JSON.stringify(body) })
-          : await api<BorrowerDetail>(`/borrowers/${drawer.id}`, {
-              method: "PATCH",
-              body: JSON.stringify(body),
-            });
+      const saved = drawerId
+        ? await api<BorrowerDetail>(`/borrowers/${drawerId}`, {
+            method: "PATCH",
+            body: JSON.stringify(body),
+          })
+        : await api<BorrowerDetail>("/borrowers", { method: "POST", body: JSON.stringify(body) });
       setDrawer(null);
       await reload();
       setDetail(saved);
@@ -156,7 +157,7 @@ export function BorrowersPage() {
           {error ? <p className="error">{errorMessage(error, "Could not save borrower")}</p> : null}
           <div className="hero-actions">
             <Button type="submit" data-control-id="S02-05">{drawer === "new" ? "Save borrower" : "Save changes"}</Button>
-            {drawer !== "new" ? (
+            {drawer && drawer !== "new" ? (
               <>
                 <Button variant="secondary" type="button" onClick={() => navigate(`/staff/borrowers/${drawer.id}/account-link`)}>
                   Account link

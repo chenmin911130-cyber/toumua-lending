@@ -8,7 +8,32 @@ import { PrismaService } from "../prisma/prisma.service";
 import { assertManageLending } from "./access";
 
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
-const MAX_BYTES = 8 * 1024 * 1024;
+const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_PHOTOS_PER_ASSET = 10;
+
+/**
+ * Confirms the bytes really are a JPEG, PNG, or WebP image. The declared
+ * content type is attacker-controlled, so it is only used as a cross-check.
+ */
+function sniffImageMime(buffer: Buffer): string | null {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (
+    buffer.length >= 8 &&
+    buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+  ) {
+    return "image/png";
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
+    buffer.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  return null;
+}
 
 @Injectable()
 export class UploadsService {
@@ -41,7 +66,15 @@ export class UploadsService {
       throw forbidden("Only JPEG, PNG, or WebP images are allowed");
     }
     if (file.size > MAX_BYTES) {
-      throw forbidden("Image must be 8 MB or smaller");
+      throw forbidden("Image must be 10 MB or smaller");
+    }
+    const actualMime = sniffImageMime(file.buffer);
+    if (!actualMime) {
+      throw forbidden("The uploaded file is not a readable JPEG, PNG, or WebP image");
+    }
+    const photoCount = await this.prisma.assetPhoto.count({ where: { assetId } });
+    if (photoCount >= MAX_PHOTOS_PER_ASSET) {
+      throw forbidden(`Each asset can hold at most ${MAX_PHOTOS_PER_ASSET} photos`);
     }
     const storageKey = `${randomUUID()}-${file.originalname.replace(/[^\w.-]+/g, "_")}`;
     writeFileSync(join(this.uploadDir, storageKey), file.buffer);
@@ -49,7 +82,7 @@ export class UploadsService {
       data: {
         assetId,
         filename: file.originalname,
-        mimeType: file.mimetype,
+        mimeType: actualMime,
         sizeBytes: file.size,
         storageKey,
       },
@@ -107,6 +140,16 @@ export class UploadsService {
     const path = join(this.uploadDir, photo.storageKey);
     if (!existsSync(path)) throw notFound("File not found");
     return { stream: createReadStream(path), mimeType: photo.mimeType, filename: photo.filename };
+  }
+
+  /**
+   * Removes the stored files for an asset whose row is being deleted. Call this
+   * with the keys read before the delete, because the photo rows cascade away.
+   */
+  removeFilesForAsset(storageKeys: string[]) {
+    for (const key of storageKeys) {
+      this.removeFile(key);
+    }
   }
 
   private removeFile(storageKey: string) {

@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+/** Accepts an ISO date or date-time string; rejects values that do not parse. */
+const dateString = (label: string) =>
+  z.preprocess(
+    (value) => (typeof value === "string" ? value.trim() : value),
+    z
+      .string()
+      .min(1, `${label} is required`)
+      .refine((value) => !Number.isNaN(Date.parse(value)), `${label} is not a valid date`),
+  );
+
 export const ApplicationStatus = {
   DRAFT: "DRAFT",
   SUBMITTED: "SUBMITTED",
@@ -73,7 +83,7 @@ export type SaveAssetInput = z.infer<typeof saveAssetSchema>;
 
 export const saveTermsSchema = z.object({
   expectedVersion: z.number().int().positive(),
-  firstPaymentDate: z.string().optional().nullable(),
+  firstPaymentDate: dateString("First payment date").optional().nullable(),
   frequency: z.enum(["WEEKLY", "FORTNIGHTLY", "MONTHLY"]).optional().nullable(),
   periods: z.number().int().positive().optional().nullable(),
   interestMethod: z.string().trim().max(120).optional().nullable(),
@@ -84,12 +94,12 @@ export type SaveTermsInput = z.infer<typeof saveTermsSchema>;
 export const completeValuationSchema = z.object({
   expectedVersion: z.number().int().positive(),
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Enter a valid amount"),
-  valuationDate: z.string().min(1, "Valuation date is required"),
+  valuationDate: dateString("Valuation date"),
   basis: z.string().trim().min(1, "Basis is required").max(2000),
   borrowerPresent: z.boolean(),
   loanOfficerId: z.string().min(1, "Loan officer is required"),
   valuationOfficerId: z.string().min(1, "Valuation officer is required"),
-  participatedAt: z.string().min(1, "Participation time is required"),
+  participatedAt: dateString("Participation time"),
 });
 
 export type CompleteValuationInput = z.infer<typeof completeValuationSchema>;

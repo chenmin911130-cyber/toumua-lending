@@ -21,7 +21,8 @@ export class BorrowersService {
     @Inject(AuditService) private readonly audit: AuditService,
   ) {}
 
-  async list(query: CursorListQuery) {
+  async list(user: AuthUser, query: CursorListQuery) {
+    assertManageLending(user);
     const limit = query.limit ?? 20;
     const q = (query.q ?? "").trim();
     const where =
@@ -57,7 +58,13 @@ export class BorrowersService {
     };
   }
 
-  async get(id: string) {
+  async get(user: AuthUser, id: string) {
+    assertManageLending(user);
+    return this.loadDetail(id);
+  }
+
+  /** Detail shape without its own role check; callers assert the role they need. */
+  private async loadDetail(id: string) {
     const row = await this.prisma.borrower.findUnique({
       where: { id },
       include: {
@@ -101,7 +108,7 @@ export class BorrowersService {
       objectId: row.id,
       after: row,
     });
-    return this.get(row.id);
+    return this.loadDetail(row.id);
   }
 
   async update(user: AuthUser, id: string, input: SaveBorrowerInput) {
@@ -127,7 +134,7 @@ export class BorrowersService {
       before: existing,
       after: row,
     });
-    return this.get(row.id);
+    return this.loadDetail(row.id);
   }
 
   async linkAccount(user: AuthUser, borrowerId: string, input: LinkAccountInput) {
@@ -154,7 +161,7 @@ export class BorrowersService {
       throw conflict("This borrower is already linked to another customer account");
     }
     if (activeForBorrower) {
-      return this.get(borrowerId);
+      return this.loadDetail(borrowerId);
     }
     const link = await this.prisma.borrowerAccountLink.create({
       data: {
@@ -172,7 +179,7 @@ export class BorrowersService {
       objectId: link.id,
       after: link,
     });
-    return this.get(borrowerId);
+    return this.loadDetail(borrowerId);
   }
 
   async revokeLink(user: AuthUser, borrowerId: string, reason: string) {
@@ -194,10 +201,11 @@ export class BorrowersService {
       after: updated,
       reason,
     });
-    return this.get(borrowerId);
+    return this.loadDetail(borrowerId);
   }
 
-  async searchVerifiedAccounts(q: string) {
+  async searchVerifiedAccounts(user: AuthUser, q: string) {
+    assertManageAccountLink(user);
     const query = q.trim();
     if (query.length < 2) return { items: [] as Array<{ id: string; name: string; email: string }> };
     const items = await this.prisma.user.findMany({

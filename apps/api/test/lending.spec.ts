@@ -8,12 +8,16 @@ import {
   registerCustomer,
   resetDb,
   seedAdmin,
+  seedCashier,
   seedLoanOfficer,
   seedValuationOfficer,
   startApp,
 } from "./helpers";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { AuthService } from "../src/auth/auth.service";
+
+/** Minimal PNG signature, enough for the server-side image sniffing check. */
+const PNG_HEADER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 describe("LENDING batch 03", () => {
   let app: INestApplication;
@@ -168,9 +172,9 @@ describe("LENDING batch 03", () => {
     const photo = await staff
       .post(`/api/v1/applications/${appId}/assets/${assetId}/photos`)
       .set("x-csrf-token", (await staff.get("/api/v1/auth/csrf")).body.token)
-      .attach("file", Buffer.from("fake-image"), {
-        filename: "laptop.jpg",
-        contentType: "image/jpeg",
+      .attach("file", PNG_HEADER, {
+        filename: "laptop.png",
+        contentType: "image/png",
       });
     expect(photo.status).toBe(201);
 
@@ -216,9 +220,75 @@ describe("LENDING batch 03", () => {
     });
     expect(customerLogin.status).toBe(201);
 
-    const customerApps = await guest.get("/api/v1/me/applications");
-    expect(customerApps.status).toBe(200);
-    expect(customerApps.body.total).toBe(1);
-    expect(customerApps.body.items[0].id).toBe(appId);
+    const apps = await guest.get("/api/v1/me/applications");
+    expect(apps.status).toBe(200);
+    expect(apps.body.total).toBe(1);
+    expect(apps.body.items[0].id).toBe(appId);
+  });
+
+  it("APP-02 rejects malformed dates instead of storing an invalid value", async () => {
+    const agent = await loginLoanOfficer();
+    const borrower = await post(agent, "/api/v1/borrowers", {
+      name: "Dana Borrower",
+      phone: "+64 21 555 0303",
+      address: "9 Victoria Street, Auckland",
+    });
+    const created = await post(agent, "/api/v1/applications", {
+      borrowerId: borrower.body.id,
+    });
+    const appId = created.body.id as string;
+    const version = (await agent.get(`/api/v1/applications/${appId}`)).body.version as number;
+
+    const badDate = await agent
+      .put(`/api/v1/applications/${appId}/terms`)
+      .set("x-csrf-token", (await agent.get("/api/v1/auth/csrf")).body.token)
+      .send({
+        expectedVersion: version,
+        firstPaymentDate: "not-a-date",
+        frequency: "MONTHLY",
+        periods: 12,
+      });
+    expect(badDate.status).toBe(422);
+    expect(badDate.body.fieldErrors.firstPaymentDate).toBeTruthy();
+
+    const goodDate = await agent
+      .put(`/api/v1/applications/${appId}/terms`)
+      .set("x-csrf-token", (await agent.get("/api/v1/auth/csrf")).body.token)
+      .send({
+        expectedVersion: version,
+        firstPaymentDate: "2026-10-01",
+        frequency: "MONTHLY",
+        periods: 12,
+      });
+    expect(goodDate.status).toBe(200);
+
+    // The rejected attempt must not have consumed a version increment.
+    const after = await agent.get(`/api/v1/applications/${appId}`);
+    expect(after.body.version).toBe(goodDate.body.version);
+  });
+
+  it("AUTHZ-01 a cashier cannot read the borrower book", async () => {
+    await seedCashier(prisma, auth);
+    const loanOfficer = await loginLoanOfficer();
+    const created = await post(loanOfficer, "/api/v1/borrowers", {
+      name: "Priya Borrower",
+      phone: "+64 21 555 0404",
+      address: "1 Queen Street, Auckland",
+    });
+    expect(created.status).toBe(201);
+
+    const cashier = await agentWithCsrf(app);
+    const login = await post(cashier, "/api/v1/auth/login", {
+      email: "cashier@example.com",
+      password: "Cashier12345",
+    });
+    expect(login.status).toBe(201);
+
+    expect((await cashier.get("/api/v1/borrowers")).status).toBe(403);
+    expect((await cashier.get(`/api/v1/borrowers/${created.body.id}`)).status).toBe(403);
+    expect((await cashier.get("/api/v1/verified-accounts?q=priya")).status).toBe(403);
+
+    // A loan officer still has access.
+    expect((await loanOfficer.get("/api/v1/borrowers")).status).toBe(200);
   });
 });
