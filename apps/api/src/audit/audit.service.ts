@@ -6,16 +6,25 @@ import { PrismaService } from "../prisma/prisma.service";
 export class AuditService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async write(input: {
-    actorId?: string | null;
-    action: string;
-    objectType: string;
-    objectId: string;
-    before?: unknown;
-    after?: unknown;
-    reason?: string | null;
-  }) {
-    return this.prisma.auditEvent.create({
+  async write(
+    input: {
+      actorId?: string | null;
+      action: string;
+      objectType: string;
+      objectId: string;
+      before?: unknown;
+      after?: unknown;
+      reason?: string | null;
+    },
+    /**
+     * Pass the transaction client when the audit record has to commit
+     * atomically with the business change it describes. A money movement that
+     * commits without its audit trail, or an audit trail without its movement,
+     * is a worse failure than rejecting the request outright.
+     */
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    return client.auditEvent.create({
       data: {
         actorId: input.actorId ?? null,
         action: input.action,

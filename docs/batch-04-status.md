@@ -19,7 +19,10 @@ Status: data model and migration applied; application code not yet written.
 `prisma generate` and `prisma migrate` both hang in an infinite loop while
 loading the CLI's own `build/cli.js`. This was verified to be independent of the
 file sandbox (identical hang with full access) and of the Node version (22, 24
-and 26 all hang).
+and 26 all hang). On the affected machine even `lsof` never returns, so
+process/file-descriptor enumeration itself is degraded — this looks like a
+machine-level problem rather than a Prisma configuration one. Restarting the
+machine is the cheapest fix.
 
 The migration was therefore applied with `psql` and recorded in
 `_prisma_migrations` with the SHA-256 of its `migration.sql`, so a normal
@@ -44,14 +47,32 @@ half-working money client is worse than none.
 
 ## To unblock
 
-Once the CLI works on your machine:
-
 ```bash
-pnpm db:migrate     # no-op: the Batch 04 migration is already applied
+# after restarting the machine, which is the cheapest fix for the hang
 pnpm db:generate    # regenerates the client with the Batch 04 models
+pnpm db:migrate     # no-op: the Batch 04 migration is already applied
 ```
 
-Then the remaining Batch 04 work can proceed against a real, generated client.
+### Consequence for the build
+
+`apps/api` **does not compile until `prisma generate` succeeds**, because
+`src/lending/decisions.service.ts` and `src/lending/idempotency.ts` reference the
+Batch 04 models. That is expected and is the only reason: nothing in those files
+is known to be wrong, but the compiler has no definitions for the new tables
+until the client is regenerated.
+
+## Work already written, waiting on the client
+
+- `src/lending/decisions.service.ts` — approve/decline, snapshot freeze, loan and
+  schedule creation, optimistic locking, audit inside the transaction
+- `src/lending/idempotency.ts` — money idempotency: same key + same body replays,
+  same key + different body conflicts, an unresolved key blocks a duplicate
+- `src/lending/access.ts` — decision = manager only, custody = valuation officer
+  only, money = cashier only, per the permission matrix
+- `src/lending/numbers.service.ts` — atomic sequence allocation, verified against
+  the database with psql
+- `AuditService.write(input, client)` — audit can now join the caller's
+  transaction, as the design requires for money movements
 
 ## Also fixed
 
