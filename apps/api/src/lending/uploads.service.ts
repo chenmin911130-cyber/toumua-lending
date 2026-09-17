@@ -40,6 +40,8 @@ export class UploadsService {
   private readonly uploadDir: string;
 
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {
+    // UPLOAD_DIR is set explicitly by the test helpers; the fallback resolves to
+    // the repository's storage/uploads, which stays out of version control.
     this.uploadDir =
       process.env.UPLOAD_DIR ?? join(process.cwd(), "../../storage/uploads");
     if (!existsSync(this.uploadDir)) {

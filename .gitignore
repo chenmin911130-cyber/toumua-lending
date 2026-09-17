@@ -15,3 +15,6 @@ apps/desktop/release
 .prisma
 playwright-report
 test-results
+
+# Local upload storage (test and dev artifacts)
+storage/

@@ -1,5 +1,7 @@
 import { config } from "dotenv";
-import { resolve } from "node:path";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
 config({ path: resolve(__dirname, "../../../.env") });
 import { INestApplication } from "@nestjs/common";
@@ -17,6 +19,12 @@ process.env.MAIL_DRIVER = "memory";
 process.env.PUBLIC_WEB_URL = "http://127.0.0.1:5173";
 process.env.BOOTSTRAP_ADMIN_EMAIL = "admin@example.com";
 process.env.BOOTSTRAP_ADMIN_PASSWORD = "ChangeMeAdmin12";
+// Keep uploaded fixtures out of the repository on every test run.
+const TEST_UPLOAD_DIR = mkdtempSync(join(tmpdir(), "toumua-uploads-"));
+process.env.UPLOAD_DIR = TEST_UPLOAD_DIR;
+process.on("exit", () => {
+  rmSync(TEST_UPLOAD_DIR, { recursive: true, force: true });
+});
 
 export type Agent = ReturnType<typeof request.agent>;
 
