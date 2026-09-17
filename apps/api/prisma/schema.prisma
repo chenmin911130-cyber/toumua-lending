@@ -64,6 +64,55 @@ enum AccountLinkStatus {
   REVOKED
 }
 
+enum LoanStatus {
+  APPROVED_UNFUNDED
+  ACTIVE
+  SETTLED
+  DEFAULTED
+}
+
+enum AssetStatus {
+  PROPOSED
+  VALUED
+  STORED
+  RETURNED
+  SOLD
+}
+
+enum CustodyEventType {
+  RECEIVED
+  INSPECTED
+  STORED
+  RELOCATED
+  RETURNED
+  SOLD
+}
+
+enum ScheduleEntryStatus {
+  PENDING
+  PAID
+}
+
+enum PaymentAttemptType {
+  DISBURSEMENT
+  REPAYMENT
+}
+
+/// UNKNOWN is deliberately distinct from REJECTED: a timeout is never proof that
+/// no money moved, so only a REJECTED attempt without a posting may be retried.
+enum PaymentAttemptStatus {
+  PENDING
+  COMMITTED
+  REJECTED
+  UNKNOWN
+}
+
+enum LedgerEntryType {
+  DISBURSEMENT
+  REPAYMENT
+  SALE_RECEIPT
+}
+
 model User {
   id              String       @id @default(cuid())
   email           String
@@ -90,6 +139,13 @@ model User {
   applicationsCreated Application[]       @relation("ApplicationCreatedBy")
   valuationsAsLoanOfficer Valuation[]     @relation("ValuationLoanOfficer")
   valuationsAsValuationOfficer Valuation[] @relation("ValuationOfficer")
+  decisionsMade     ApplicationDecision[] @relation("DecisionBy")
+  loansDisbursed    Loan[]                @relation("LoanDisbursedBy")
+  loansDefaulted    Loan[]                @relation("LoanDefaultedBy")
+  custodyRecorded   CustodyEvent[]        @relation("CustodyRecordedBy")
+  ledgerPosted      LedgerEntry[]         @relation("LedgerPostedBy")
+  paymentAttempts   PaymentAttempt[]      @relation("PaymentAttemptBy")
+  receiptsIssued    Receipt[]             @relation("ReceiptIssuedBy")
 }
 
 model Session {
@@ -201,6 +257,7 @@ model Borrower {
 
   applications Application[]
   accountLinks BorrowerAccountLink[]
+  loans        Loan[]
 
   @@index([name])
   @@index([phone])
@@ -246,9 +303,163 @@ model Application {
   assets     ApplicationAsset[]
   terms      ApplicationTerms?
   valuations Valuation[]
+  decisions  ApplicationDecision[]
+  loan       Loan?
 
   @@index([status, updatedAt])
   @@index([borrowerId])
+}
+
+/// Append-only record of the manager decision taken against a submitted snapshot.
+model ApplicationDecision {
+  id            String            @id @default(cuid())
+  applicationId String            @unique
+  application   Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  outcome       ApplicationStatus
+  decidedById   String
+  decidedBy     User              @relation("DecisionBy", fields: [decidedById], references: [id])
+  reason        String?
+  publicNote    String?
+  snapshot      Json
+  createdAt     DateTime          @default(now())
+}
+
+model Loan {
+  id                String     @id @default(cuid())
+  number            String     @unique
+  applicationId     String     @unique
+  application       Application @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  borrowerId        String
+  borrower          Borrower   @relation(fields: [borrowerId], references: [id], onDelete: Restrict)
+  status            LoanStatus @default(APPROVED_UNFUNDED)
+  /// Exact decimal string; never a JS float.
+  principal         String
+  frequency         String
+  periods           Int
+  firstPaymentDate  DateTime
+  interestMethod    String?
+  policy            String
+  policyConfigured  Boolean    @default(false)
+  version           Int        @default(1)
+  disbursedAt       DateTime?
+  disbursedById     String?
+  disbursedBy       User?      @relation("LoanDisbursedBy", fields: [disbursedById], references: [id], onDelete: SetNull)
+  settledAt         DateTime?
+  defaultedAt       DateTime?
+  defaultedById     String?
+  defaultedBy       User?      @relation("LoanDefaultedBy", fields: [defaultedById], references: [id], onDelete: SetNull)
+  defaultReason     String?
+  /// Guarantees at most one disbursement posting per loan.
+  disbursementKey   String?    @unique
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  schedule ScheduleEntry[]
+  ledger   LedgerEntry[]
+  receipts Receipt[]
+  attempts PaymentAttempt[]
+  custody  CustodyEvent[]
+
+  @@index([status, updatedAt])
+  @@index([borrowerId])
+}
+
+/// The approved repayment plan, frozen at approval. One row per installment.
+model ScheduleEntry {
+  id         String              @id @default(cuid())
+  loanId     String
+  loan       Loan                @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  number     Int
+  dueDate    DateTime
+  amount     String
+  paidAmount String              @default("0.00")
+  status     ScheduleEntryStatus @default(PENDING)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@unique([loanId, number])
+  @@index([loanId, dueDate])
+}
+
+model LedgerEntry {
+  id                String          @id @default(cuid())
+  loanId            String
+  loan              Loan            @relation(fields: [loanId], references: [id], onDelete: Restrict)
+  type              LedgerEntryType
+  /// Signed exact decimal string: positive increases what the borrower owes
+  /// (disbursement), negative reduces it (repayment, sale receipt).
+  amount            String
+  businessDate      DateTime
+  method            String
+  externalReference String?
+  note              String?
+  postedById        String
+  postedBy          User            @relation("LedgerPostedBy", fields: [postedById], references: [id])
+  attemptId         String?         @unique
+  createdAt         DateTime        @default(now())
+
+  receipt Receipt?
+
+  @@index([loanId, createdAt])
+}
+
+model Receipt {
+  id            String      @id @default(cuid())
+  number        String      @unique
+  loanId        String
+  loan          Loan        @relation(fields: [loanId], references: [id], onDelete: Restrict)
+  ledgerEntryId String      @unique
+  ledgerEntry   LedgerEntry @relation(fields: [ledgerEntryId], references: [id], onDelete: Restrict)
+  issuedById    String
+  issuedBy      User        @relation("ReceiptIssuedBy", fields: [issuedById], references: [id])
+  summary       Json
+  createdAt     DateTime    @default(now())
+
+  @@index([loanId, createdAt])
+}
+
+/// One money intent. The key is unique, so a replay returns the original result
+/// instead of posting a second transaction; the same key with a different body
+/// is a conflict.
+model PaymentAttempt {
+  id             String               @id @default(cuid())
+  idempotencyKey String               @unique
+  type           PaymentAttemptType
+  loanId         String
+  loan           Loan                 @relation(fields: [loanId], references: [id], onDelete: Restrict)
+  initiatedById  String
+  initiatedBy    User                 @relation("PaymentAttemptBy", fields: [initiatedById], references: [id])
+  requestHash    String
+  requestBody    Json
+  status         PaymentAttemptStatus @default(PENDING)
+  failureReason  String?
+  ledgerEntryId  String?              @unique
+  committedAt    DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@index([loanId, status])
+  @@index([initiatedById, status])
+}
+
+/// Append-only chain of physical collateral hand-offs.
+model CustodyEvent {
+  id               String           @id @default(cuid())
+  assetId          String
+  asset            ApplicationAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  loanId           String?
+  loan             Loan?            @relation(fields: [loanId], references: [id], onDelete: SetNull)
+  type             CustodyEventType
+  businessDate     DateTime
+  location         String?
+  inspectionResult String?
+  conditionNote    String?
+  reason           String?
+  recordedById     String
+  recordedBy       User             @relation("CustodyRecordedBy", fields: [recordedById], references: [id])
+  createdAt        DateTime         @default(now())
+
+  @@index([assetId, createdAt])
 }
 
 model ApplicationAsset {
@@ -261,13 +472,16 @@ model ApplicationAsset {
   category      String?
   identifier    String?
   sortOrder     Int      @default(0)
+  status        AssetStatus @default(PROPOSED)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   photos     AssetPhoto[]
   valuations Valuation[]
+  custody    CustodyEvent[]
 
   @@index([applicationId])
+  @@index([status])
 }
 
 model AssetPhoto {

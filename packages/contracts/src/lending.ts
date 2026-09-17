@@ -177,3 +177,363 @@ export type ApplicationDetail = ApplicationSummary & {
   } | null;
   readiness: ReadinessItem[];
 };
+
+/* ------------------------------------------------------------------ *
+ * Batch 04: approval, collateral custody, loans and money movements
+ * ------------------------------------------------------------------ */
+
+export const LoanStatus = {
+  APPROVED_UNFUNDED: "APPROVED_UNFUNDED",
+  ACTIVE: "ACTIVE",
+  SETTLED: "SETTLED",
+  DEFAULTED: "DEFAULTED",
+} as const;
+export type LoanStatus = (typeof LoanStatus)[keyof typeof LoanStatus];
+
+export const AssetStatus = {
+  PROPOSED: "PROPOSED",
+  VALUED: "VALUED",
+  STORED: "STORED",
+  RETURNED: "RETURNED",
+  SOLD: "SOLD",
+} as const;
+export type AssetStatus = (typeof AssetStatus)[keyof typeof AssetStatus];
+
+export const CustodyEventType = {
+  RECEIVED: "RECEIVED",
+  INSPECTED: "INSPECTED",
+  STORED: "STORED",
+  RELOCATED: "RELOCATED",
+  RETURNED: "RETURNED",
+  SOLD: "SOLD",
+} as const;
+export type CustodyEventType = (typeof CustodyEventType)[keyof typeof CustodyEventType];
+
+export const PaymentAttemptStatus = {
+  PENDING: "PENDING",
+  COMMITTED: "COMMITTED",
+  REJECTED: "REJECTED",
+  /**
+   * A timeout is never proof that no money moved, so UNKNOWN is deliberately
+   * distinct from REJECTED: only a known-unposted attempt may be retried.
+   */
+  UNKNOWN: "UNKNOWN",
+} as const;
+export type PaymentAttemptStatus =
+  (typeof PaymentAttemptStatus)[keyof typeof PaymentAttemptStatus];
+
+export const PaymentMethod = {
+  CASH: "CASH",
+  BANK_TRANSFER: "BANK_TRANSFER",
+  CHEQUE: "CHEQUE",
+  MOBILE_WALLET: "MOBILE_WALLET",
+} as const;
+export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
+
+export const PAYMENT_METHODS = Object.values(PaymentMethod) as PaymentMethod[];
+
+/** Cash needs no external reference; every other method does. */
+export const METHOD_REQUIRES_REFERENCE: Record<PaymentMethod, boolean> = {
+  CASH: false,
+  BANK_TRANSFER: true,
+  CHEQUE: true,
+  MOBILE_WALLET: true,
+};
+
+/** Business dates are calendar dates, never instants. */
+const businessDateField = (label: string) =>
+  z.preprocess(
+    (value) => (typeof value === "string" ? value.trim() : value),
+    z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, `${label} must be a YYYY-MM-DD date`)
+      .refine((value) => !Number.isNaN(Date.parse(value)), `${label} is not a valid date`),
+  );
+
+const moneyField = (label: string) =>
+  z
+    .string()
+    .trim()
+    .regex(/^\d+(\.\d{1,2})?$/, `${label} must be an amount with at most two decimals`);
+
+const paymentMethodField = z.enum([
+  PaymentMethod.CASH,
+  PaymentMethod.BANK_TRANSFER,
+  PaymentMethod.CHEQUE,
+  PaymentMethod.MOBILE_WALLET,
+]);
+
+/** Rejects a method that requires an external reference when none was given. */
+const requireReference = (
+  value: { method?: PaymentMethod; externalReference?: string | null },
+  context: z.RefinementCtx,
+) => {
+  if (!value.method) return;
+  if (METHOD_REQUIRES_REFERENCE[value.method] && !value.externalReference?.trim()) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["externalReference"],
+      message: "An external reference is required for this method",
+    });
+  }
+};
+
+export const decisionSchema = z
+  .object({
+    expectedVersion: z.number().int().positive(),
+    decision: z.enum(["approve", "decline"]),
+    reviewed: z.boolean().optional(),
+    reason: z.string().trim().max(1000).optional().nullable(),
+    publicNote: z.string().trim().max(1000).optional().nullable(),
+  })
+  .superRefine((value, context) => {
+    if (value.decision === "approve" && value.reviewed !== true) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["reviewed"],
+        message: "Confirm the review checklist before approving",
+      });
+    }
+    if (value.decision === "decline" && !value.reason) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["reason"],
+        message: "A reason is required to decline",
+      });
+    }
+  });
+
+export type DecisionInput = z.infer<typeof decisionSchema>;
+
+export const intakeSchema = z
+  .object({
+    expectedVersion: z.number().int().positive(),
+    receivedOn: businessDateField("Received date"),
+    inspectedOn: businessDateField("Inspection date"),
+    inspectionResult: z.enum(["PASS", "FAIL"]),
+    inspectionNote: z.string().trim().max(2000).optional().nullable(),
+    location: z.string().trim().max(200).optional().nullable(),
+    conditionNote: z.string().trim().max(2000).optional().nullable(),
+  })
+  .superRefine((value, context) => {
+    // A failed inspection must say why and can never open the loan for funding.
+    if (value.inspectionResult === "FAIL" && !value.inspectionNote?.trim()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["inspectionNote"],
+        message: "Explain what did not match the valuation",
+      });
+    }
+    if (value.inspectionResult === "PASS" && !value.location?.trim()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["location"],
+        message: "A storage location is required to store the asset",
+      });
+    }
+  });
+
+export type IntakeInput = z.infer<typeof intakeSchema>;
+
+export const custodyUpdateSchema = z.object({
+  expectedVersion: z.number().int().positive(),
+  location: z.string().trim().min(1, "Storage location is required").max(200),
+  conditionNote: z.string().trim().max(2000).optional().nullable(),
+  reason: z.string().trim().min(1, "A reason is required").max(1000),
+});
+
+export type CustodyUpdateInput = z.infer<typeof custodyUpdateSchema>;
+
+export const disbursementSchema = z
+  .object({
+    expectedVersion: z.number().int().positive(),
+    businessDate: businessDateField("Business date"),
+    method: paymentMethodField,
+    externalReference: z.string().trim().max(200).optional().nullable(),
+    note: z.string().trim().max(2000).optional().nullable(),
+  })
+  .superRefine(requireReference);
+
+export type DisbursementInput = z.infer<typeof disbursementSchema>;
+
+export const repaymentSchema = z
+  .object({
+    expectedVersion: z.number().int().positive(),
+    amount: moneyField("Amount"),
+    businessDate: businessDateField("Business date"),
+    method: paymentMethodField,
+    externalReference: z.string().trim().max(200).optional().nullable(),
+    note: z.string().trim().max(2000).optional().nullable(),
+  })
+  .superRefine(requireReference);
+
+export type RepaymentInput = z.infer<typeof repaymentSchema>;
+
+export const quoteQuerySchema = z.object({
+  type: z.literal("repayment").optional(),
+  amount: moneyField("Amount"),
+  businessDate: businessDateField("Business date").optional(),
+});
+
+export type QuoteQuery = z.infer<typeof quoteQuerySchema>;
+
+export type AllowedAction = {
+  id: string;
+  label: string;
+  allowed: boolean;
+  /** Why it is not allowed; present only when allowed is false. */
+  reason?: string;
+};
+
+export type ScheduleEntryView = {
+  id: string;
+  number: number;
+  dueDate: string;
+  amount: string;
+  paidAmount: string;
+  outstanding: string;
+  status: "PENDING" | "PAID";
+  overdue: boolean;
+};
+
+export type LoanSummary = {
+  id: string;
+  number: string;
+  status: LoanStatus;
+  borrowerId: string;
+  borrowerName: string | null;
+  applicationId: string;
+  applicationNumber: string | null;
+  principal: string;
+  balance: string;
+  frequency: string;
+  periods: number;
+  firstPaymentDate: string;
+  disbursedAt: string | null;
+  settledAt: string | null;
+  defaultedAt: string | null;
+  updatedAt: string;
+};
+
+export type LoanDetail = LoanSummary & {
+  version: number;
+  interestMethod: string | null;
+  policy: string;
+  policyConfigured: boolean;
+  overdueAmount: string;
+  nextDueDate: string | null;
+  schedule: ScheduleEntryView[];
+  allowedActions: AllowedAction[];
+};
+
+export type CustodyEventView = {
+  id: string;
+  type: CustodyEventType;
+  businessDate: string;
+  location: string | null;
+  inspectionResult: string | null;
+  conditionNote: string | null;
+  reason: string | null;
+  recordedBy: string | null;
+  createdAt: string;
+};
+
+export type AssetView = {
+  id: string;
+  applicationId: string;
+  applicationNumber: string | null;
+  loanId: string | null;
+  loanNumber: string | null;
+  name: string;
+  description: string;
+  condition: string;
+  category: string | null;
+  identifier: string | null;
+  status: AssetStatus;
+  version: number;
+  photoCount: number;
+  valuationAmount: string | null;
+  valuationStatus: ValuationStatus | null;
+  storageLocation: string | null;
+  receivedOn: string | null;
+  inspectedOn: string | null;
+  inspectionResult: string | null;
+  custody: CustodyEventView[];
+  allowedActions: AllowedAction[];
+};
+
+export type ReadinessCheck = {
+  id: string;
+  label: string;
+  complete: boolean;
+  detail?: string;
+};
+
+export type DisbursementReadiness = {
+  ready: boolean;
+  items: ReadinessCheck[];
+};
+
+export type ReceiptView = {
+  id: string;
+  number: string;
+  loanId: string;
+  loanNumber: string | null;
+  type: "DISBURSEMENT" | "REPAYMENT" | "SALE_RECEIPT";
+  amount: string;
+  businessDate: string;
+  method: string;
+  externalReference: string | null;
+  note: string | null;
+  balanceAfter: string;
+  issuedBy: string | null;
+  createdAt: string;
+  summary: Record<string, unknown>;
+};
+
+export type TransactionView = {
+  id: string;
+  loanId: string;
+  loanNumber: string | null;
+  borrowerName: string | null;
+  type: "DISBURSEMENT" | "REPAYMENT" | "SALE_RECEIPT";
+  amount: string;
+  businessDate: string;
+  method: string;
+  externalReference: string | null;
+  note: string | null;
+  postedBy: string | null;
+  createdAt: string;
+  receiptId: string | null;
+  receiptNumber: string | null;
+};
+
+export type PaymentAttemptView = {
+  id: string;
+  type: "DISBURSEMENT" | "REPAYMENT";
+  status: PaymentAttemptStatus;
+  loanId: string;
+  loanNumber: string | null;
+  requestBody: Record<string, unknown>;
+  failureReason: string | null;
+  ledgerEntryId: string | null;
+  receiptId: string | null;
+  committedAt: string | null;
+  createdAt: string;
+};
+
+export type RepaymentQuoteView = {
+  policy: string;
+  amount: string;
+  settled: boolean;
+  balanceBefore: string;
+  balanceAfter: string;
+  allocations: Array<{
+    entryId: string;
+    number: number;
+    amount: string;
+    paidAmountAfter: string;
+  }>;
+  schedule: ScheduleEntryView[];
+};
+
