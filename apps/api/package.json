@@ -20,6 +20,7 @@
     "@nestjs/swagger": "11.2.1",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
+    "@prisma/client-runtime-utils": "7.10.0",
     "@toumua/contracts": "workspace:*",
     "argon2": "0.43.1",
     "cookie-parser": "1.4.7",
