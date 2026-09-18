@@ -30,8 +30,8 @@ export function Navbar() {
   return (
     <>
       <header className="sticky top-0 z-40 bg-white">
-        <div className="marketing-wrap grid h-[72px] grid-cols-[1fr_auto] items-center md:grid-cols-[1fr_auto_1fr]">
-          <MarketingLogo />
+        <div className="marketing-wrap grid h-[80px] grid-cols-[1fr_auto] items-center md:grid-cols-[1fr_auto_1fr]">
+          <MarketingLogo className="justify-self-start" />
 
           <nav className="hidden items-center gap-8 md:flex" aria-label="Main">
             <div

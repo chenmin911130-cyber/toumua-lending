@@ -6,17 +6,20 @@ type MarkProps = {
 };
 
 export function BrandMark({ light, className = "" }: MarkProps) {
-  const tile = light ? "rgba(255,255,255,0.16)" : "#075E45";
+  const tile = light ? "rgba(255,255,255,0.18)" : "#075E45";
   const ink = "#ffffff";
-  const cut = light ? "rgba(16,24,40,0.22)" : "#075E45";
 
   return (
     <svg viewBox="0 0 36 36" className={className || "brand-mark"} aria-hidden>
-      <rect width="36" height="36" rx="10" fill={tile} />
-      <path d="M7.2 15.1c0-.7.6-1.3 1.3-1.3h19c.7 0 1.3.6 1.3 1.3v1.2H7.2z" fill={ink} />
-      <path d="M11.1 16.3h13.8v9.3a1.7 1.7 0 0 1-1.7 1.7H12.8a1.7 1.7 0 0 1-1.7-1.7z" fill={ink} />
-      <rect x="13.6" y="18.4" width="3.5" height="3.5" rx="0.7" fill={cut} />
-      <path d="M20.3 21.6h3.3v5.7h-3.3z" fill={cut} />
+      <circle cx="18" cy="18" r="18" fill={tile} />
+      <path fill={ink} d="M10.6 22.2V16.7L18 10.2l4.2 3.7V10.4h2.4v6.3l.8.7v4.8H10.6Z" />
+      <path
+        d="M7 25.3c3.4-2.4 6.5 2 10.6-.5 4-2.4 6.8 2.2 11.3-.2"
+        fill="none"
+        stroke={ink}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
