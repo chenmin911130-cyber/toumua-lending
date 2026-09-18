@@ -11,7 +11,7 @@
 | `/forgot-password` | A01 | Implemented |
 | `/reset-password` | A07 | Implemented |
 | `/accept-invitation` | A06 | Implemented |
-| `/help` | C07 | Implemented (demo office mailbox `office@toumua.lending`) |
+| `/help` | C07 | Implemented (demo office mailbox `office@toumua.nz`) |
 | `/account` | A02 | Implemented |
 | `/customer` | C10 when no loans | Implemented empty |
 | `/customer/applications` | C04 | List + empty state |

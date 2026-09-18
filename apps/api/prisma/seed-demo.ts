@@ -20,9 +20,9 @@ async function main() {
       argon2.hash(password, { type: argon2.argon2id }),
     );
     console.log("Demo accounts ready. Password for all: 123456");
-    console.log("  Admin     admin@toumua.lending    /staff/login");
-    console.log("  Staff     staff@toumua.lending    /staff/login");
-    console.log("  Customer  sarah.tama@toumua.lending   /login");
+    console.log("  Admin     admin@toumua.nz    /staff/login");
+    console.log("  Staff     staff@toumua.nz    /staff/login");
+    console.log("  Customer  sarah.tama@toumua.nz   /login");
     console.log(`  Customers seeded: ${DEMO_CUSTOMERS.length}`);
     console.log(`  Shared password: ${DEMO_PASSWORD}`);
   } finally {

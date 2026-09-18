@@ -21,7 +21,7 @@ export class PublicController {
     };
     return {
       phone: value("CONTACT_PHONE", "021 150 1502"),
-      email: value("CONTACT_EMAIL", "office@toumua.lending"),
+      email: value("CONTACT_EMAIL", "office@toumua.nz"),
       address: value("CONTACT_ADDRESS", "Auckland, New Zealand"),
       hours: value("CONTACT_HOURS", "Monday–Friday, 9:00am–5:00pm NZST"),
       note: value(

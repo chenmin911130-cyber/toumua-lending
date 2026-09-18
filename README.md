@@ -27,10 +27,10 @@ pnpm dev
 
 Demo logins (password `123456` for all). Seed or refresh with `pnpm db:seed-demo`:
 
-- Customer: `sarah.tama@toumua.lending` at `/login`
-- Staff: `staff@toumua.lending` at `/staff/login` — simple files up to $3,000
-- Manager: `manager@toumua.lending` at `/staff/login` — larger or complex files, staff accounts
-- Admin: `admin@toumua.lending` at `/staff/login`
+- Customer: `sarah.tama@toumua.nz` at `/login`
+- Staff: `staff@toumua.nz` at `/staff/login` — simple files up to $3,000
+- Manager: `manager@toumua.nz` at `/staff/login` — larger or complex files, staff accounts
+- Admin: `admin@toumua.nz` at `/staff/login`
 
 Public registration only creates Customer accounts.
 
@@ -63,4 +63,4 @@ Deploy as a **new** Railway project with a **new** Postgres plugin (do not point
 
 - Do not migrate or overwrite the existing Railway database.
 - Official interest, fees, and default rules are not implemented (client policy still required).
-- Demo office mailbox is `office@toumua.lending` / `noreply@toumua.lending`. Real SMTP still needs a purchased domain.
+- Demo office mailbox is `office@toumua.nz` / `noreply@toumua.nz`. Real SMTP still needs a purchased domain.

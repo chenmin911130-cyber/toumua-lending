@@ -2,74 +2,80 @@ import { Permission, normalizeEmail } from "@toumua/contracts";
 import { Prisma, PrismaClient } from "../generated/prisma";
 
 export const DEMO_PASSWORD = "123456";
+export const DEMO_EMAIL_DOMAIN = "toumua.nz";
+const LEGACY_EMAIL_DOMAIN = "toumua.lending";
+
+function demoEmail(localPart: string) {
+  return `${localPart}@${DEMO_EMAIL_DOMAIN}`;
+}
 
 export const DEMO_CUSTOMERS = [
   {
     name: "Sarah Tama",
-    email: "sarah.tama@toumua.lending",
+    email: demoEmail("sarah.tama"),
     phone: "021 150 1001",
     address: "12 Queen Street, Auckland 1010",
     notes: "Personal loan for home improvements",
   },
   {
     name: "James Latu",
-    email: "james.latu@toumua.lending",
+    email: demoEmail("james.latu"),
     phone: "021 150 1002",
     address: "88 Lambton Quay, Wellington 6011",
     notes: "Vehicle finance enquiry",
   },
   {
     name: "Mere Kaho",
-    email: "mere.kaho@toumua.lending",
+    email: demoEmail("mere.kaho"),
     phone: "021 150 1003",
     address: "44 Cashel Street, Christchurch 8011",
     notes: "Business finance follow-up",
   },
   {
     name: "Ana Folau",
-    email: "ana.folau@toumua.lending",
+    email: demoEmail("ana.folau"),
     phone: "021 150 1004",
     address: "9 Victoria Street, Hamilton 3204",
     notes: "Personal loan, first-time borrower",
   },
   {
     name: "David Chen",
-    email: "david.chen@toumua.lending",
+    email: demoEmail("david.chen"),
     phone: "021 150 1005",
     address: "210 Dominion Road, Mount Eden, Auckland 1024",
     notes: "Used vehicle finance",
   },
   {
     name: "Sione Tapu",
-    email: "sione.tapu@toumua.lending",
+    email: demoEmail("sione.tapu"),
     phone: "021 150 1006",
     address: "31 Great South Road, Manukau 2104",
     notes: "Family vehicle replacement",
   },
   {
     name: "Lisa Wong",
-    email: "lisa.wong@toumua.lending",
+    email: demoEmail("lisa.wong"),
     phone: "021 150 1007",
     address: "15 Courtenay Place, Wellington 6011",
     notes: "Short-term personal loan",
   },
   {
     name: "Toma Vaka",
-    email: "toma.vaka@toumua.lending",
+    email: demoEmail("toma.vaka"),
     phone: "021 150 1008",
     address: "6 Devonport Road, Tauranga 3110",
     notes: "Small business working capital",
   },
   {
     name: "Rachel Ngata",
-    email: "rachel.ngata@toumua.lending",
+    email: demoEmail("rachel.ngata"),
     phone: "021 150 1009",
     address: "27 George Street, Dunedin 9016",
     notes: "Home repair loan",
   },
   {
     name: "Peter Ioane",
-    email: "peter.ioane@toumua.lending",
+    email: demoEmail("peter.ioane"),
     phone: "021 150 1010",
     address: "50 The Square, Palmerston North 4410",
     notes: "Personal loan, referred by Sarah Tama",
@@ -103,11 +109,18 @@ async function upsertUser(
   },
 ) {
   const emailNormalized = normalizeEmail(input.email);
-  const existing = await prisma.user.findUnique({ where: { emailNormalized } });
+  const legacyEmail = input.email.replace(`@${DEMO_EMAIL_DOMAIN}`, `@${LEGACY_EMAIL_DOMAIN}`);
+  const existing =
+    (await prisma.user.findUnique({ where: { emailNormalized } })) ??
+    (legacyEmail !== input.email
+      ? await prisma.user.findUnique({ where: { emailNormalized: normalizeEmail(legacyEmail) } })
+      : null);
   const user = existing
     ? await prisma.user.update({
         where: { id: existing.id },
         data: {
+          email: input.email,
+          emailNormalized,
           name: input.name,
           passwordHash: input.passwordHash,
           role: input.role,
@@ -147,7 +160,7 @@ export async function seedDemoAccounts(
   const passwordHash = await hashPassword(DEMO_PASSWORD);
 
   const admin = await upsertUser(prisma, {
-    email: "admin@toumua.lending",
+    email: demoEmail("admin"),
     name: "Workspace Admin",
     passwordHash,
     role: null,
@@ -169,14 +182,14 @@ export async function seedDemoAccounts(
   }
 
   const staff = await upsertUser(prisma, {
-    email: "staff@toumua.lending",
+    email: demoEmail("staff"),
     name: "Louise Staff",
     passwordHash,
     role: "LOAN_OFFICER",
   });
 
   await upsertUser(prisma, {
-    email: "manager@toumua.lending",
+    email: demoEmail("manager"),
     name: "Morgan Manager",
     passwordHash,
     role: "MANAGER",
@@ -190,8 +203,12 @@ export async function seedDemoAccounts(
       role: "CUSTOMER",
     });
 
+    const legacyBorrowerEmail = customer.email.replace(
+      `@${DEMO_EMAIL_DOMAIN}`,
+      `@${LEGACY_EMAIL_DOMAIN}`,
+    );
     let borrower = await prisma.borrower.findFirst({
-      where: { email: customer.email },
+      where: { email: { in: [customer.email, legacyBorrowerEmail] } },
     });
     if (!borrower) {
       borrower = await prisma.borrower.create({
@@ -210,6 +227,7 @@ export async function seedDemoAccounts(
         where: { id: borrower.id },
         data: {
           name: customer.name,
+          email: customer.email,
           phone: customer.phone,
           address: customer.address,
           notes: customer.notes,
