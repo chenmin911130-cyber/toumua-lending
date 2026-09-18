@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "tsx watch --exclude '../../node_modules/**' --exclude '../../../node_modules/**' --env-file=../../.env src/main.ts",
     "start:e2e": "tsx --env-file=../../.env src/main.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && cp -R src/generated dist/generated",
     "start": "node dist/main.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
