@@ -11,6 +11,8 @@
     "dev:web": "pnpm --filter @toumua/web dev",
     "dev:desktop": "pnpm --filter @toumua/desktop dev",
     "build": "pnpm --filter @toumua/contracts build && pnpm --filter @toumua/api build && pnpm --filter @toumua/web build && pnpm --filter @toumua/desktop build",
+    "build:api": "pnpm db:generate && pnpm --filter @toumua/contracts build && pnpm --filter @toumua/api build",
+    "build:web": "pnpm --filter @toumua/contracts build && pnpm --filter @toumua/web build",
     "test": "pnpm --filter @toumua/api test && pnpm --filter @toumua/e2e test",
     "test:api": "pnpm --filter @toumua/api test",
     "test:e2e": "pnpm --filter @toumua/e2e test",
