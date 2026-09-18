@@ -12,7 +12,7 @@ import {
   formatCurrency,
 } from "./loan-calculator";
 
-const STORAGE_KEY = "toumua-calculator-pos-v3";
+const STORAGE_KEY = "toumua-calculator-pos-v4";
 
 type Position = { x: number; y: number };
 
@@ -159,7 +159,7 @@ export function LoanCalculator({ boundsRef }: Props) {
   return (
     <div
       ref={cardRef}
-      className={`relative z-20 mx-auto w-full max-w-[420px] xl:absolute xl:right-12 xl:bottom-10 xl:mx-0 xl:w-[360px] ${dragging ? "select-none" : ""}`}
+      className={`relative z-20 mx-auto w-full max-w-[420px] xl:absolute xl:right-[274px] xl:top-[168px] xl:mx-0 xl:w-[360px] ${dragging ? "select-none" : ""}`}
       style={placement}
       onPointerDown={onCardPointerDown}
       onPointerMove={(event) => moveListenerRef.current(event.nativeEvent)}

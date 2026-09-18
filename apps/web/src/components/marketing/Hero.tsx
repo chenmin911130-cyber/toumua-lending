@@ -12,7 +12,7 @@ export function Hero() {
       <div className="relative min-h-[560px] overflow-hidden lg:min-h-[720px]">
         <div className="pointer-events-none absolute inset-0">
           <img
-            src="/images/hero-house-1280.webp"
+            src="/images/hero-house-1536.webp"
             srcSet="/images/hero-house-768.webp 768w, /images/hero-house-1280.webp 1280w, /images/hero-house-1536.webp 1536w"
             sizes="100vw"
             width={1536}

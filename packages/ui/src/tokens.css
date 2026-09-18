@@ -300,7 +300,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: url("/images/hero-house-1280.webp") 68% 42% / cover no-repeat;
+  background: url("/images/hero-house-1536.webp") 68% 42% / cover no-repeat;
 }
 .auth-brand::after {
   content: "";
