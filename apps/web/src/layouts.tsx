@@ -13,11 +13,21 @@ const SIMPLE_AUTH = new Set([
   "/verify-email/pending",
 ]);
 
+function useSignOut(staff?: boolean) {
+  const { clearProtectedCache } = useAuth();
+  const navigate = useNavigate();
+  return async () => {
+    await api("/auth/logout", { method: "POST" });
+    clearProtectedCache();
+    navigate(staff ? "/staff/login" : "/login");
+  };
+}
+
 function AccountMenu({ staff }: { staff?: boolean }) {
-  const { user, clearProtectedCache } = useAuth();
+  const { user } = useAuth();
+  const signOut = useSignOut(staff);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
@@ -33,12 +43,6 @@ function AccountMenu({ staff }: { staff?: boolean }) {
       window.removeEventListener("keydown", onKey);
     };
   }, []);
-
-  async function signOut() {
-    await api("/auth/logout", { method: "POST" });
-    clearProtectedCache();
-    navigate(staff ? "/staff/login" : "/login");
-  }
 
   if (!user) return null;
   return (
@@ -74,6 +78,8 @@ export function PublicLayout() {
 
   if (split) return <Outlet />;
 
+  if (location.pathname === "/") return <Outlet />;
+
   if (location.pathname === "/help" && user && !user.isStaff && !user.restrictedSession) {
     return (
       <div>
@@ -83,8 +89,8 @@ export function PublicLayout() {
             <nav className="nav-links">
               <NavLink to="/customer" end data-control-id="GLOBAL-02">My overview</NavLink>
               <NavLink to="/customer/applications">Application</NavLink>
-              <NavLink to="/customer/loans">Repayments</NavLink>
-              <NavLink to="/customer/loans">My security</NavLink>
+              <NavLink to="/customer/loans">My loans</NavLink>
+              <NavLink to="/notifications">Notifications</NavLink>
               <NavLink to="/help">Help</NavLink>
             </nav>
           </div>
@@ -153,8 +159,8 @@ export function CustomerLayout() {
           <nav className="nav-links">
             <NavLink to="/customer" end data-control-id="GLOBAL-02">My overview</NavLink>
             <NavLink to="/customer/applications">Application</NavLink>
-            <NavLink to="/customer/loans">Repayments</NavLink>
-            <NavLink to="/customer/loans">My security</NavLink>
+            <NavLink to="/customer/loans">My loans</NavLink>
+            <NavLink to="/notifications">Notifications</NavLink>
             <NavLink to="/help">Help</NavLink>
           </nav>
         </div>
@@ -184,6 +190,7 @@ const STAFF_NAV = [
 export function StaffLayout() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const signOut = useSignOut(true);
 
   useEffect(() => {
     if (loading) return;
@@ -228,12 +235,25 @@ export function StaffLayout() {
               <NavLink to="/staff/admin/activity">Activity log</NavLink>
             ) : null}
             <NavLink to="/account">Settings</NavLink>
+            <NavLink to="/notifications">Notifications</NavLink>
+            <button
+              type="button"
+              className="staff-nav-button"
+              data-control-id="GLOBAL-07"
+              onClick={() => void signOut()}
+            >
+              Sign out
+            </button>
           </nav>
           <AccountMenu staff />
           <div className="staff-sub" style={{ padding: "8px 12px 0" }}>{roleLabel(user.role)}</div>
         </div>
       </aside>
       <div className="staff-main">
+        <header className="staff-mobile-bar">
+          <Logo to="/staff" />
+          <AccountMenu staff />
+        </header>
         <Outlet />
       </div>
     </div>

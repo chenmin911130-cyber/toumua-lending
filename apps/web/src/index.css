@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #075e45;
+  --color-primary-hover: #064a38;
+  --color-text: #101828;
+  --color-text-secondary: #475467;
+  --color-text-muted: #667085;
+  --color-border: #eaecf0;
+  --color-bg-warm: #f7f7f3;
+  --color-bg-green: #f0f6f2;
+  --color-bg-green-icon: #e8f3ed;
+
+  --font-sans: Inter, "Noto Sans", "Segoe UI", sans-serif;
+
+  --radius-button: 10px;
+  --radius-card: 14px;
+  --radius-card-lg: 16px;
+
+  --shadow-card: 0 10px 30px rgba(16, 24, 40, 0.08);
+  --shadow-card-hover: 0 16px 40px rgba(16, 24, 40, 0.12);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+.loan-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: #075e45;
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.18);
+  cursor: pointer;
+}
+
+.loan-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: #075e45;
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.18);
+  cursor: pointer;
+}

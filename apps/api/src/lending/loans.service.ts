@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import {
   AssetStatus,
   CursorListQuery,
+  CustomerLoanDetail,
   DefaultInput,
   LedgerEntryType,
   LoanDetail,
@@ -9,6 +10,7 @@ import {
   LoanSummary,
   QuoteQuery,
   ScheduleEntryView,
+  ValuationStatus,
 } from "@toumua/contracts";
 import { AuthUser } from "../auth/session";
 import { conflict, forbidden, notFound } from "../common/http";
@@ -187,7 +189,7 @@ export class LoansService {
     };
   }
 
-  async getForCustomer(userId: string, id: string): Promise<LoanDetail> {
+  async getForCustomer(userId: string, id: string): Promise<CustomerLoanDetail> {
     const link = await this.prisma.borrowerAccountLink.findFirst({
       where: { userId, status: "ACTIVE" },
     });
@@ -198,10 +200,37 @@ export class LoansService {
         borrowerId: link.borrowerId,
         status: { in: [LoanStatus.ACTIVE, LoanStatus.SETTLED, LoanStatus.DEFAULTED] },
       },
-      include: this.loanInclude(),
+      include: this.customerLoanInclude(),
     });
     if (!loan) throw notFound("Loan not found");
-    return this.toDetail(loan);
+    const receipts = await this.prisma.receipt.findMany({
+      where: { loanId: loan.id },
+      orderBy: { createdAt: "desc" },
+    });
+    return this.toCustomerDetail(loan, receipts);
+  }
+
+  private customerLoanInclude() {
+    return {
+      borrower: { select: { name: true } },
+      application: {
+        select: {
+          number: true,
+          assets: {
+            orderBy: { sortOrder: "asc" as const },
+            include: {
+              photos: { select: { id: true } },
+              valuations: {
+                where: { status: ValuationStatus.COMPLETED },
+                orderBy: { version: "desc" as const },
+                take: 1,
+              },
+            },
+          },
+        },
+      },
+      schedule: { orderBy: { number: "asc" as const } },
+    };
   }
 
   private loanInclude() {
@@ -238,7 +267,7 @@ export class LoansService {
     updatedAt: Date;
     borrower?: { name: string } | null;
     application?: { number: string } | null;
-    schedule: Array<{ amount: string; paidAmount: string }>;
+    schedule: Array<{ amount: string; paidAmount: string; dueDate?: Date; status?: string }>;
   }): LoanSummary {
     const balance =
       row.status === LoanStatus.APPROVED_UNFUNDED
@@ -251,6 +280,7 @@ export class LoansService {
               paidAmount: entry.paidAmount,
             })),
           );
+    const nextDue = row.schedule.find((entry) => entry.status === "PENDING");
     return {
       id: row.id,
       number: row.number,
@@ -268,6 +298,108 @@ export class LoansService {
       settledAt: row.settledAt?.toISOString() ?? null,
       defaultedAt: row.defaultedAt?.toISOString() ?? null,
       updatedAt: row.updatedAt.toISOString(),
+      nextDueDate: nextDue?.dueDate?.toISOString() ?? null,
+    };
+  }
+
+  private toCustomerDetail(
+    loan: {
+      id: string;
+      number: string;
+      status: string;
+      principal: string;
+      frequency: string;
+      periods: number;
+      firstPaymentDate: Date;
+      disbursedAt: Date | null;
+      settledAt: Date | null;
+      defaultedAt: Date | null;
+      defaultReason?: string | null;
+      borrower?: { name: string } | null;
+      application?: {
+        number: string;
+        assets: Array<{
+          id: string;
+          name: string;
+          description: string;
+          condition: string;
+          category: string | null;
+          identifier: string | null;
+          status: string;
+          photos: Array<{ id: string }>;
+          valuations: Array<{ amount: string | null; status: string }>;
+        }>;
+      } | null;
+      schedule: Array<{
+        id: string;
+        number: number;
+        dueDate: Date;
+        amount: string;
+        paidAmount: string;
+        status: string;
+      }>;
+    },
+    receipts: Array<{
+      id: string;
+      number: string;
+      createdAt: Date;
+      summary: unknown;
+    }>,
+  ): CustomerLoanDetail {
+    const summary = this.toSummary({
+      ...loan,
+      borrowerId: "",
+      applicationId: "",
+      updatedAt: new Date(),
+      schedule: loan.schedule,
+    });
+    const schedule = loan.schedule.map((entry) => this.scheduleView(entry));
+    const overdueAmount = schedule
+      .filter((entry) => entry.overdue)
+      .reduce((acc, entry) => subtract(acc, `-${entry.outstanding}`), "0.00");
+    const assets =
+      loan.application?.assets.map((asset) => ({
+        id: asset.id,
+        name: asset.name,
+        description: asset.description,
+        condition: asset.condition,
+        category: asset.category,
+        identifier: asset.identifier,
+        status: asset.status as CustomerLoanDetail["assets"][number]["status"],
+        valuationAmount: asset.valuations[0]?.amount ?? null,
+        valuationStatus: (asset.valuations[0]?.status ?? null) as CustomerLoanDetail["assets"][number]["valuationStatus"],
+        photoCount: asset.photos.length,
+      })) ?? [];
+    return {
+      id: summary.id,
+      number: summary.number,
+      status: summary.status,
+      borrowerName: summary.borrowerName,
+      applicationNumber: summary.applicationNumber,
+      principal: summary.principal,
+      balance: summary.balance,
+      frequency: summary.frequency,
+      periods: summary.periods,
+      firstPaymentDate: summary.firstPaymentDate,
+      disbursedAt: summary.disbursedAt,
+      settledAt: summary.settledAt,
+      defaultedAt: summary.defaultedAt,
+      defaultReason: loan.defaultReason ?? null,
+      overdueAmount,
+      nextDueDate: summary.nextDueDate,
+      schedule,
+      assets,
+      receipts: receipts.map((receipt) => {
+        const summaryJson = (receipt.summary ?? {}) as Record<string, unknown>;
+        return {
+          id: receipt.id,
+          number: receipt.number,
+          type: String(summaryJson.type ?? "RECEIPT"),
+          amount: String(summaryJson.amount ?? "0.00"),
+          businessDate: String(summaryJson.businessDate ?? receipt.createdAt.toISOString().slice(0, 10)),
+          createdAt: receipt.createdAt.toISOString(),
+        };
+      }),
     };
   }
 
@@ -279,7 +411,6 @@ export class LoansService {
     const overdueAmount = schedule
       .filter((entry) => entry.overdue)
       .reduce((acc, entry) => subtract(acc, `-${entry.outstanding}`), "0.00");
-    const nextDue = schedule.find((entry) => entry.status === "PENDING");
     const canDisburse =
       loan.status === LoanStatus.APPROVED_UNFUNDED &&
       loan.application.assets.every((asset) => asset.status === AssetStatus.STORED) &&
@@ -297,7 +428,6 @@ export class LoansService {
       policyConfigured: loan.policyConfigured,
       defaultReason: loan.defaultReason,
       overdueAmount,
-      nextDueDate: nextDue?.dueDate ?? null,
       schedule,
       allowedActions: [
         {

@@ -425,6 +425,51 @@ export type LoanSummary = {
   settledAt: string | null;
   defaultedAt: string | null;
   updatedAt: string;
+  nextDueDate: string | null;
+};
+
+export type CustomerAssetView = {
+  id: string;
+  name: string;
+  description: string;
+  condition: string;
+  category: string | null;
+  identifier: string | null;
+  status: AssetStatus;
+  valuationAmount: string | null;
+  valuationStatus: ValuationStatus | null;
+  photoCount: number;
+};
+
+export type CustomerReceiptSummary = {
+  id: string;
+  number: string;
+  type: string;
+  amount: string;
+  businessDate: string;
+  createdAt: string;
+};
+
+export type CustomerLoanDetail = {
+  id: string;
+  number: string;
+  status: LoanStatus;
+  borrowerName: string | null;
+  applicationNumber: string | null;
+  principal: string;
+  balance: string;
+  frequency: string;
+  periods: number;
+  firstPaymentDate: string;
+  disbursedAt: string | null;
+  settledAt: string | null;
+  defaultedAt: string | null;
+  defaultReason?: string | null;
+  overdueAmount: string;
+  nextDueDate: string | null;
+  schedule: ScheduleEntryView[];
+  assets: CustomerAssetView[];
+  receipts: CustomerReceiptSummary[];
 };
 
 export type LoanDetail = LoanSummary & {
@@ -434,7 +479,6 @@ export type LoanDetail = LoanSummary & {
   policyConfigured: boolean;
   defaultReason?: string | null;
   overdueAmount: string;
-  nextDueDate: string | null;
   schedule: ScheduleEntryView[];
   allowedActions: AllowedAction[];
 };

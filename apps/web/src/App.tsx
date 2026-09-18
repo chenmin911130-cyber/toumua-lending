@@ -5,7 +5,6 @@ import {
   AccountPage,
   ForgotPasswordPage,
   HelpPage,
-  HomePage,
   LoginPage,
   RegisterPage,
   ResetPasswordPage,
@@ -13,7 +12,16 @@ import {
   VerifyEmailPage,
   VerifyPendingPage,
 } from "./pages/public";
-import { CustomerApplicationsPage, CustomerHomePage, LaterModulePage } from "./pages/customer";
+import { HomePage } from "./pages/home";
+import { CustomerApplicationsPage, CustomerHomePage } from "./pages/customer";
+import {
+  CustomerLoanDetailPage,
+  CustomerLoansListPage,
+  CustomerReceiptPage,
+  CustomerRepaymentsPage,
+  CustomerSecurityPage,
+} from "./pages/customer-loans";
+import { NotificationsPage } from "./pages/notifications";
 import {
   ApplicationReviewPage,
   StaffCollateralDetailPage,
@@ -43,7 +51,7 @@ import {
   CustomerApplicationDetailPage,
   ValuationPage,
 } from "./pages/lending";
-import { ActivityLogPage, StaffAccountsPage, StaffHomePage, UnavailableStaffPage } from "./pages/staff";
+import { ActivityLogPage, StaffAccountsPage, StaffHomePage } from "./pages/staff";
 
 export function App() {
   return (
@@ -65,11 +73,12 @@ export function App() {
         <Route path="/customer" element={<CustomerHomePage />} />
         <Route path="/customer/applications" element={<CustomerApplicationsPage />} />
         <Route path="/customer/applications/:id" element={<CustomerApplicationDetailPage />} />
-        <Route path="/customer/loans" element={<CustomerHomePage />} />
-        <Route path="/customer/loans/:loanId" element={<LaterModulePage title="Loan" />} />
-        <Route path="/customer/loans/:loanId/repayments" element={<LaterModulePage title="Repayments" />} />
-        <Route path="/customer/loans/:loanId/security/:assetId?" element={<LaterModulePage title="Security" />} />
-        <Route path="/notifications" element={<LaterModulePage title="Notifications" />} />
+        <Route path="/customer/loans" element={<CustomerLoansListPage />} />
+        <Route path="/customer/loans/:loanId" element={<CustomerLoanDetailPage />} />
+        <Route path="/customer/loans/:loanId/repayments" element={<CustomerRepaymentsPage />} />
+        <Route path="/customer/loans/:loanId/security/:assetId?" element={<CustomerSecurityPage />} />
+        <Route path="/customer/receipts/:id" element={<CustomerReceiptPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
       </Route>
 
       <Route element={<AccountLayout />}>
@@ -105,7 +114,7 @@ export function App() {
         <Route path="/staff/payment-attempts/:id" element={<StaffPaymentAttemptPage />} />
         <Route path="/staff/admin/accounts" element={<StaffAccountsPage />} />
         <Route path="/staff/admin/activity" element={<ActivityLogPage />} />
-        <Route path="/notifications" element={<UnavailableStaffPage title="Notifications" />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

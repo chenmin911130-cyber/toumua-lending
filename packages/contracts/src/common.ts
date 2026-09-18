@@ -18,6 +18,19 @@ export type CursorListResponse<T> = {
   total: number;
 };
 
+export type NotificationItem = {
+  id: string;
+  title: string;
+  body: string;
+  href: string | null;
+  read: boolean;
+  createdAt: string;
+};
+
+export type NotificationListResponse = CursorListResponse<NotificationItem> & {
+  unread: number;
+};
+
 export const emptyList = <T>(): CursorListResponse<T> => ({
   items: [],
   nextCursor: null,

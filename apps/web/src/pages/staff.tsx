@@ -1,10 +1,25 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Button, Dialog, Field } from "@toumua/ui";
-import type { AuditEvent, StaffAccount, StaffBusinessRole } from "@toumua/contracts";
+import type {
+  ApplicationSummary,
+  AuditEvent,
+  CursorListResponse,
+  LoanSummary,
+  StaffAccount,
+  StaffBusinessRole,
+} from "@toumua/contracts";
 import { api, errorMessage, fieldError } from "../api";
-import { LaterModulePage } from "./customer";
-import { aucklandDate, roleLabel } from "../format";
+import { aucklandDate, formatDate, roleLabel, statusLabel } from "../format";
 import { useAuth } from "../auth";
+
+type TransactionRow = {
+  id: string;
+  type: string;
+  amount: string;
+  businessDate: string;
+  loanNumber: string | null;
+};
 
 const ROLES: StaffBusinessRole[] = [
   "LOAN_OFFICER",
@@ -17,6 +32,37 @@ const ROLES: StaffBusinessRole[] = [
 
 export function StaffHomePage() {
   const { user } = useAuth();
+  const [loans, setLoans] = useState<CursorListResponse<LoanSummary> | null>(null);
+  const [applications, setApplications] = useState<CursorListResponse<ApplicationSummary> | null>(null);
+  const [transactions, setTransactions] = useState<CursorListResponse<TransactionRow> | null>(null);
+  const [error, setError] = useState<unknown>(null);
+
+  useEffect(() => {
+    void Promise.all([
+      api<CursorListResponse<LoanSummary>>("/loans?limit=100"),
+      api<CursorListResponse<ApplicationSummary>>("/applications?status=SUBMITTED&limit=5"),
+      api<CursorListResponse<TransactionRow>>("/transactions?limit=5"),
+    ])
+      .then(([loanData, appData, txData]) => {
+        setLoans(loanData);
+        setApplications(appData);
+        setTransactions(txData);
+      })
+      .catch(setError);
+  }, []);
+
+  const outstanding = (loans?.items ?? [])
+    .filter((loan) => loan.status === "ACTIVE" || loan.status === "DEFAULTED")
+    .reduce((sum, loan) => sum + Number.parseFloat(loan.balance), 0);
+  const dueToday = (loans?.items ?? []).filter((loan) => {
+    if (!loan.nextDueDate || loan.status !== "ACTIVE") return false;
+    const due = new Date(loan.nextDueDate);
+    const now = new Date();
+    return due.getFullYear() === now.getFullYear()
+      && due.getMonth() === now.getMonth()
+      && due.getDate() === now.getDate();
+  }).length;
+
   return (
     <main className="staff-page">
       <div className="staff-top">
@@ -24,23 +70,26 @@ export function StaffHomePage() {
         <span>{user?.name}</span>
       </div>
       <h1>Overview</h1>
-      <p className="hint">Queues appear here after lending modules are implemented. These figures are empty because no loans have been recorded yet.</p>
+      {error ? <p className="error">{errorMessage(error, "Could not load overview")}</p> : null}
       <section className="metrics">
         <article>
-          <div className="metric-label">Outstanding principal</div>
-          <div className="metric-value">No loans yet</div>
+          <div className="metric-label">Outstanding balance</div>
+          <div className="metric-value">
+            {loans ? `$${outstanding.toFixed(2)}` : "…"}
+          </div>
         </article>
         <article>
-          <div className="metric-label">Pending applications</div>
-          <div className="metric-value">0</div>
+          <div className="metric-label">Pending reviews</div>
+          <div className="metric-value">{applications?.total ?? "…"}</div>
         </article>
         <article>
           <div className="metric-label">Due today</div>
-          <div className="metric-value">—</div>
+          <div className="metric-value">{loans ? String(dueToday) : "…"}</div>
         </article>
       </section>
       <div className="section-head">
         <h2>Pending reviews</h2>
+        <Link to="/staff/applications?status=SUBMITTED">View all</Link>
       </div>
       <table className="data-table">
         <thead>
@@ -52,11 +101,21 @@ export function StaffHomePage() {
           </tr>
         </thead>
         <tbody>
-          <tr><td className="empty-row" colSpan={4}>No applications are waiting for review.</td></tr>
+          {applications?.items.length ? applications.items.map((item) => (
+            <tr key={item.id}>
+              <td><Link to={`/staff/applications/${item.id}/review`}>{item.number}</Link></td>
+              <td>{item.borrowerName ?? "—"}</td>
+              <td>{statusLabel(item.status)}</td>
+              <td>{formatDate(item.updatedAt)}</td>
+            </tr>
+          )) : (
+            <tr><td className="empty-row" colSpan={4}>No applications are waiting for review.</td></tr>
+          )}
         </tbody>
       </table>
       <div className="section-head">
         <h2>Recent transactions</h2>
+        <Link to="/staff/transactions">View all</Link>
       </div>
       <table className="data-table">
         <thead>
@@ -68,7 +127,16 @@ export function StaffHomePage() {
           </tr>
         </thead>
         <tbody>
-          <tr><td className="empty-row" colSpan={4}>No transactions have been recorded.</td></tr>
+          {transactions?.items.length ? transactions.items.map((item) => (
+            <tr key={item.id}>
+              <td>{formatDate(item.businessDate)}</td>
+              <td>{statusLabel(item.type)}</td>
+              <td>{item.loanNumber ?? "—"}</td>
+              <td>${item.amount.replace(/^-/, "")}</td>
+            </tr>
+          )) : (
+            <tr><td className="empty-row" colSpan={4}>No transactions have been recorded.</td></tr>
+          )}
         </tbody>
       </table>
     </main>
@@ -367,11 +435,3 @@ export function ActivityLogPage() {
   );
 }
 
-export function UnavailableStaffPage({ title }: { title: string }) {
-  return (
-    <main className="staff-page">
-      <div className="staff-top"><span>{aucklandDate()}</span></div>
-      <LaterModulePage title={title} />
-    </main>
-  );
-}

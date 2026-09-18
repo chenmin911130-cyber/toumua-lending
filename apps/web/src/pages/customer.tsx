@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import type { LoanSummary } from "@toumua/contracts";
 import { api } from "../api";
 import { useAuth } from "../auth";
-import { firstName } from "../format";
+import { firstName, formatDate, statusLabel } from "../format";
 
-type ListResponse = { items: unknown[]; total: number };
+type ListResponse = { items: LoanSummary[]; total: number };
 
 export function CustomerHomePage() {
   const { user } = useAuth();
@@ -50,10 +51,39 @@ export function CustomerHomePage() {
     );
   }
 
+  const items = loans.items;
   return (
     <main className="page">
-      <h1 className="serif" style={{ fontSize: 40 }}>My loans</h1>
-      <p>{loans.total} loan{loans.total === 1 ? "" : "s"} linked to this account.</p>
+      <h1 className="serif" style={{ fontSize: 40, marginBottom: 8 }}>Welcome back, {firstName(user?.name ?? "there")}.</h1>
+      <p className="hint" style={{ marginTop: 0 }}>
+        {loans.total} loan{loans.total === 1 ? "" : "s"} linked to this account.
+      </p>
+      <section className="stack" style={{ maxWidth: 720, marginTop: 32 }}>
+        {items.map((loan) => (
+          <article key={loan.id} className="card stack">
+            <div>
+              <strong>{loan.number}</strong>
+              <span>
+                {statusLabel(loan.status)} · balance ${loan.balance}
+                {loan.nextDueDate ? ` · next due ${formatDate(loan.nextDueDate)}` : ""}
+              </span>
+            </div>
+            <div className="hero-actions">
+              <Link className="btn btn-primary" to={`/customer/loans/${loan.id}`} data-control-id="C03-01">
+                Open loan
+              </Link>
+              <Link className="btn btn-secondary" to={`/customer/loans/${loan.id}/repayments`} data-control-id="C05-01">
+                Repayments
+              </Link>
+            </div>
+          </article>
+        ))}
+      </section>
+      <p style={{ marginTop: 24 }}>
+        <Link to="/customer/loans" data-control-id="C09-01">View all loans</Link>
+        {" · "}
+        <Link to="/customer/applications">Application progress</Link>
+      </p>
     </main>
   );
 }
@@ -100,11 +130,3 @@ export function CustomerApplicationsPage() {
   );
 }
 
-export function LaterModulePage({ title }: { title: string }) {
-  return (
-    <main className="page">
-      <h1 className="serif" style={{ fontSize: 40 }}>{title}</h1>
-      <p className="hint">This module is not part of the current authentication release. The route is reserved and does not show sample loans.</p>
-    </main>
-  );
-}

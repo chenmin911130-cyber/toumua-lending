@@ -17,10 +17,11 @@
 | `/customer/applications` | C04 | List + empty state |
 | `/customer/applications/:id` | C04 | Progress stages |
 | `/customer/loans` | C09/C10 | Linked borrower loans (disbursed+) |
-| `/customer/loans/:loanId` | C03/C08 | Reserved shell |
-| `/customer/loans/:loanId/repayments` | C05 | Reserved shell |
-| `/customer/loans/:loanId/security/:assetId?` | C06 | Reserved shell |
-| `/staff` | S01 | Shell only |
+| `/customer/loans/:loanId` | C03/C08 | Implemented |
+| `/customer/loans/:loanId/repayments` | C05 | Implemented (schedule + receipt history) |
+| `/customer/loans/:loanId/security/:assetId?` | C06 | Implemented |
+| `/customer/receipts/:id` | C05 receipt detail | Implemented |
+| `/staff` | S01 | Implemented (live metrics + queues) |
 | `/staff/admin/accounts` | S16 | Implemented |
 | `/staff/admin/activity` | S19 | Implemented |
 | `/staff/borrowers` (+ new/edit) | S02/S20 | Implemented |
@@ -39,4 +40,4 @@
 | `/staff/collateral/:id/sale` | S12 sale record | Implemented |
 | `/staff/corrections`, `/staff/corrections/:id` | S18 | Implemented |
 | `/staff/payment-attempts/:id` | G01 recovery | Implemented |
-| Remaining `/staff/*`, customer loan detail | notifications, C03/C05/C06 | Reserved shells |
+| `/notifications` | G02 | Implemented (empty state until events are wired) |

@@ -31,66 +31,6 @@ function AuthSplit({
   );
 }
 
-export function HomePage() {
-  return (
-    <main>
-      <section className="hero">
-        <div>
-          <p className="kicker">Secured lending</p>
-          <h1 className="display">A little support. For what matters.</h1>
-          <p className="lead">
-            Toumu’a records secured loans for personal, family and community needs. Applications are completed with a loan officer in the office — not online.
-          </p>
-          <div className="hero-actions">
-            <Link className="btn btn-primary" to="/help" data-control-id="C01-03">Contact our team</Link>
-            <a className="btn btn-secondary" href="/#how-it-works" data-control-id="C01-01">How it works</a>
-          </div>
-        </div>
-        <img
-          className="hero-photo"
-          src="/images/hero-meeting.jpg"
-          alt="A loan officer meeting with customers"
-        />
-      </section>
-
-      <div className="return-strip">
-        <div>
-          <strong>Already have a loan?</strong>
-          <div className="hint">Sign in to view the loan linked to your account.</div>
-        </div>
-        <Link className="btn btn-secondary" to="/login" data-control-id="C01-02">View my loan</Link>
-      </div>
-
-      <section id="how-it-works" tabIndex={-1} className="page" style={{ paddingTop: 0 }}>
-        <p className="kicker">How it works</p>
-        <h2 className="serif" style={{ fontSize: 36, color: "var(--navy)", marginTop: 0 }}>Three steps with our office team</h2>
-      </section>
-      <div className="steps">
-        <article>
-          <div className="step-num">01</div>
-          <h3>Meet our team</h3>
-          <p className="hint">Speak with a loan officer and complete the application together.</p>
-        </article>
-        <article>
-          <div className="step-num">02</div>
-          <h3>Assessment and review</h3>
-          <p className="hint">Security is valued and a manager reviews the application before any funds are released.</p>
-        </article>
-        <article>
-          <div className="step-num">03</div>
-          <h3>Receive your loan</h3>
-          <p className="hint">After approval and inspection, security is stored and the cashier records the disbursement.</p>
-        </article>
-      </div>
-
-      <footer className="page-footer">
-        <span>Repayments are made with our cashier.</span>
-        <Link to="/help">Contact</Link>
-      </footer>
-    </main>
-  );
-}
-
 function LoginForm({ staff }: { staff?: boolean }) {
   const { setUser, user } = useAuth();
   const navigate = useNavigate();
@@ -589,6 +529,12 @@ export function AcceptInvitationPage() {
 export function AccountPage() {
   const { user, clearProtectedCache } = useAuth();
   const navigate = useNavigate();
+
+  async function signOut() {
+    await api("/auth/logout", { method: "POST" });
+    clearProtectedCache();
+    navigate(user?.isStaff ? "/staff/login" : "/login");
+  }
   const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -641,8 +587,11 @@ export function AccountPage() {
           </form>
         </section>
       </div>
-      <p style={{ marginTop: 40 }}>
+      <p style={{ marginTop: 40, display: "flex", gap: 16, flexWrap: "wrap" }}>
         <Link to={user?.isStaff ? "/staff" : "/customer"} data-control-id="A02-02">Back to overview</Link>
+        <button type="button" className="btn btn-secondary" data-control-id="A02-03" onClick={() => void signOut()}>
+          Sign out
+        </button>
       </p>
     </main>
   );

@@ -30,6 +30,40 @@ export function aucklandDate() {
   }).format(new Date());
 }
 
+export function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-NZ", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Pacific/Auckland",
+  }).format(date);
+}
+
+export function formatDateTime(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-NZ", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Pacific/Auckland",
+  }).format(date);
+}
+
+export function statusLabel(status: string) {
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 export function maskEmail(email: string) {
   const [local, domain] = email.split("@");
   if (!local || !domain) return email;
