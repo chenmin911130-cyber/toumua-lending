@@ -42,12 +42,12 @@ Deploy as a **new** Railway project with a **new** Postgres plugin (do not point
 
 1. Create project and add Postgres template.
 2. Add two services from this repo (`main`): **api** and **web**.
-3. **api** — build: `pnpm install && pnpm db:generate && pnpm --filter @toumua/api build`  
+3. **api** — build: `pnpm install && pnpm db:generate && pnpm --filter @toumua/contracts build && pnpm --filter @toumua/api build`  
    pre-deploy: `pnpm db:migrate:deploy`  
    start: `pnpm --filter @toumua/api start`  
    healthcheck: `/api/v1/health`  
    env: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `NODE_ENV=production`, `COOKIE_SECURE=true`, `PUBLIC_WEB_URL=<web public URL>`, plus `SESSION_SECRET` / `CSRF_SECRET` / bootstrap admin vars.
-4. **web** — build: `pnpm install && pnpm --filter @toumua/web build`  
+4. **web** — build: `pnpm install && pnpm --filter @toumua/contracts build && pnpm --filter @toumua/web build`  
    start: `pnpm --filter @toumua/web preview`  
    env: `API_PROXY_TARGET=http://${{api.RAILWAY_PRIVATE_DOMAIN}}:${{api.PORT}}`
 5. Generate a public domain on **web**; set that URL as `PUBLIC_WEB_URL` on **api** and redeploy.
