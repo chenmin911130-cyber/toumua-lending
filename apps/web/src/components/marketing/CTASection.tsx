@@ -13,13 +13,13 @@ export function CTASection() {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             to="/register"
-            className="inline-flex h-12 items-center justify-center rounded-[10px] bg-white px-6 text-[15px] font-semibold text-primary no-underline transition-all hover:-translate-y-px"
+            className="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-[15px] font-semibold text-primary no-underline transition-all hover:-translate-y-px"
           >
             Get started
           </Link>
           <Link
             to="/help"
-            className="inline-flex h-12 items-center justify-center rounded-[10px] border border-white/35 px-6 text-[15px] font-semibold text-white no-underline transition-all hover:-translate-y-px hover:bg-white/10"
+            className="inline-flex h-12 items-center justify-center rounded-full border border-white/35 px-6 text-[15px] font-semibold text-white no-underline transition-all hover:-translate-y-px hover:bg-white/10"
           >
             Talk to us
           </Link>

@@ -13,9 +13,9 @@ export function LoanCard({ icon: Icon, title, description, href }: Props) {
   return (
     <Link
       to={href}
-      className="group block rounded-[14px] border border-border bg-white p-6 no-underline transition-all duration-200 hover:-translate-y-[3px] hover:shadow-card-hover"
+      className="group block rounded-[18px] bg-[#f6f7f6] p-6 no-underline transition-all duration-200 hover:-translate-y-[3px] hover:bg-[#f1f3f1]"
     >
-      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-bg-green-icon text-primary">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-primary">
         <Icon className="h-5 w-5" strokeWidth={1.8} aria-hidden />
       </span>
       <h3 className="mt-5 text-[19px] font-semibold text-text">{title}</h3>

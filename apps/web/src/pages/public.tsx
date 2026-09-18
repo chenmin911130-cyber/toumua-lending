@@ -1,7 +1,7 @@
 import { FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, Field, PasswordField } from "@toumua/ui";
-import { api, errorMessage, fieldError, type ContactResponse, type MeResponse } from "../api";
+import { api, errorMessage, fieldError, type MeResponse } from "../api";
 import { useAuth } from "../auth";
 import { maskEmail } from "../format";
 
@@ -104,80 +104,6 @@ export function LoginPage() {
 
 export function StaffLoginPage() {
   return <LoginForm staff />;
-}
-
-const FAQS = [
-  {
-    q: "How do I apply?",
-    a: "Meet with a loan officer to complete your application together. Your security assets will be valued before manager review.",
-  },
-  {
-    q: "Where do I make repayments?",
-    a: "Repayments are recorded by our cashier in the office. This website does not take online payments.",
-  },
-  {
-    q: "When is my security returned?",
-    a: "Security is returned after the loan balance is cleared, or recorded as sold if a default sale is completed.",
-  },
-  {
-    q: "How can I check my application?",
-    a: "Sign in to view application progress once a staff member has linked your account.",
-  },
-];
-
-export function HelpPage() {
-  const [contact, setContact] = useState<ContactResponse | null>(null);
-  useEffect(() => {
-    void api<ContactResponse>("/public/contact").then(setContact);
-  }, []);
-  return (
-    <main className="page">
-      <h1 className="display" style={{ fontSize: 48 }}>We’re here to help.</h1>
-      <p className="lead">Speak with your loan officer about your application, repayments or security assets.</p>
-      <div className="two-col">
-        <section>
-          <h2>Common questions</h2>
-          <div className="faq">
-            {FAQS.map((item, index) => (
-              <details key={item.q} open={index === 0}>
-                <summary>{item.q}</summary>
-                <p className="hint">{item.a}</p>
-              </details>
-            ))}
-          </div>
-        </section>
-        <aside>
-          <h2>Your loan officer</h2>
-          {contact?.phone || contact?.email || contact?.address ? (
-            <ul>
-              {contact.phone ? <li>{contact.phone}</li> : null}
-              {contact.email ? <li>{contact.email}</li> : null}
-              {contact.address ? <li>{contact.address}</li> : null}
-              {contact.hours ? <li>{contact.hours}</li> : null}
-            </ul>
-          ) : (
-            <p className="hint">{contact?.note ?? "Please use the contact details provided with your loan agreement."}</p>
-          )}
-          <p><Link to="/login" data-control-id="C01-02">View my application</Link></p>
-          <div className="return-strip" style={{ margin: "24px 0 0" }}>
-            <div>
-              <strong>Need to update your details?</strong>
-              <div className="hint">Contact our team to update the information on your loan record.</div>
-            </div>
-          </div>
-        </aside>
-      </div>
-      <section style={{ marginTop: 48 }}>
-        <h2>How it works</h2>
-        <div className="steps steps-4" style={{ padding: 0 }}>
-          <article><div className="step-num">01</div><h3>Apply with an officer</h3></article>
-          <article><div className="step-num">02</div><h3>Valuation</h3></article>
-          <article><div className="step-num">03</div><h3>Manager decision</h3></article>
-          <article><div className="step-num">04</div><h3>Security intake, then disbursement</h3></article>
-        </div>
-      </section>
-    </main>
-  );
 }
 
 export function RegisterPage() {

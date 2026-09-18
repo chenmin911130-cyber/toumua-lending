@@ -22,11 +22,11 @@ const REVIEWS = [
 
 export function Testimonials() {
   return (
-    <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-3">
       {REVIEWS.map((review, index) => (
         <motion.blockquote
           key={review.name}
-          className="rounded-[14px] border border-border/70 bg-white p-5 shadow-[0_4px_20px_rgba(16,24,40,0.04)]"
+          className="rounded-[16px] bg-white p-5 shadow-[0_8px_24px_rgba(16,24,40,0.05)]"
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-60px" }}

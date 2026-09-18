@@ -78,7 +78,9 @@ export function PublicLayout() {
 
   if (split) return <Outlet />;
 
-  if (location.pathname === "/") return <Outlet />;
+  if (location.pathname === "/" || (location.pathname === "/help" && (!user || user.isStaff || user.restrictedSession))) {
+    return <Outlet />;
+  }
 
   if (location.pathname === "/help" && user && !user.isStaff && !user.restrictedSession) {
     return (

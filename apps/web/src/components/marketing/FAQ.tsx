@@ -25,7 +25,7 @@ const FAQ_ITEMS = [
   },
 ] as const;
 
-function FAQItem({ question, answer }: { question: string; answer: string }) {
+export function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
 
   return (

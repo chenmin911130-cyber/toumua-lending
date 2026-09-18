@@ -23,7 +23,7 @@ const FOOTER_LINKS = {
 export function Footer() {
   return (
     <footer className="border-t border-border bg-white pt-14 pb-8">
-      <div className="mx-auto grid max-w-[1280px] gap-10 px-6 sm:grid-cols-2 lg:grid-cols-4 lg:px-12">
+      <div className="marketing-wrap grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <MarketingLogo />
           <p className="mt-4 max-w-[260px] text-[14px] leading-relaxed text-text-secondary">
@@ -91,7 +91,7 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="mx-auto mt-12 max-w-[1280px] border-t border-border px-6 pt-6 lg:px-12">
+      <div className="marketing-wrap mt-12 border-t border-border pt-6">
         <p className="text-[13px] text-text-muted">© Toumu&apos;a Lending</p>
       </div>
     </footer>

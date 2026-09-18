@@ -4,7 +4,6 @@ import {
   AcceptInvitationPage,
   AccountPage,
   ForgotPasswordPage,
-  HelpPage,
   LoginPage,
   RegisterPage,
   ResetPasswordPage,
@@ -12,6 +11,7 @@ import {
   VerifyEmailPage,
   VerifyPendingPage,
 } from "./pages/public";
+import { HelpPage } from "./pages/help";
 import { HomePage } from "./pages/home";
 import { CustomerApplicationsPage, CustomerHomePage } from "./pages/customer";
 import {

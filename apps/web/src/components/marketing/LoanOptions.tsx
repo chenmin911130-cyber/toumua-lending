@@ -26,8 +26,8 @@ const PRODUCTS = [
 
 export function LoanOptions() {
   return (
-    <section className="bg-bg-warm py-16 md:py-24 lg:py-[96px]">
-      <div className="mx-auto max-w-[1280px] px-6 lg:px-12">
+    <section id="loans" className="bg-white pb-16 md:pb-20 lg:pb-[88px]">
+      <div className="marketing-wrap">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <h2 className="text-[clamp(30px,3.5vw,40px)] font-bold tracking-tight text-text">
             Our loan options

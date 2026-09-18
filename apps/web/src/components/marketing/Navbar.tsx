@@ -5,13 +5,20 @@ import { AnimatePresence, motion } from "framer-motion";
 import { MarketingLogo } from "./MarketingLogo";
 
 const NAV_LINKS = [
-  { label: "About", to: "/about", href: undefined },
-  { label: "FAQ", to: undefined, href: "/#faq" },
-  { label: "Contact", to: "/help", href: undefined },
+  { label: "About", href: "/#why" },
+  { label: "FAQ", href: "/#faq" },
+  { label: "Contact", href: "/help" },
+] as const;
+
+const LOAN_LINKS = [
+  { label: "Vehicle Finance", href: "/#loans" },
+  { label: "Personal Loan", href: "/#loans" },
+  { label: "Business Finance", href: "/#loans" },
 ] as const;
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loansOpen, setLoansOpen] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
@@ -22,20 +29,50 @@ export function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-white/95 backdrop-blur-[16px]">
-        <div className="mx-auto flex h-[72px] max-w-[1280px] items-center justify-between px-6 lg:px-12">
+      <header className="sticky top-0 z-40 bg-white">
+        <div className="marketing-wrap grid h-[72px] grid-cols-[1fr_auto] items-center md:grid-cols-[1fr_auto_1fr]">
           <MarketingLogo />
 
           <nav className="hidden items-center gap-8 md:flex" aria-label="Main">
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 text-[15px] font-medium text-text-secondary transition-colors hover:text-text"
+            <div
+              className="relative"
+              onMouseEnter={() => setLoansOpen(true)}
+              onMouseLeave={() => setLoansOpen(false)}
             >
-              Loans
-              <ChevronDown className="h-4 w-4" strokeWidth={1.8} aria-hidden />
-            </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-[15px] font-medium text-text-secondary transition-colors hover:text-text"
+                aria-expanded={loansOpen}
+              >
+                Loans
+                <ChevronDown className="h-4 w-4" strokeWidth={1.8} aria-hidden />
+              </button>
+              <AnimatePresence>
+                {loansOpen ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    transition={{ duration: 0.16 }}
+                    className="absolute left-1/2 top-full z-20 w-[220px] -translate-x-1/2 pt-3"
+                  >
+                    <div className="rounded-[16px] border border-border bg-white p-2 shadow-card">
+                      {LOAN_LINKS.map((item) => (
+                        <a
+                          key={item.label}
+                          href={item.href}
+                          className="block rounded-[10px] px-3 py-2.5 text-[14px] font-medium text-text-secondary no-underline hover:bg-bg-warm hover:text-text"
+                        >
+                          {item.label}
+                        </a>
+                      ))}
+                    </div>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+            </div>
             {NAV_LINKS.map((item) =>
-              item.href ? (
+              item.href.startsWith("/#") ? (
                 <a
                   key={item.label}
                   href={item.href}
@@ -46,8 +83,12 @@ export function Navbar() {
               ) : (
                 <NavLink
                   key={item.label}
-                  to={item.to!}
-                  className="text-[15px] font-medium text-text-secondary no-underline transition-colors hover:text-text"
+                  to={item.href}
+                  className={({ isActive }) =>
+                    `text-[15px] font-medium no-underline transition-colors hover:text-text ${
+                      isActive ? "text-text" : "text-text-secondary"
+                    }`
+                  }
                 >
                   {item.label}
                 </NavLink>
@@ -55,17 +96,17 @@ export function Navbar() {
             )}
           </nav>
 
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center justify-end gap-3 md:flex">
             <Link
               to="/login"
-              className="inline-flex h-11 items-center justify-center rounded-[10px] border border-border bg-white px-5 text-[15px] font-semibold text-text no-underline transition-all hover:-translate-y-px hover:border-text-muted/30"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-border bg-white px-5 text-[15px] font-semibold text-text no-underline transition-all hover:-translate-y-px hover:border-text-muted/30"
               data-control-id="C01-02"
             >
               Log in
             </Link>
             <Link
               to="/register"
-              className="inline-flex h-11 items-center justify-center rounded-[10px] bg-primary px-5 text-[15px] font-semibold text-white no-underline transition-all hover:-translate-y-px hover:bg-primary-hover"
+              className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-5 text-[15px] font-semibold text-white no-underline transition-all hover:-translate-y-px hover:bg-primary-hover"
             >
               Get started
             </Link>
@@ -73,7 +114,7 @@ export function Navbar() {
 
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-border text-text md:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center justify-self-end rounded-full border border-border text-text md:hidden"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             onClick={() => setMenuOpen(true)}
           >
@@ -106,7 +147,7 @@ export function Navbar() {
                 <MarketingLogo />
                 <button
                   type="button"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-border"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border"
                   aria-label="Close menu"
                   onClick={() => setMenuOpen(false)}
                 >
@@ -114,9 +155,21 @@ export function Navbar() {
                 </button>
               </div>
               <nav className="flex flex-1 flex-col gap-1 p-5" aria-label="Mobile">
-                <span className="px-3 py-3 text-[15px] font-medium text-text-secondary">Loans</span>
+                <p className="px-3 py-2 text-[13px] font-semibold uppercase tracking-wide text-text-muted">
+                  Loans
+                </p>
+                {LOAN_LINKS.map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    className="rounded-[10px] px-3 py-3 text-[16px] font-medium text-text no-underline hover:bg-bg-warm"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {item.label}
+                  </a>
+                ))}
                 {NAV_LINKS.map((item) =>
-                  item.href ? (
+                  item.href.startsWith("/#") ? (
                     <a
                       key={item.label}
                       href={item.href}
@@ -128,7 +181,7 @@ export function Navbar() {
                   ) : (
                     <NavLink
                       key={item.label}
-                      to={item.to!}
+                      to={item.href}
                       className="rounded-[10px] px-3 py-3 text-[16px] font-medium text-text no-underline hover:bg-bg-warm"
                       onClick={() => setMenuOpen(false)}
                     >
@@ -140,14 +193,14 @@ export function Navbar() {
               <div className="space-y-3 border-t border-border p-5">
                 <Link
                   to="/login"
-                  className="flex h-11 w-full items-center justify-center rounded-[10px] border border-border text-[15px] font-semibold text-text no-underline"
+                  className="flex h-11 w-full items-center justify-center rounded-full border border-border text-[15px] font-semibold text-text no-underline"
                   onClick={() => setMenuOpen(false)}
                 >
                   Log in
                 </Link>
                 <Link
                   to="/register"
-                  className="flex h-11 w-full items-center justify-center rounded-[10px] bg-primary text-[15px] font-semibold text-white no-underline"
+                  className="flex h-11 w-full items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-white no-underline"
                   onClick={() => setMenuOpen(false)}
                 >
                   Get started

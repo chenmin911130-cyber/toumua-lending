@@ -10,7 +10,7 @@ import { WhyUs } from "../components/marketing/WhyUs";
 
 export function HomePage() {
   return (
-    <div className="min-h-screen bg-white font-sans text-text antialiased">
+    <div className="marketing-page min-h-screen bg-white font-sans text-text antialiased">
       <Navbar />
       <main>
         <Hero />

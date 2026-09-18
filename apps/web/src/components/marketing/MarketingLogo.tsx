@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { Mountain } from "lucide-react";
 
 type Props = {
   to?: string;
@@ -13,12 +12,23 @@ export function MarketingLogo({ to = "/", className = "" }: Props) {
       className={`inline-flex items-center gap-2.5 no-underline ${className}`}
       data-control-id="GLOBAL-01"
     >
-      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white">
-        <Mountain className="h-5 w-5" strokeWidth={2} aria-hidden />
-      </span>
+      <svg
+        viewBox="0 0 36 36"
+        className="h-8 w-8 text-text"
+        fill="none"
+        aria-hidden
+      >
+        <path
+          d="M4 26.5 16.2 8.5l6.1 8.6L32 10.8"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
       <span className="flex flex-col leading-none">
-        <span className="text-[17px] font-bold tracking-tight text-text">Toumu&apos;a</span>
-        <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted">
+        <span className="text-[18px] font-semibold tracking-tight text-text">Toumu&apos;a</span>
+        <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-text-muted">
           Lending
         </span>
       </span>
