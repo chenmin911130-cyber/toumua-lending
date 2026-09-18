@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { PublicUser } from "@toumua/contracts";
 import { api, type MeResponse } from "./api";
+import { isAnonymousAuthPath, isMarketingPath } from "./site";
 
 type AuthContextValue = {
   user: PublicUser | null;
@@ -28,6 +29,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    const pathname = window.location.pathname;
+    const hasSession = document.cookie.split(";").some((part) => part.trim().startsWith("toumua.sid="));
+    if (!hasSession && (isMarketingPath(pathname) || isAnonymousAuthPath(pathname))) {
+      setLoading(false);
+      return;
+    }
     void refresh().finally(() => setLoading(false));
   }, []);
 

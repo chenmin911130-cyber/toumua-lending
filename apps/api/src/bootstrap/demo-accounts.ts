@@ -1,7 +1,7 @@
 import { Permission, normalizeEmail } from "@toumua/contracts";
 import { Prisma, PrismaClient } from "../generated/prisma";
 
-export const DEMO_PASSWORD = "123456";
+export const DEMO_PASSWORD = "project721";
 export const DEMO_EMAIL_DOMAIN = "toumua.nz";
 const LEGACY_EMAIL_DOMAIN = "toumua.lending";
 

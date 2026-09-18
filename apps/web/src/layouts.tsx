@@ -6,6 +6,7 @@ import { useAuth } from "./auth";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { initials, roleLabel } from "./format";
+import { isMarketingPath } from "./site";
 
 const SPLIT_AUTH = new Set(["/login", "/staff/login", "/register", "/accept-invitation"]);
 const SIMPLE_AUTH = new Set([
@@ -53,13 +54,15 @@ function AccountMenu({ staff }: { staff?: boolean }) {
         type="button"
         className="avatar-chip"
         data-control-id="GLOBAL-06"
+        aria-expanded={open}
+        aria-controls="account-menu"
         onClick={() => setOpen((value) => !value)}
       >
         <span className={`avatar-circle${staff ? " avatar-circle-staff" : ""}`}>{initials(user.name)}</span>
         <span>{user.name}</span>
       </button>
       {open ? (
-        <div className="menu">
+        <div id="account-menu" className="menu">
           <NavLink to="/account" data-control-id="GLOBAL-05" onClick={() => setOpen(false)}>
             Your account
           </NavLink>
@@ -80,7 +83,10 @@ export function PublicLayout() {
 
   if (split) return <Outlet />;
 
-  if (location.pathname === "/" || (location.pathname === "/help" && (!user || user.isStaff || user.restrictedSession))) {
+  if (
+    isMarketingPath(location.pathname) &&
+    !(location.pathname === "/help" && user && !user.isStaff && !user.restrictedSession)
+  ) {
     return <Outlet />;
   }
 

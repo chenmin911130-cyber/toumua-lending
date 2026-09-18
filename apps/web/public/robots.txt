@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /staff
+Disallow: /customer
+Disallow: /account
+Disallow: /api
+
+Sitemap: https://web-production-b5acc.up.railway.app/sitemap.xml

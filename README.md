@@ -21,11 +21,11 @@ pnpm dev
 ```
 
 - Web: http://127.0.0.1:5173
-- API / OpenAPI: http://127.0.0.1:3001/api/docs
+- API / OpenAPI (local only): http://127.0.0.1:3001/api/docs
 - Mailpit: http://127.0.0.1:8025
 - Desktop: `pnpm dev:desktop` (loads the staff login)
 
-Demo logins (password `123456` for all). Seed or refresh with `pnpm db:seed-demo`:
+Demo logins (password `project721` for all). Seed or refresh with `pnpm db:seed-demo`:
 
 - Customer: `sarah.tama@toumua.nz` at `/login`
 - Staff: `staff@toumua.nz` at `/staff/login` — simple files up to $3,000
@@ -64,3 +64,4 @@ Deploy as a **new** Railway project with a **new** Postgres plugin (do not point
 - Do not migrate or overwrite the existing Railway database.
 - Official interest, fees, and default rules are not implemented (client policy still required).
 - Demo office mailbox is `office@toumua.nz` / `noreply@toumua.nz`. Real SMTP still needs a purchased domain.
+- Production API does not mount `/api/docs`. Set `ENABLE_API_DOCS=1` only for a private review.

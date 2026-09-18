@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -27,6 +27,7 @@ const FAQ_ITEMS = [
 
 export function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
+  const panelId = useId();
 
   return (
     <div className="border-b border-border">
@@ -34,6 +35,7 @@ export function FAQItem({ question, answer }: { question: string; answer: string
         type="button"
         className="flex w-full items-center justify-between gap-4 py-5 text-left"
         aria-expanded={open}
+        aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
       >
         <span className="text-[16px] font-semibold text-text">{question}</span>
@@ -45,19 +47,21 @@ export function FAQItem({ question, answer }: { question: string; answer: string
           )}
         </span>
       </button>
-      <AnimatePresence initial={false}>
-        {open ? (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <p className="pb-5 pr-12 text-[15px] leading-relaxed text-text-secondary">{answer}</p>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      <div id={panelId}>
+        <AnimatePresence initial={false}>
+          {open ? (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <p className="pb-5 pr-12 text-[15px] leading-relaxed text-text-secondary">{answer}</p>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

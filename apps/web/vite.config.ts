@@ -10,6 +10,11 @@ export default defineConfig({
   server: {
     host: "127.0.0.1",
     port: 5173,
+    headers: {
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+    },
     proxy: {
       "/api": {
         target: apiProxyTarget,

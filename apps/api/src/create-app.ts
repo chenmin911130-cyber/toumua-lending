@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./common/all-exceptions.filter";
 import { requestIdMiddleware } from "./common/request-id.middleware";
+import { securityHeadersMiddleware } from "./common/security-headers.middleware";
 
 export async function createApp(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule, {
@@ -13,6 +14,7 @@ export async function createApp(): Promise<INestApplication> {
   });
   app.setGlobalPrefix("api/v1");
   app.use(requestIdMiddleware);
+  app.use(securityHeadersMiddleware);
   app.use(cookieParser());
   app.useGlobalFilters(new AllExceptionsFilter());
   app.enableCors({

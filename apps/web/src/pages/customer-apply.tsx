@@ -276,16 +276,6 @@ export function CustomerApplyPage() {
                 <span>{asset.category ? `${asset.category} · ` : ""}{asset.condition}</span>
                 <span>{asset.description}</span>
                 <span>{asset.photoCount} photo(s)</span>
-                <div className="hero-actions">
-                  {asset.photos.map((photo) => (
-                    <img
-                      key={photo.id}
-                      src={photo.url}
-                      alt=""
-                      style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8 }}
-                    />
-                  ))}
-                </div>
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"

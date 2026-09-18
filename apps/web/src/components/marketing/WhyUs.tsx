@@ -5,8 +5,8 @@ import { Testimonials } from "./Testimonials";
 export function WhyUs() {
   return (
     <section id="why" className="bg-[#f4f7f4] py-16 md:py-20 lg:py-[88px]">
-      <div className="marketing-wrap grid gap-12 lg:grid-cols-[minmax(260px,340px)_minmax(0,1fr)] lg:items-start lg:gap-12">
-        <div>
+      <div className="marketing-wrap">
+        <div className="max-w-[560px]">
           <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-primary">
             Why Toumu&apos;a
           </p>
@@ -20,14 +20,16 @@ export function WhyUs() {
             goals, not just process your application.
           </p>
           <Link
-            to="/help"
+            to="/about"
             className="mt-8 inline-flex h-11 items-center gap-1 rounded-full border border-border bg-white px-5 text-[15px] font-semibold text-text no-underline transition-all hover:-translate-y-px"
           >
             About us
             <ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden />
           </Link>
         </div>
-        <Testimonials />
+        <div className="mt-10">
+          <Testimonials />
+        </div>
       </div>
     </section>
   );

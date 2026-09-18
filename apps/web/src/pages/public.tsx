@@ -4,6 +4,7 @@ import { Button, Field, Logo, PasswordField } from "@toumua/ui";
 import { api, errorMessage, fieldError, type MeResponse } from "../api";
 import { useAuth } from "../auth";
 import { maskEmail } from "../format";
+import { DocumentHead } from "../components/DocumentHead";
 
 function AuthSplit({
   title,
@@ -20,7 +21,7 @@ function AuthSplit({
         <Logo to="/" />
         <div>
           <p className="auth-brand-kicker">Real opportunities. A brighter tomorrow.</p>
-          <h1>{title}</h1>
+          <p className="auth-brand-title">{title}</p>
           <p>{body}</p>
         </div>
         <p className="auth-brand-foot">Toumu’a Money Transfer Ltd</p>
@@ -77,13 +78,14 @@ function LoginForm({ staff }: { staff?: boolean }) {
         ? "Sign in to review applications, value security, and manage loans."
         : "Sign in to apply, or to see an application or loan already linked to your account."}
     >
+      <DocumentHead title={staff ? "Staff sign-in" : "Log in"} path={staff ? "/staff/login" : "/login"} description="Sign in to the Toumu’a Lending school demonstration." />
       <h1>{staff ? "Staff sign-in" : "Welcome back"}</h1>
       {!staff ? <p className="hint" style={{ marginTop: 0 }}>Sign in to your account</p> : <p className="hint" style={{ marginTop: 0 }}>Use your office account</p>}
       <form onSubmit={(event) => void onSubmit(event)}>
         {formError ? (
-          <p className="auth-error">We couldn’t sign you in. Check your details and try again.</p>
+          <p className="auth-error" role="alert">We couldn’t sign you in. Check your details and try again.</p>
         ) : null}
-        <Field label="Email address" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} error={fieldError(error, "email")} />
+        <Field label="Email address" name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={fieldError(error, "email")} />
         <PasswordField label="Password" name="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" error={fieldError(error, "password")} />
         <Button controlId="C02-01" className="btn-block" type="submit" disabled={pending}>{pending ? "Signing in…" : "Log in"}</Button>
       </form>
@@ -142,13 +144,14 @@ export function RegisterPage() {
       title="Your next step starts here."
       body="Create an account to apply online, or to view a loan already linked for you."
     >
+      <DocumentHead title="Create an account" path="/register" description="Register for a Toumu’a Lending demonstration account, then apply with collateral." />
       <h1>Create your account</h1>
       <p className="hint" style={{ marginTop: 0 }}>Register, then apply with the amount you need and the security you can offer.</p>
       <form onSubmit={(event) => void onSubmit(event)}>
-        <Field label="Full name" name="name" value={name} onChange={(e) => setName(e.target.value)} error={fieldError(error, "name")} />
-        <Field label="Email address" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} error={fieldError(error, "email")} />
-        <PasswordField label="Password" name="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" error={fieldError(error, "password")} />
-        <PasswordField label="Confirm password" name="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" error={fieldError(error, "confirmPassword")} />
+        <Field label="Full name" name="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} error={fieldError(error, "name")} />
+        <Field label="Email address" name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={fieldError(error, "email")} />
+        <PasswordField label="Password" name="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={12} maxLength={128} hint="Use 12 to 128 characters." error={fieldError(error, "password")} />
+        <PasswordField label="Confirm password" name="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" minLength={12} maxLength={128} error={fieldError(error, "confirmPassword")} />
         <Button controlId="A03-01" className="btn-block" type="submit" disabled={pending}>{pending ? "Creating…" : "Create account"}</Button>
       </form>
       <p>Already have an account? <Link to="/login" data-control-id="A03-02">Log in</Link></p>
@@ -377,8 +380,8 @@ export function ResetPasswordPage() {
         <p>Password updated. You can log in with the new password.</p>
       ) : (
         <form onSubmit={(event) => void onSubmit(event)}>
-          <PasswordField label="New password" name="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" error={fieldError(error, "password")} />
-          <PasswordField label="Confirm new password" name="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" error={fieldError(error, "confirmPassword")} />
+          <PasswordField label="New password" name="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={12} maxLength={128} hint="Use 12 to 128 characters." error={fieldError(error, "password")} />
+          <PasswordField label="Confirm new password" name="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" minLength={12} maxLength={128} error={fieldError(error, "confirmPassword")} />
           {fieldError(error, "token") ? <p className="field-error">{fieldError(error, "token")}</p> : null}
           <Button controlId="A07-01" className="btn-block" type="submit">Reset password</Button>
         </form>
@@ -440,8 +443,8 @@ export function AcceptInvitationPage() {
         <>
           <p className="hint">Your role will be assigned by the office{inspect?.role ? `: ${inspect.role}` : ""}.</p>
           <form onSubmit={(event) => void onSubmit(event)}>
-            <PasswordField label="Password" name="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" error={fieldError(error, "password")} />
-            <PasswordField label="Confirm password" name="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" error={fieldError(error, "confirmPassword")} />
+            <PasswordField label="Password" name="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={12} maxLength={128} hint="Use 12 to 128 characters." error={fieldError(error, "password")} />
+            <PasswordField label="Confirm password" name="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" minLength={12} maxLength={128} error={fieldError(error, "confirmPassword")} />
             <Button controlId="A06-01" className="btn-block" type="submit">Activate account</Button>
           </form>
         </>
@@ -510,8 +513,8 @@ export function AccountPage() {
           <h2>Password</h2>
           <form onSubmit={(event) => void onSubmit(event)}>
             <PasswordField label="Current password" name="currentPassword" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" error={fieldError(error, "currentPassword")} />
-            <PasswordField label="New password" name="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" error={fieldError(error, "password")} />
-            <PasswordField label="Confirm new password" name="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" error={fieldError(error, "confirmPassword")} />
+            <PasswordField label="New password" name="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={12} maxLength={128} hint="Use 12 to 128 characters." error={fieldError(error, "password")} />
+            <PasswordField label="Confirm new password" name="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" minLength={12} maxLength={128} error={fieldError(error, "confirmPassword")} />
             <Button controlId="A02-01" type="submit" disabled={pending}>Update password</Button>
           </form>
         </section>

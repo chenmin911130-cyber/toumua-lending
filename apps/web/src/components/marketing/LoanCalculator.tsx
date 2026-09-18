@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "react-router-dom";
-import { Calculator, ChevronRight, GripHorizontal, Info, X } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { Calculator, ChevronRight, X } from "lucide-react";
 import {
+  ESTIMATE_ANNUAL_RATE,
   LOAN_AMOUNT_DEFAULT,
   LOAN_AMOUNT_MAX,
   LOAN_AMOUNT_MIN,
   LOAN_AMOUNT_STEP,
   LOAN_TERMS,
-  calcWeeklyRepayment,
+  calcEstimate,
   formatCurrency,
 } from "./loan-calculator";
 
-const STORAGE_KEY = "toumua-calculator-pos-v2";
+const STORAGE_KEY = "toumua-calculator-pos-v3";
 
 type Position = { x: number; y: number };
 
@@ -56,10 +56,9 @@ export function LoanCalculator({ boundsRef }: Props) {
   }).current;
 
   const term = LOAN_TERMS[termIndex];
-  const weekly = useMemo(
-    () => calcWeeklyRepayment(amount, term.months),
-    [amount, term.months],
-  );
+  const estimate = useMemo(() => calcEstimate(amount, term.months), [amount, term.months]);
+  const ratePercent = Math.round(ESTIMATE_ANNUAL_RATE * 100);
+  const detailsId = "loan-estimate-details";
 
   const sliderPercent =
     ((amount - LOAN_AMOUNT_MIN) / (LOAN_AMOUNT_MAX - LOAN_AMOUNT_MIN)) * 100;
@@ -160,139 +159,125 @@ export function LoanCalculator({ boundsRef }: Props) {
   return (
     <div
       ref={cardRef}
-      className={`relative z-20 w-full max-w-[360px] xl:absolute xl:right-[274px] xl:top-[168px] xl:w-[360px] ${
-        dragging ? "select-none" : ""
-      }`}
+      className={`relative z-20 mx-auto w-full max-w-[420px] xl:absolute xl:right-12 xl:bottom-10 xl:mx-0 xl:w-[360px] ${dragging ? "select-none" : ""}`}
       style={placement}
       onPointerDown={onCardPointerDown}
       onPointerMove={(event) => moveListenerRef.current(event.nativeEvent)}
       onPointerUp={() => upListenerRef.current()}
       onPointerCancel={() => upListenerRef.current()}
     >
-      <AnimatePresence mode="wait" initial={false}>
-        {open ? (
-          <motion.div
-            key="calculator"
-            className={`relative rounded-[20px] border border-border/70 bg-white px-4 py-3.5 shadow-card xl:touch-none ${
-              dragging ? "cursor-grabbing" : "xl:cursor-grab"
-            }`}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="mb-2 flex items-center justify-between">
-              <p className="hidden items-center gap-1.5 text-[12px] font-medium text-text-muted xl:inline-flex">
-                <GripHorizontal className="h-4 w-4" strokeWidth={1.8} />
-                Drag to move
-              </p>
-              <button
-                type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border text-text-secondary transition-colors hover:bg-bg-warm hover:text-text"
-                aria-label="Close calculator"
-                onClick={() => setOpen(false)}
-              >
-                <X className="h-4 w-4" strokeWidth={1.8} />
-              </button>
-            </div>
-
-            <div className="flex items-end justify-between gap-3">
-              <p className="text-[13px] font-medium text-text-secondary">
-                How much to borrow?
-              </p>
-              <motion.p
-                key={amount}
-                className="text-[28px] font-bold leading-none tracking-tight text-text"
-                initial={{ opacity: 0.6 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                {formatCurrency(amount)}
-              </motion.p>
-            </div>
-
-            <div className="mt-3">
-              <input
-                type="range"
-                min={LOAN_AMOUNT_MIN}
-                max={LOAN_AMOUNT_MAX}
-                step={LOAN_AMOUNT_STEP}
-                value={amount}
-                onChange={(event) => setAmount(Number(event.target.value))}
-                className="loan-slider h-1.5 w-full cursor-pointer appearance-none rounded-full bg-border"
-                style={{
-                  background: `linear-gradient(to right, #075E45 0%, #075E45 ${sliderPercent}%, #EAECF0 ${sliderPercent}%, #EAECF0 100%)`,
-                }}
-                aria-valuemin={LOAN_AMOUNT_MIN}
-                aria-valuemax={LOAN_AMOUNT_MAX}
-                aria-valuenow={amount}
-                aria-label="Loan amount"
-              />
-              <div className="mt-1.5 flex justify-between text-[12px] text-text-muted">
-                <span>{formatCurrency(LOAN_AMOUNT_MIN)}</span>
-                <span>{formatCurrency(LOAN_AMOUNT_MAX)}</span>
-              </div>
-            </div>
-
-            <label className="mt-3 block">
-              <span className="text-[13px] font-medium text-text-secondary">Loan term</span>
-              <select
-                value={termIndex}
-                onChange={(event) => setTermIndex(Number(event.target.value))}
-                className="mt-1 h-10 w-full cursor-pointer rounded-[12px] border border-border bg-white px-3 text-[14px] text-text outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/15"
-              >
-                {LOAN_TERMS.map((option, index) => (
-                  <option key={option.months} value={index}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="mt-3 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-[12px] text-text-secondary">Estimated repayment</p>
-                <motion.p
-                  key={weekly}
-                  className="mt-0.5 text-[22px] font-bold tracking-tight text-text"
-                  initial={{ opacity: 0.6 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {formatCurrency(weekly)}
-                  <span className="text-[14px] font-semibold text-text-secondary"> / week</span>
-                </motion.p>
-              </div>
-              <Info className="mb-1.5 h-4 w-4 shrink-0 text-text-muted" strokeWidth={1.8} aria-hidden />
-            </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-text-muted">
-              This is an estimate only. Rates and terms may vary.
-            </p>
-
-            <Link
-              to="/register"
-              className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-full bg-primary text-[14px] font-semibold text-white no-underline transition-all hover:-translate-y-px hover:bg-primary-hover"
+      {open ? (
+        <div
+          className={`relative rounded-[20px] border border-border/70 bg-white px-4 py-3.5 shadow-card ${
+            dragging ? "cursor-grabbing" : ""
+          }`}
+        >
+          <div className="mb-2 flex items-center justify-end">
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border text-text-secondary transition-colors hover:bg-bg-warm hover:text-text"
+              aria-label="Close calculator"
+              onClick={() => setOpen(false)}
             >
-              Get started
-              <ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden />
-            </Link>
-          </motion.div>
-        ) : (
-          <motion.button
-            key="open"
-            type="button"
-            className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-5 text-[15px] font-semibold text-text shadow-card transition-all hover:-translate-y-px"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => setOpen(true)}
+              <X className="h-4 w-4" strokeWidth={1.8} />
+            </button>
+          </div>
+
+          <div className="flex items-end justify-between gap-3">
+            <p className="text-[14px] font-medium text-text-secondary">How much to borrow?</p>
+            <p className="text-[28px] font-bold leading-none tracking-tight text-text">
+              {formatCurrency(amount)}
+            </p>
+          </div>
+
+          <div className="mt-3">
+            <input
+              type="range"
+              min={LOAN_AMOUNT_MIN}
+              max={LOAN_AMOUNT_MAX}
+              step={LOAN_AMOUNT_STEP}
+              value={amount}
+              onChange={(event) => setAmount(Number(event.target.value))}
+              className="loan-slider h-1.5 w-full cursor-pointer appearance-none rounded-full bg-border"
+              style={{
+                background: `linear-gradient(to right, #075E45 0%, #075E45 ${sliderPercent}%, #EAECF0 ${sliderPercent}%, #EAECF0 100%)`,
+              }}
+              aria-valuemin={LOAN_AMOUNT_MIN}
+              aria-valuemax={LOAN_AMOUNT_MAX}
+              aria-valuenow={amount}
+              aria-label="Loan amount"
+              aria-describedby={detailsId}
+            />
+            <div className="mt-1.5 flex justify-between text-[13px] text-text-muted">
+              <span>{formatCurrency(LOAN_AMOUNT_MIN)}</span>
+              <span>{formatCurrency(LOAN_AMOUNT_MAX)}</span>
+            </div>
+          </div>
+
+          <label className="mt-3 block">
+            <span className="text-[14px] font-medium text-text-secondary">Loan term</span>
+            <select
+              value={termIndex}
+              onChange={(event) => setTermIndex(Number(event.target.value))}
+              className="mt-1 h-10 w-full cursor-pointer rounded-[12px] border border-border bg-white px-3 text-[14px] text-text outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/15"
+            >
+              {LOAN_TERMS.map((option, index) => (
+                <option key={option.months} value={index}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="mt-3">
+            <p className="text-[13px] text-text-secondary">Estimated weekly repayment</p>
+            <p className="mt-0.5 text-[22px] font-bold tracking-tight text-text">
+              {formatCurrency(estimate.weekly)}
+              <span className="text-[14px] font-semibold text-text-secondary"> / week</span>
+            </p>
+          </div>
+
+          <dl id={detailsId} className="mt-3 space-y-1 text-[13px] text-text-secondary">
+            <div className="flex justify-between gap-3">
+              <dt>Illustrative annual rate</dt>
+              <dd className="font-semibold text-text">{ratePercent}% p.a.</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt>Total amount payable</dt>
+              <dd className="font-semibold text-text">{formatCurrency(estimate.totalPayable)}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt>Interest in this estimate</dt>
+              <dd className="font-semibold text-text">{formatCurrency(estimate.totalInterest)}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt>Establishment and other fees</dt>
+              <dd className="font-semibold text-text">Not included</dd>
+            </div>
+          </dl>
+          <p className="mt-2 text-[13px] leading-relaxed text-text-muted">
+            Demo placeholder pending the client&apos;s official formula. {estimate.weeks} weekly
+            payments. Not a credit quote.
+          </p>
+
+          <Link
+            to="/register"
+            className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-full bg-primary text-[14px] font-semibold text-white no-underline transition-all hover:-translate-y-px hover:bg-primary-hover"
           >
-            <Calculator className="h-4 w-4 text-primary" strokeWidth={1.8} />
-            Open calculator
-          </motion.button>
-        )}
-      </AnimatePresence>
+            Get started
+            <ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden />
+          </Link>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-5 text-[15px] font-semibold text-text shadow-card transition-all hover:-translate-y-px"
+          onClick={() => setOpen(true)}
+        >
+          <Calculator className="h-4 w-4 text-primary" strokeWidth={1.8} />
+          Open calculator
+        </button>
+      )}
     </div>
   );
 }

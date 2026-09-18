@@ -5,15 +5,15 @@ import { AnimatePresence, motion } from "framer-motion";
 import { MarketingLogo } from "./MarketingLogo";
 
 const NAV_LINKS = [
-  { label: "About", href: "/#why" },
+  { label: "About", href: "/about" },
   { label: "FAQ", href: "/#faq" },
   { label: "Contact", href: "/help" },
 ] as const;
 
 const LOAN_LINKS = [
-  { label: "Vehicle Finance", href: "/#loans" },
-  { label: "Personal Loan", href: "/#loans" },
-  { label: "Business Finance", href: "/#loans" },
+  { label: "Vehicle finance", href: "/loans/vehicle" },
+  { label: "Personal loan", href: "/loans/personal" },
+  { label: "Business finance", href: "/loans/business" },
 ] as const;
 
 export function Navbar() {
@@ -43,6 +43,7 @@ export function Navbar() {
                 type="button"
                 className="inline-flex items-center gap-1 text-[15px] font-medium text-text-secondary transition-colors hover:text-text"
                 aria-expanded={loansOpen}
+                aria-controls="loans-menu"
               >
                 Loans
                 <ChevronDown className="h-4 w-4" strokeWidth={1.8} aria-hidden />
@@ -54,17 +55,18 @@ export function Navbar() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 6 }}
                     transition={{ duration: 0.16 }}
+                    id="loans-menu"
                     className="absolute left-1/2 top-full z-20 w-[220px] -translate-x-1/2 pt-3"
                   >
                     <div className="rounded-[16px] border border-border bg-white p-2 shadow-card">
                       {LOAN_LINKS.map((item) => (
-                        <a
+                        <Link
                           key={item.label}
-                          href={item.href}
+                          to={item.href}
                           className="block rounded-[10px] px-3 py-2.5 text-[14px] font-medium text-text-secondary no-underline hover:bg-bg-warm hover:text-text"
                         >
                           {item.label}
-                        </a>
+                        </Link>
                       ))}
                     </div>
                   </motion.div>
@@ -116,7 +118,9 @@ export function Navbar() {
             type="button"
             className="inline-flex h-10 w-10 items-center justify-center justify-self-end rounded-full border border-border text-text md:hidden"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
-            onClick={() => setMenuOpen(true)}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav"
+            onClick={() => setMenuOpen((value) => !value)}
           >
             <Menu className="h-5 w-5" strokeWidth={1.8} />
           </button>
@@ -137,6 +141,7 @@ export function Navbar() {
               onClick={() => setMenuOpen(false)}
             />
             <motion.aside
+              id="mobile-nav"
               className="fixed inset-y-0 right-0 z-50 flex w-[min(320px,88vw)] flex-col bg-white shadow-card md:hidden"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
@@ -159,14 +164,14 @@ export function Navbar() {
                   Loans
                 </p>
                 {LOAN_LINKS.map((item) => (
-                  <a
+                  <Link
                     key={item.label}
-                    href={item.href}
+                    to={item.href}
                     className="rounded-[10px] px-3 py-3 text-[16px] font-medium text-text no-underline hover:bg-bg-warm"
                     onClick={() => setMenuOpen(false)}
                   >
                     {item.label}
-                  </a>
+                  </Link>
                 ))}
                 {NAV_LINKS.map((item) =>
                   item.href.startsWith("/#") ? (

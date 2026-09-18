@@ -1,22 +1,30 @@
 import { Link } from "react-router-dom";
 import { MarketingLogo } from "./MarketingLogo";
+import {
+  CONTACT_ADDRESS,
+  CONTACT_EMAIL,
+  CONTACT_PHONE,
+  DEMO_NOTICE,
+  LEGAL_ENTITY,
+  SITE_NAME,
+} from "../../site";
 
 const FOOTER_LINKS = {
   loans: [
-    { label: "Personal Loan", to: "/help" },
-    { label: "Vehicle Finance", to: "/help" },
-    { label: "Business Finance", to: "/help" },
+    { label: "Personal loan", to: "/loans/personal" },
+    { label: "Vehicle finance", to: "/loans/vehicle" },
+    { label: "Business finance", to: "/loans/business" },
   ],
   company: [
-    { label: "About", to: "/help" },
+    { label: "About", to: "/about" },
     { label: "Contact", to: "/help" },
     { label: "FAQ", to: "/#faq" },
   ],
   legal: [
-    { label: "Privacy", to: "/help" },
-    { label: "Terms", to: "/help" },
-    { label: "Responsible Lending", to: "/help" },
-    { label: "Disclosures", to: "/help" },
+    { label: "Privacy", to: "/privacy" },
+    { label: "Terms", to: "/terms" },
+    { label: "Responsible lending", to: "/responsible-lending" },
+    { label: "Disclosures", to: "/disclosures" },
   ],
 } as const;
 
@@ -26,13 +34,24 @@ export function Footer() {
       <div className="marketing-wrap grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <MarketingLogo />
-          <p className="mt-4 max-w-[260px] text-[14px] leading-relaxed text-text-secondary">
-            Simple, transparent finance built around people across New Zealand.
+          <p className="mt-4 max-w-[280px] text-[14px] leading-relaxed text-text-secondary">
+            {SITE_NAME} is the teaching workspace for {LEGAL_ENTITY}.
+          </p>
+          <p className="mt-3 text-[14px] leading-relaxed text-text-secondary">
+            {CONTACT_ADDRESS}
+            <br />
+            <a href={`tel:${CONTACT_PHONE.replace(/\s/g, "")}`} className="text-text-secondary">
+              {CONTACT_PHONE}
+            </a>
+            <br />
+            <a href={`mailto:${CONTACT_EMAIL}`} className="text-text-secondary">
+              {CONTACT_EMAIL}
+            </a>
           </p>
         </div>
 
         <div>
-          <h3 className="text-[14px] font-semibold text-text">Loans</h3>
+          <h2 className="text-[14px] font-semibold text-text">Loans</h2>
           <ul className="mt-4 space-y-3">
             {FOOTER_LINKS.loans.map((item) => (
               <li key={item.label}>
@@ -48,7 +67,7 @@ export function Footer() {
         </div>
 
         <div>
-          <h3 className="text-[14px] font-semibold text-text">Company</h3>
+          <h2 className="text-[14px] font-semibold text-text">Company</h2>
           <ul className="mt-4 space-y-3">
             {FOOTER_LINKS.company.map((item) =>
               item.to.startsWith("/#") ? (
@@ -75,7 +94,7 @@ export function Footer() {
         </div>
 
         <div>
-          <h3 className="text-[14px] font-semibold text-text">Legal</h3>
+          <h2 className="text-[14px] font-semibold text-text">Legal</h2>
           <ul className="mt-4 space-y-3">
             {FOOTER_LINKS.legal.map((item) => (
               <li key={item.label}>
@@ -91,8 +110,11 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="marketing-wrap mt-12 border-t border-border pt-6">
-        <p className="text-[13px] text-text-muted">© Toumu&apos;a Lending</p>
+      <div className="marketing-wrap mt-12 space-y-2 border-t border-border pt-6">
+        <p className="text-[13px] text-text-muted">
+          © {new Date().getFullYear()} {LEGAL_ENTITY}. Product name: {SITE_NAME}.
+        </p>
+        <p className="max-w-[720px] text-[13px] leading-relaxed text-text-muted">{DEMO_NOTICE}</p>
       </div>
     </footer>
   );

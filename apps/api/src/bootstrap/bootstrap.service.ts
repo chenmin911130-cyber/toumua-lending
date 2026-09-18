@@ -17,7 +17,7 @@ export class BootstrapService implements OnModuleInit {
     await this.ensureBootstrapAdmin();
     if (process.env.NODE_ENV === "test") return;
     await seedDemoAccounts(this.prisma, (password) => this.auth.hashPassword(password));
-    this.logger.log("Seeded COMP721 demo accounts with password 123456");
+    this.logger.log("Seeded COMP721 demo accounts with password project721");
   }
 
   private async ensureBootstrapAdmin(): Promise<void> {

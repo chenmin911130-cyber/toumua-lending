@@ -7,20 +7,20 @@ const PRODUCTS = [
     icon: Car,
     title: "Vehicle Finance",
     description: "Get on the road with flexible vehicle finance for new or used vehicles.",
-    href: "/help",
+    href: "/loans/vehicle",
   },
   {
     icon: UserRound,
     title: "Personal Loan",
     description:
       "Finance what matters to you — home improvements, travel, or life's next step.",
-    href: "/help",
+    href: "/loans/personal",
   },
   {
     icon: BriefcaseBusiness,
     title: "Business Finance",
     description: "Support your business goals with flexible lending solutions.",
-    href: "/help",
+    href: "/loans/business",
   },
 ] as const;
 
@@ -33,7 +33,7 @@ export function LoanOptions() {
             Our loan options
           </h2>
           <Link
-            to="/help"
+            to="/loans"
             className="inline-flex items-center gap-1 text-[15px] font-semibold text-primary no-underline hover:text-primary-hover"
           >
             View all loans

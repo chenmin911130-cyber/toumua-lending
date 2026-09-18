@@ -1,5 +1,4 @@
 import { ChevronRight, CircleCheck, ClipboardList, Search } from "lucide-react";
-import { motion } from "framer-motion";
 
 const STEPS = [
   {
@@ -36,13 +35,7 @@ export function ProcessSteps() {
         <div className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
           {STEPS.map((step, index) => (
             <div key={step.num} className="relative flex items-start gap-4">
-              <motion.article
-                className="min-w-0"
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-80px" }}
-                transition={{ duration: 0.4, delay: index * 0.08 }}
-              >
+              <article className="min-w-0">
                 <div className="flex items-center gap-3">
                   <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f3f4f6] text-[13px] font-semibold text-text-muted">
                     {step.num}
@@ -53,7 +46,7 @@ export function ProcessSteps() {
                 <p className="mt-2 text-[15px] leading-relaxed text-text-secondary">
                   {step.description}
                 </p>
-              </motion.article>
+              </article>
               {index < STEPS.length - 1 ? (
                 <ChevronRight
                   className="absolute top-3 -right-4 hidden h-5 w-5 text-text-muted lg:block"

@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p tsconfig.json --noEmit && vite build",
-    "preview": "vite preview"
+    "build": "tsc -p tsconfig.json --noEmit && vite build && node ./scripts/prerender.mjs",
+    "preview": "node ./preview-server.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "5.89.0",

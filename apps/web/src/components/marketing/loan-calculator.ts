@@ -23,6 +23,10 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+export function weeksForTerm(months: number): number {
+  return Math.round((months * 52) / 12);
+}
+
 export function calcWeeklyRepayment(
   principal: number,
   months: number,
@@ -34,4 +38,16 @@ export function calcWeeklyRepayment(
   const monthly =
     (principal * monthlyRate * factor) / (factor - 1);
   return Math.round((monthly * 12) / 52);
+}
+
+export function calcEstimate(
+  principal: number,
+  months: number,
+  annualRate = ESTIMATE_ANNUAL_RATE,
+) {
+  const weekly = calcWeeklyRepayment(principal, months, annualRate);
+  const weeks = weeksForTerm(months);
+  const totalPayable = weekly * weeks;
+  const totalInterest = Math.max(0, totalPayable - principal);
+  return { weekly, weeks, totalPayable, totalInterest, annualRate };
 }

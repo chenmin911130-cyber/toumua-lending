@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { AccountLayout, CustomerLayout, PublicLayout, StaffLayout } from "./layouts";
 import {
   AcceptInvitationPage,
@@ -13,6 +13,20 @@ import {
 } from "./pages/public";
 import { HelpPage } from "./pages/help";
 import { HomePage } from "./pages/home";
+import {
+  AboutPage,
+  DisclosuresPage,
+  PrivacyPage,
+  ResponsibleLendingPage,
+  TermsPage,
+} from "./pages/legal";
+import {
+  BusinessLoanPage,
+  LoansIndexPage,
+  PersonalLoanPage,
+  VehicleLoanPage,
+} from "./pages/loans";
+import { NotFoundPage } from "./pages/not-found";
 import { CustomerApplicationsPage, CustomerHomePage } from "./pages/customer";
 import { CustomerApplyPage } from "./pages/customer-apply";
 import {
@@ -68,6 +82,15 @@ export function App() {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/accept-invitation" element={<AcceptInvitationPage />} />
         <Route path="/help" element={<HelpPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/responsible-lending" element={<ResponsibleLendingPage />} />
+        <Route path="/disclosures" element={<DisclosuresPage />} />
+        <Route path="/loans" element={<LoansIndexPage />} />
+        <Route path="/loans/personal" element={<PersonalLoanPage />} />
+        <Route path="/loans/vehicle" element={<VehicleLoanPage />} />
+        <Route path="/loans/business" element={<BusinessLoanPage />} />
       </Route>
 
       <Route element={<CustomerLayout />}>
@@ -119,7 +142,7 @@ export function App() {
         <Route path="/notifications" element={<NotificationsPage />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

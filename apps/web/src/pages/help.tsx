@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { DocumentHead } from "../components/DocumentHead";
 import { ChevronRight, Clock, Mail, MapPin, Phone } from "lucide-react";
-import { motion } from "framer-motion";
 import { api, type ContactResponse } from "../api";
 import { useAuth } from "../auth";
 import { FAQItem } from "../components/marketing/FAQ";
@@ -152,20 +152,14 @@ function HelpContent() {
             A straightforward process from application to disbursement.
           </p>
           <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((step, index) => (
-              <motion.article
-                key={step.num}
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-80px" }}
-                transition={{ duration: 0.4, delay: index * 0.06 }}
-              >
+            {STEPS.map((step) => (
+              <article key={step.num}>
                 <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f3f4f6] text-[13px] font-semibold text-text-muted">
                   {step.num}
                 </span>
                 <h3 className="mt-4 text-[18px] font-semibold text-text">{step.title}</h3>
                 <p className="mt-2 text-[15px] leading-relaxed text-text-secondary">{step.description}</p>
-              </motion.article>
+              </article>
             ))}
           </div>
         </div>
@@ -181,6 +175,7 @@ export function HelpPage() {
   if (inCustomerApp) {
     return (
       <div className="marketing-page bg-white font-sans text-text antialiased">
+        <DocumentHead title="Help" path="/help" description="Contact Toumu’a Lending about an application, repayment, or security asset." />
         <HelpContent />
       </div>
     );
@@ -188,6 +183,7 @@ export function HelpPage() {
 
   return (
     <div className="marketing-page min-h-screen bg-white font-sans text-text antialiased">
+      <DocumentHead title="Contact" path="/help" description="Call or email the Toumu’a Lending office about an application, repayment, or security asset." />
       <Navbar />
       <main>
         <HelpContent />
