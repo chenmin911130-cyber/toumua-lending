@@ -183,6 +183,25 @@ export function isQuoteFailure(
 }
 
 /** Kept for the schedule preview on the terms step (test policy only). */
+/** Official surplus/shortfall settlement is an external dependency. */
+export function isSettlementPolicyConfigured(): boolean {
+  return false;
+}
+
+export function quoteSettlement(balanceBefore: string, saleProceeds: string) {
+  const surplusOrShortfall = subtract(saleProceeds, balanceBefore);
+  return {
+    policy: null as string | null,
+    balanceBefore,
+    saleProceeds,
+    surplusOrShortfall,
+    pendingSettlement: !isSettlementPolicyConfigured(),
+    reason: isSettlementPolicyConfigured()
+      ? undefined
+      : "Official settlement policy is not configured",
+  };
+}
+
 export function buildTermsPreview(
   input: {
     firstPaymentDate?: string | null;

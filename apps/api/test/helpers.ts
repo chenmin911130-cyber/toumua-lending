@@ -37,22 +37,35 @@ export async function startApp() {
 }
 
 export async function resetDb(prisma: PrismaService) {
-  await prisma.assetPhoto.deleteMany();
-  await prisma.valuation.deleteMany();
-  await prisma.applicationAsset.deleteMany();
-  await prisma.applicationTerms.deleteMany();
-  await prisma.application.deleteMany();
-  await prisma.borrowerAccountLink.deleteMany();
-  await prisma.borrower.deleteMany();
-  await prisma.sequenceCounter.deleteMany();
-  await prisma.rateLimitHit.deleteMany();
-  await prisma.mailMessage.deleteMany();
-  await prisma.auditEvent.deleteMany();
-  await prisma.staffPermission.deleteMany();
-  await prisma.verificationToken.deleteMany();
-  await prisma.session.deleteMany();
-  await prisma.invitation.deleteMany();
-  await prisma.user.deleteMany();
+  // CASCADE truncate keeps test resets reliable as the schema grows.
+  await prisma.$executeRawUnsafe(`
+    TRUNCATE TABLE
+      "CorrectionRequest",
+      "Receipt",
+      "LedgerEntry",
+      "PaymentAttempt",
+      "ScheduleEntry",
+      "CustodyEvent",
+      "ApplicationDecision",
+      "Loan",
+      "AssetPhoto",
+      "Valuation",
+      "ApplicationAsset",
+      "ApplicationTerms",
+      "Application",
+      "BorrowerAccountLink",
+      "Borrower",
+      "SequenceCounter",
+      "RateLimitHit",
+      "MailMessage",
+      "AuditEvent",
+      "StaffPermission",
+      "VerificationToken",
+      "Session",
+      "Invitation",
+      "User"
+    RESTART IDENTITY CASCADE
+  `);
 }
 
 export async function seedAdmin(prisma: PrismaService, auth: AuthService) {
@@ -106,6 +119,21 @@ export async function seedValuationOfficer(prisma: PrismaService, auth: AuthServ
   });
 }
 
+export async function seedManager(prisma: PrismaService, auth: AuthService) {
+  const passwordHash = await auth.hashPassword("Manager12345");
+  return prisma.user.create({
+    data: {
+      email: "manager@example.com",
+      emailNormalized: "manager@example.com",
+      name: "Morgan Manager",
+      passwordHash,
+      role: "MANAGER",
+      status: "ACTIVE",
+      emailVerifiedAt: new Date(),
+    },
+  });
+}
+
 export async function seedCashier(prisma: PrismaService, auth: AuthService) {
   const passwordHash = await auth.hashPassword("Cashier12345");
   return prisma.user.create({
@@ -140,6 +168,20 @@ export function csrf(agent: Agent) {
 export async function post(agent: Agent, url: string, body?: unknown) {
   const token = await refreshCsrf(agent);
   return agent.post(url).set("x-csrf-token", token).send(body ?? {});
+}
+
+export async function postIdempotent(
+  agent: Agent,
+  url: string,
+  body: unknown,
+  idempotencyKey: string,
+) {
+  const token = await refreshCsrf(agent);
+  return agent
+    .post(url)
+    .set("x-csrf-token", token)
+    .set("idempotency-key", idempotencyKey)
+    .send(body ?? {});
 }
 
 export async function patch(agent: Agent, url: string, body?: unknown) {

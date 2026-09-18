@@ -74,6 +74,42 @@ export type AttemptStart =
   | { kind: "new"; attemptId: string }
   | { kind: "replay"; attemptId: string; ledgerEntryId: string | null };
 
+/** Short-circuit before loan-state checks when the key already committed. */
+export function inspectIdempotencyKey(
+  existing: {
+    id: string;
+    requestHash: string;
+    status: string;
+    ledgerEntryId: string | null;
+    failureReason: string | null;
+  } | null,
+  body: Record<string, unknown>,
+): { action: "proceed" } | { action: "replay"; attemptId: string } {
+  let lookup: AttemptLookup;
+  try {
+    lookup = resolveExistingAttempt(existing, hashRequest(body));
+  } catch (error) {
+    if (error instanceof IdempotencyConflict) {
+      throw conflict(error.message);
+    }
+    throw error;
+  }
+  if (lookup.kind === "absent") return { action: "proceed" };
+  if (lookup.kind === "replay") {
+    return { action: "replay", attemptId: lookup.attemptId };
+  }
+  if (lookup.kind === "unresolved") {
+    throw conflict(
+      lookup.status === PaymentAttemptStatus.UNKNOWN
+        ? "An earlier attempt with this key has an unknown result. Check it before retrying rather than sending a new one."
+        : "An attempt with this key is still in progress.",
+    );
+  }
+  throw conflict(
+    `This attempt was rejected and posted nothing${lookup.reason ? `: ${lookup.reason}` : ""}. Correct the request and submit it with a new key.`,
+  );
+}
+
 /**
  * Creates the attempt row, or reports the existing one. Relies on the unique
  * index on `idempotencyKey`, so two simultaneous identical requests cannot both
@@ -86,7 +122,7 @@ export async function beginAttempt(
   tx: Prisma.TransactionClient,
   input: {
     idempotencyKey: string;
-    type: "DISBURSEMENT" | "REPAYMENT";
+    type: "DISBURSEMENT" | "REPAYMENT" | "SALE_RECEIPT";
     loanId: string;
     initiatedById: string;
     body: Record<string, unknown>;

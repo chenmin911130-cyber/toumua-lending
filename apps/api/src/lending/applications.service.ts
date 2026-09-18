@@ -17,7 +17,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { assertManageLending } from "./access";
 import { NumbersService } from "./numbers.service";
 import { attachReadiness, buildReadiness, isReadyToSubmit } from "./readiness";
-import { buildTermsPreview, termsPolicyConfigured } from "./terms-policy";
+import { buildTermsPreview, termsPolicyConfigured } from "./calculation-policy";
 import { UploadsService } from "./uploads.service";
 
 @Injectable()

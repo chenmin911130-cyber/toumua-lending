@@ -1,24 +1,25 @@
 import { Controller, Get, Inject, Param } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { emptyList } from "@toumua/contracts";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { AuthUser } from "../auth/session";
-import { forbidden, notFound } from "../common/http";
+import { forbidden } from "../common/http";
 import { ApplicationsService } from "../lending/applications.service";
-import { PrismaService } from "../prisma/prisma.service";
+import { LoansService } from "../lending/loans.service";
+import { MoneyService } from "../lending/money.service";
 
 @ApiTags("customer")
 @Controller("me")
 export class CustomerController {
   constructor(
     @Inject(ApplicationsService) private readonly applicationsService: ApplicationsService,
-    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(LoansService) private readonly loansService: LoansService,
+    @Inject(MoneyService) private readonly moneyService: MoneyService,
   ) {}
 
   @Get("loans")
   loans(@CurrentUser() user: AuthUser) {
     this.assertCustomer(user);
-    return emptyList();
+    return this.loansService.listForCustomer(user.id);
   }
 
   @Get("applications")
@@ -34,15 +35,15 @@ export class CustomerController {
   }
 
   @Get("loans/:id")
-  loan(@CurrentUser() user: AuthUser, @Param("id") _id: string) {
+  loan(@CurrentUser() user: AuthUser, @Param("id") id: string) {
     this.assertCustomer(user);
-    throw notFound();
+    return this.loansService.getForCustomer(user.id, id);
   }
 
   @Get("receipts/:id")
-  receipt(@CurrentUser() user: AuthUser, @Param("id") _id: string) {
+  receipt(@CurrentUser() user: AuthUser, @Param("id") id: string) {
     this.assertCustomer(user);
-    throw notFound();
+    return this.moneyService.getReceiptForCustomer(user.id, id);
   }
 
   private assertCustomer(user: AuthUser) {

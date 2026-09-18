@@ -15,6 +15,27 @@ import {
 } from "./pages/public";
 import { CustomerApplicationsPage, CustomerHomePage, LaterModulePage } from "./pages/customer";
 import {
+  ApplicationReviewPage,
+  StaffCollateralDetailPage,
+  StaffCollateralPage,
+  StaffDisbursementPage,
+  StaffLoanDetailPage,
+  StaffLoansPage,
+  StaffRepaymentPage,
+  StaffReceiptPage,
+  StaffTransactionDetailPage,
+  StaffTransactionsPage,
+} from "./pages/batch04";
+import {
+  StaffCorrectionDetailPage,
+  StaffCorrectionsPage,
+  StaffDefaultPage,
+  StaffPaymentAttemptPage,
+  StaffReturnPage,
+  StaffSalePage,
+  StaffSaleReceiptPage,
+} from "./pages/batch05";
+import {
   AccountLinkPage,
   ApplicationWizardPage,
   ApplicationsPage,
@@ -65,20 +86,23 @@ export function App() {
         <Route path="/staff/applications" element={<ApplicationsPage />} />
         <Route path="/staff/applications/:id/edit/:step" element={<ApplicationWizardPage />} />
         <Route path="/staff/applications/:id/valuation" element={<ValuationPage />} />
-        <Route path="/staff/applications/:id/review" element={<ApplicationWizardPage />} />
-        <Route path="/staff/collateral" element={<UnavailableStaffPage title="Collateral" />} />
-        <Route path="/staff/collateral/:id" element={<UnavailableStaffPage title="Collateral item" />} />
-        <Route path="/staff/collateral/:id/return" element={<UnavailableStaffPage title="Return" />} />
-        <Route path="/staff/collateral/:id/sale" element={<UnavailableStaffPage title="Sale" />} />
-        <Route path="/staff/loans" element={<UnavailableStaffPage title="Loans" />} />
-        <Route path="/staff/loans/:id" element={<UnavailableStaffPage title="Loan" />} />
-        <Route path="/staff/loans/:id/disbursement" element={<UnavailableStaffPage title="Disbursement" />} />
-        <Route path="/staff/loans/:id/repayment" element={<UnavailableStaffPage title="Repayment" />} />
-        <Route path="/staff/transactions" element={<UnavailableStaffPage title="Transactions" />} />
-        <Route path="/staff/transactions/:id" element={<UnavailableStaffPage title="Transaction" />} />
-        <Route path="/staff/corrections" element={<UnavailableStaffPage title="Corrections" />} />
-        <Route path="/staff/corrections/:id" element={<UnavailableStaffPage title="Correction" />} />
-        <Route path="/staff/payment-attempts/:id" element={<UnavailableStaffPage title="Payment attempt" />} />
+        <Route path="/staff/applications/:id/review" element={<ApplicationReviewPage />} />
+        <Route path="/staff/collateral" element={<StaffCollateralPage />} />
+        <Route path="/staff/collateral/:id" element={<StaffCollateralDetailPage />} />
+        <Route path="/staff/collateral/:id/return" element={<StaffReturnPage />} />
+        <Route path="/staff/collateral/:id/sale" element={<StaffSalePage />} />
+        <Route path="/staff/loans" element={<StaffLoansPage />} />
+        <Route path="/staff/loans/:id" element={<StaffLoanDetailPage />} />
+        <Route path="/staff/loans/:id/disbursement" element={<StaffDisbursementPage />} />
+        <Route path="/staff/loans/:id/repayment" element={<StaffRepaymentPage />} />
+        <Route path="/staff/loans/:id/default" element={<StaffDefaultPage />} />
+        <Route path="/staff/loans/:id/sale-receipt" element={<StaffSaleReceiptPage />} />
+        <Route path="/staff/transactions" element={<StaffTransactionsPage />} />
+        <Route path="/staff/transactions/:id" element={<StaffTransactionDetailPage />} />
+        <Route path="/staff/receipts/:id" element={<StaffReceiptPage />} />
+        <Route path="/staff/corrections" element={<StaffCorrectionsPage />} />
+        <Route path="/staff/corrections/:id" element={<StaffCorrectionDetailPage />} />
+        <Route path="/staff/payment-attempts/:id" element={<StaffPaymentAttemptPage />} />
         <Route path="/staff/admin/accounts" element={<StaffAccountsPage />} />
         <Route path="/staff/admin/activity" element={<ActivityLogPage />} />
         <Route path="/notifications" element={<UnavailableStaffPage title="Notifications" />} />

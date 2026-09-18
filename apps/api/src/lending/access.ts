@@ -51,6 +51,8 @@ export function assertRevokeAccountLink(user: PublicUser) {
  * passes.
  */
 const DECISION_ROLES = new Set<string>([BusinessRole.MANAGER]);
+const DEFAULT_ROLES = new Set<string>([BusinessRole.MANAGER]);
+const CORRECTION_APPROVE_ROLES = new Set<string>([BusinessRole.MANAGER]);
 const CUSTODY_ROLES = new Set<string>([BusinessRole.VALUATION_OFFICER]);
 const CASHIER_ROLES = new Set<string>([BusinessRole.CASHIER]);
 
@@ -63,6 +65,20 @@ function assertRole(user: PublicUser, allowed: Set<string>, who: string) {
 /** Approving or declining a submitted application is a manager decision. */
 export function assertDecideApplication(user: PublicUser) {
   assertRole(user, DECISION_ROLES, "a manager");
+}
+
+/** Declaring default on an active loan is a manager decision. */
+export function assertDecideDefault(user: PublicUser) {
+  assertRole(user, DEFAULT_ROLES, "a manager");
+}
+
+/** Cashiers submit correction requests; managers approve them. */
+export function assertRequestCorrection(user: PublicUser) {
+  assertRole(user, CASHIER_ROLES, "a cashier");
+}
+
+export function assertApproveCorrection(user: PublicUser) {
+  assertRole(user, CORRECTION_APPROVE_ROLES, "a manager");
 }
 
 /** Physical custody: intake, inspection, storage moves, return and sale. */
@@ -78,6 +94,7 @@ export function assertPostMoney(user: PublicUser) {
 /** Reading loans and transactions: lending roles plus cashier and accountant. */
 const LEDGER_READ_ROLES = new Set<string>([
   BusinessRole.LOAN_OFFICER,
+  BusinessRole.VALUATION_OFFICER,
   BusinessRole.MANAGER,
   BusinessRole.CASHIER,
   BusinessRole.ACCOUNTANT,

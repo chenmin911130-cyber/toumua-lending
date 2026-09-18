@@ -356,7 +356,13 @@ export function ApplicationsPage() {
               <td>{row.borrowerName ?? "—"}</td>
               <td>{statusLabel(row.status)}</td>
               <td>{statusLabel(row.currentStep)}</td>
-              <td>{new Date(row.updatedAt).toLocaleDateString()}</td>
+              <td>
+                {row.status === "SUBMITTED" ? (
+                  <Link to={`/staff/applications/${row.id}/review`}>Review</Link>
+                ) : (
+                  new Date(row.updatedAt).toLocaleDateString()
+                )}
+              </td>
             </tr>
           )) : (
             <tr><td colSpan={5} className="empty-row">No applications yet.</td></tr>

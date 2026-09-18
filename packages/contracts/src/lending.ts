@@ -222,6 +222,13 @@ export const PaymentAttemptStatus = {
 export type PaymentAttemptStatus =
   (typeof PaymentAttemptStatus)[keyof typeof PaymentAttemptStatus];
 
+export const LedgerEntryType = {
+  DISBURSEMENT: "DISBURSEMENT",
+  REPAYMENT: "REPAYMENT",
+  SALE_RECEIPT: "SALE_RECEIPT",
+} as const;
+export type LedgerEntryType = (typeof LedgerEntryType)[keyof typeof LedgerEntryType];
+
 export const PaymentMethod = {
   CASH: "CASH",
   BANK_TRANSFER: "BANK_TRANSFER",
@@ -369,11 +376,16 @@ export const repaymentSchema = z
 
 export type RepaymentInput = z.infer<typeof repaymentSchema>;
 
-export const quoteQuerySchema = z.object({
-  type: z.literal("repayment").optional(),
+export const settlementQuoteQuerySchema = z.object({
+  type: z.literal("settlement"),
+});
+
+export const repaymentQuoteQuerySchema = z.object({
   amount: moneyField("Amount"),
   businessDate: businessDateField("Business date").optional(),
 });
+
+export const quoteQuerySchema = z.union([settlementQuoteQuerySchema, repaymentQuoteQuerySchema]);
 
 export type QuoteQuery = z.infer<typeof quoteQuerySchema>;
 
@@ -420,6 +432,7 @@ export type LoanDetail = LoanSummary & {
   interestMethod: string | null;
   policy: string;
   policyConfigured: boolean;
+  defaultReason?: string | null;
   overdueAmount: string;
   nextDueDate: string | null;
   schedule: ScheduleEntryView[];
@@ -458,6 +471,7 @@ export type AssetView = {
   receivedOn: string | null;
   inspectedOn: string | null;
   inspectionResult: string | null;
+  saleDraft: Record<string, unknown> | null;
   custody: CustodyEventView[];
   allowedActions: AllowedAction[];
 };
@@ -510,7 +524,7 @@ export type TransactionView = {
 
 export type PaymentAttemptView = {
   id: string;
-  type: "DISBURSEMENT" | "REPAYMENT";
+  type: "DISBURSEMENT" | "REPAYMENT" | "SALE_RECEIPT";
   status: PaymentAttemptStatus;
   loanId: string;
   loanNumber: string | null;
@@ -535,5 +549,119 @@ export type RepaymentQuoteView = {
     paidAmountAfter: string;
   }>;
   schedule: ScheduleEntryView[];
+};
+
+/* ------------------------------------------------------------------ *
+ * Batch 05: default, return, sale, corrections, settlement
+ * ------------------------------------------------------------------ */
+
+export const CorrectionStatus = {
+  REQUESTED: "REQUESTED",
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED",
+  POSTED: "POSTED",
+} as const;
+export type CorrectionStatus = (typeof CorrectionStatus)[keyof typeof CorrectionStatus];
+
+export const defaultSchema = z.object({
+  expectedVersion: z.number().int().positive(),
+  businessDate: businessDateField("Default date"),
+  reason: z.string().trim().min(1, "Reason is required").max(2000),
+  policyBasis: z.string().trim().min(1, "Policy basis is required").max(2000),
+});
+
+export type DefaultInput = z.infer<typeof defaultSchema>;
+
+export const returnSchema = z.object({
+  expectedVersion: z.number().int().positive(),
+  returnedOn: businessDateField("Return date"),
+  recipientName: z.string().trim().min(1, "Recipient name is required").max(160),
+  verificationMethod: z.string().trim().min(1, "Verification method is required").max(200),
+  conditionNote: z.string().trim().max(2000).optional().nullable(),
+  identityConfirmed: z.literal(true, {
+    errorMap: () => ({ message: "Confirm borrower and asset identity before returning" }),
+  }),
+});
+
+export type ReturnInput = z.infer<typeof returnSchema>;
+
+export const saleDraftSchema = z.object({
+  buyerName: z.string().trim().min(1, "Buyer name is required").max(160),
+  buyerContact: z.string().trim().min(1, "Buyer contact is required").max(200),
+  saleAmount: moneyField("Sale amount"),
+  saleDate: businessDateField("Sale date"),
+  method: z.string().trim().min(1, "Disposal method is required").max(200),
+  notes: z.string().trim().max(2000).optional().nullable(),
+});
+
+export type SaleDraftInput = z.infer<typeof saleDraftSchema>;
+
+export const saleSchema = saleDraftSchema.extend({
+  expectedVersion: z.number().int().positive(),
+  receiptId: z.string().optional().nullable(),
+});
+
+export type SaleInput = z.infer<typeof saleSchema>;
+
+export const saleReceiptSchema = z
+  .object({
+    expectedVersion: z.number().int().positive(),
+    amount: moneyField("Amount"),
+    businessDate: businessDateField("Business date"),
+    method: paymentMethodField,
+    externalReference: z.string().trim().max(200).optional().nullable(),
+    note: z.string().trim().max(2000).optional().nullable(),
+  })
+  .superRefine(requireReference);
+
+export type SaleReceiptInput = z.infer<typeof saleReceiptSchema>;
+
+export const correctionRequestSchema = z.object({
+  originalLedgerEntryId: z.string().min(1),
+  reason: z.string().trim().min(1, "Reason is required").max(2000),
+  proposedValues: z.object({
+    amount: moneyField("Amount").optional(),
+    businessDate: businessDateField("Business date").optional(),
+    method: paymentMethodField.optional(),
+    externalReference: z.string().trim().max(200).optional().nullable(),
+    note: z.string().trim().max(2000).optional().nullable(),
+  }),
+});
+
+export type CorrectionRequestInput = z.infer<typeof correctionRequestSchema>;
+
+export const correctionDecisionSchema = z.object({
+  expectedVersion: z.number().int().positive(),
+  decision: z.enum(["approve", "reject"]),
+  reason: z.string().trim().max(2000).optional().nullable(),
+});
+
+export type CorrectionDecisionInput = z.infer<typeof correctionDecisionSchema>;
+
+export type CorrectionView = {
+  id: string;
+  status: CorrectionStatus;
+  version: number;
+  originalLedgerEntryId: string;
+  originalTransaction: TransactionView | null;
+  proposedValues: Record<string, unknown>;
+  reason: string;
+  requestedBy: string | null;
+  decidedBy: string | null;
+  decisionReason: string | null;
+  reversalEntryId: string | null;
+  replacementEntryId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  allowedActions: AllowedAction[];
+};
+
+export type SettlementQuoteView = {
+  policy: string | null;
+  balanceBefore: string;
+  saleProceeds: string;
+  surplusOrShortfall: string;
+  pendingSettlement: boolean;
+  reason?: string;
 };
 

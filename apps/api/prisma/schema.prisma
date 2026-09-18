@@ -96,6 +96,14 @@ enum ScheduleEntryStatus {
 enum PaymentAttemptType {
   DISBURSEMENT
   REPAYMENT
+  SALE_RECEIPT
+}
+
+enum CorrectionStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  POSTED
 }
 
 /// UNKNOWN is deliberately distinct from REJECTED: a timeout is never proof that
@@ -146,6 +154,8 @@ model User {
   ledgerPosted      LedgerEntry[]         @relation("LedgerPostedBy")
   paymentAttempts   PaymentAttempt[]      @relation("PaymentAttemptBy")
   receiptsIssued    Receipt[]             @relation("ReceiptIssuedBy")
+  correctionsRequested CorrectionRequest[] @relation("CorrectionRequestedBy")
+  correctionsDecided  CorrectionRequest[]   @relation("CorrectionDecidedBy")
 }
 
 model Session {
@@ -398,9 +408,34 @@ model LedgerEntry {
   attemptId         String?         @unique
   createdAt         DateTime        @default(now())
 
-  receipt Receipt?
+  receipt             Receipt?
+  correctionRequests  CorrectionRequest[] @relation("CorrectionOriginal")
 
   @@index([loanId, createdAt])
+}
+
+/// A cashier request to reverse and replace a posted transaction.
+model CorrectionRequest {
+  id                    String           @id @default(cuid())
+  originalLedgerEntryId String
+  originalLedgerEntry   LedgerEntry      @relation("CorrectionOriginal", fields: [originalLedgerEntryId], references: [id], onDelete: Restrict)
+  proposedValues        Json
+  reason                String
+  status                CorrectionStatus @default(REQUESTED)
+  requestedById         String
+  requestedBy           User             @relation("CorrectionRequestedBy", fields: [requestedById], references: [id])
+  decidedById           String?
+  decidedBy             User?            @relation("CorrectionDecidedBy", fields: [decidedById], references: [id])
+  decisionReason        String?
+  reversalEntryId       String?          @unique
+  replacementEntryId    String?          @unique
+  postingKey            String?          @unique
+  version               Int              @default(1)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  @@index([status, createdAt])
+  @@index([originalLedgerEntryId])
 }
 
 model Receipt {
@@ -473,6 +508,8 @@ model ApplicationAsset {
   identifier    String?
   sortOrder     Int      @default(0)
   status        AssetStatus @default(PROPOSED)
+  /// Draft sale details before a valuation officer confirms disposal.
+  saleDraft     Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

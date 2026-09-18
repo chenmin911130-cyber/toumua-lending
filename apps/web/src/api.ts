@@ -63,6 +63,37 @@ export function errorMessage(error: unknown, fallback: string): string {
 }
 
 export type MeResponse = { user: PublicUser };
+export async function postIdempotent<T>(
+  path: string,
+  body: unknown,
+  idempotencyKey: string,
+): Promise<T> {
+  const token = await ensureCsrf();
+  const response = await fetch(`/api/v1${path}`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "content-type": "application/json",
+      "x-csrf-token": token,
+      "idempotency-key": idempotencyKey,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = (await response.json().catch(() => ({}))) as T & ApiErrorBody;
+  if (!response.ok) {
+    throw new ApiError(
+      {
+        code: data.code ?? "ERROR",
+        message: data.message ?? "Request failed",
+        fieldErrors: data.fieldErrors,
+        requestId: data.requestId ?? "",
+      },
+      response.status,
+    );
+  }
+  return data;
+}
+
 export async function uploadFile<T>(path: string, file: File): Promise<T> {
   const token = await ensureCsrf();
   const body = new FormData();

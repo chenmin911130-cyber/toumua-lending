@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { CompleteValuationInput, ValuationStatus } from "@toumua/contracts";
+import { AssetStatus, CompleteValuationInput, ValuationStatus } from "@toumua/contracts";
 import { AuthUser } from "../auth/session";
 import { conflict, notFound, validation } from "../common/http";
 import { AuditService } from "../audit/audit.service";
@@ -115,6 +115,10 @@ export class ValuationsService {
         participatedAt: new Date(input.participatedAt),
         version: { increment: 1 },
       },
+    });
+    await this.prisma.applicationAsset.update({
+      where: { id: valuation.assetId },
+      data: { status: AssetStatus.VALUED },
     });
     await this.audit.write({
       actorId: user.id,

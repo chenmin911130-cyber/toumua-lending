@@ -1,83 +1,59 @@
 # Batch 04: approval, collateral intake, disbursement and repayment
 
-Status: data model and migration applied; application code not yet written.
+Status: **implemented** (API + staff web). Batch 05 covers corrections, default, return, and sale flows.
 
-## What is in place
+## Delivered
 
 | Item | State |
 | --- | --- |
-| `prisma/schema.prisma` Batch 04 models | Written and structurally reviewed (23 models, 15 enums, all relations paired) |
-| Migration `20260918090000_batch_04_loans_custody_ledger` | Applied to `toumua_dev` and `toumua_test`, registered in `_prisma_migrations` |
-| Exact decimal money (`src/lending/money.ts`) | Done, 16 unit tests passing |
-| Test-only calculation policy (`src/lending/calculation-policy.ts`) | Done, production blocked |
-| API contracts (`packages/contracts/src/lending.ts`) | Done |
-| Generated Prisma client | **Not regenerated** — see blocker below |
-| Services, controllers, staff UI, integration tests | Not started |
+| Prisma schema + migration `20260918090000_batch_04_loans_custody_ledger` | Applied |
+| Generated Prisma client | Run `pnpm db:generate` after pull |
+| Exact money + test calculation policy | Done (`money.ts`, `calculation-policy.ts`, 16 unit tests) |
+| Contracts (`packages/contracts/src/lending.ts`) | Decision, intake, disbursement, repayment schemas |
+| `DecisionsService` + `/applications/:id/review` + `/decision` | Done |
+| `CustodyService` + `/assets/:id/intake` | Done |
+| `LoansService` + `/loans/*` quotes & readiness | Done |
+| `MoneyService` + disbursements/repayments with `Idempotency-Key` | Done |
+| Transactions + payment-attempt read APIs | Done |
+| Staff receipt read API + `/staff/receipts/:id` (S13-01) | Done |
+| Customer `/me/loans`, `/me/receipts/:id` | Done |
+| Staff web: loans, collateral, disbursement, repayment, review, transactions | Done |
+| Integration tests `test/batch04.spec.ts` | 8 tests: approval, decline, intake FAIL, replay, concurrency, overpayment, receipt, role refusal |
 
-## Blocker: the Prisma CLI cannot run here
-
-`prisma generate` and `prisma migrate` both hang in an infinite loop while
-loading the CLI's own `build/cli.js`. This was verified to be independent of the
-file sandbox (identical hang with full access) and of the Node version (22, 24
-and 26 all hang). On the affected machine even `lsof` never returns, so
-process/file-descriptor enumeration itself is degraded — this looks like a
-machine-level problem rather than a Prisma configuration one. Restarting the
-machine is the cheapest fix.
-
-The migration was therefore applied with `psql` and recorded in
-`_prisma_migrations` with the SHA-256 of its `migration.sql`, so a normal
-`prisma migrate` on a working machine treats it as already applied and will not
-try to re-run it.
-
-`prisma generate` has no such workaround. The generated client still contains
-only the Batch 01–03 models, so `prisma.loan`, `prisma.ledgerEntry`,
-`prisma.receipt`, `prisma.paymentAttempt`, `prisma.custodyEvent`,
-`prisma.scheduleEntry` and `prisma.applicationDecision` do not exist yet.
-
-Extending the generated client by hand was attempted and abandoned deliberately.
-Two of the three required pieces can be rewritten: the runtime model table and
-the operation name table. The third, `config.parameterizationSchema.graph`, is a
-binary encoding of the schema that the WASM query compiler validates every query
-against. A model absent from that graph is rejected with
-
-> Operation 'findMany' for model 'Loan' does not match any query.
-
-Re-encoding that graph by hand is not something that can be done reliably, and a
-half-working money client is worse than none.
-
-## To unblock
+## Verify locally
 
 ```bash
-# after restarting the machine, which is the cheapest fix for the hang
-pnpm db:generate    # regenerates the client with the Batch 04 models
-pnpm db:migrate     # no-op: the Batch 04 migration is already applied
+pnpm db:generate
+pnpm --filter @toumua/contracts build
+pnpm test:api
+pnpm dev
 ```
 
-### Consequence for the build
+The full flow can also be driven over real HTTP, which additionally exercises
+routing, CSRF and sessions. The script needs the seeded staff accounts, so point
+it at an API bound to the test database:
 
-`apps/api` **does not compile until `prisma generate` succeeds**, because
-`src/lending/decisions.service.ts` and `src/lending/idempotency.ts` reference the
-Batch 04 models. That is expected and is the only reason: nothing in those files
-is known to be wrong, but the compiler has no definitions for the new tables
-until the client is regenerated.
+```bash
+# terminal 1
+cd apps/api
+NODE_ENV=test DATABASE_URL=$TEST_DATABASE_URL API_PORT=3002 \
+  CALCULATION_POLICY=test MAIL_DRIVER=memory SMOKE_SEED=1 \
+  ../../node_modules/.bin/tsx ../../scripts/live-server.ts
 
-## Work already written, waiting on the client
+# terminal 2
+API_BASE=http://127.0.0.1:3002/api/v1 node scripts/smoke-batch04.mjs
+```
 
-- `src/lending/decisions.service.ts` — approve/decline, snapshot freeze, loan and
-  schedule creation, optimistic locking, audit inside the transaction
-- `src/lending/idempotency.ts` — money idempotency: same key + same body replays,
-  same key + different body conflicts, an unresolved key blocks a duplicate
-- `src/lending/access.ts` — decision = manager only, custody = valuation officer
-  only, money = cashier only, per the permission matrix
-- `src/lending/numbers.service.ts` — atomic sequence allocation, verified against
-  the database with psql
-- `AuditService.write(input, client)` — audit can now join the caller's
-  transaction, as the design requires for money movements
+Test accounts (passwords in `apps/api/test/helpers.ts`):
 
-## Also fixed
+- Manager: `manager@example.com` / `Manager12345`
+- Cashier: `cashier@example.com` / `Cashier12345`
+- Loan officer: `loan@example.com` / `LoanOfficer12`
+- Valuation officer: `val@example.com` / `Valuation12`
 
-`apps/api/node_modules/@prisma/client-runtime-utils` was missing, so the
-generated client could not even be `require`d (`Cannot find module
-'@prisma/client-runtime-utils'`). A link to the existing pnpm store entry was
-added, matching the sibling `@prisma/client` and `@prisma/adapter-pg` links. This
-is what `pnpm install` would normally create.
+## Still reserved (Batch 05+)
+
+- `/staff/corrections/*`, payment-attempt recovery UI (G01)
+- Collateral return and sale (S10–S12)
+- Loan default / settlement quotes (S08–S09 partial)
+- Customer loan detail pages C03/C05/C06 (shell routes remain)
