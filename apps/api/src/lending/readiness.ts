@@ -86,6 +86,15 @@ export function isReadyToSubmit(items: ReadinessItem[]) {
   return items.every((item) => item.complete);
 }
 
+/** Customer online apply: contact + loan + security photos. Valuation and terms stay with staff. */
+export const CUSTOMER_SUBMIT_IDS = new Set(["borrower", "loan-details", "security"]);
+
+export function isReadyForCustomerSubmit(items: ReadinessItem[]) {
+  return items
+    .filter((item) => CUSTOMER_SUBMIT_IDS.has(item.id))
+    .every((item) => item.complete);
+}
+
 export function attachReadiness(detail: Omit<ApplicationDetail, "readiness">, raw: ReadinessInput) {
   const readiness = buildReadiness(raw);
   return { ...detail, readiness };

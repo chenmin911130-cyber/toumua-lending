@@ -55,12 +55,12 @@ export class UploadsService {
     assetId: string,
     file: { originalname: string; mimetype: string; size: number; buffer: Buffer },
   ) {
-    assertManageLending(user);
     const asset = await this.prisma.applicationAsset.findFirst({
       where: { id: assetId, applicationId },
       include: { application: true },
     });
     if (!asset) throw notFound("Asset not found");
+    await this.assertPhotoEditor(user, asset.application);
     if (asset.application.status !== "DRAFT") {
       throw forbidden("Only draft applications can be edited");
     }
@@ -103,12 +103,12 @@ export class UploadsService {
   }
 
   async deletePhoto(user: AuthUser, applicationId: string, assetId: string, photoId: string) {
-    assertManageLending(user);
     const photo = await this.prisma.assetPhoto.findFirst({
       where: { id: photoId, assetId, asset: { applicationId } },
       include: { asset: { include: { application: true } } },
     });
     if (!photo) throw notFound("Photo not found");
+    await this.assertPhotoEditor(user, photo.asset.application);
     if (photo.asset.application.status !== "DRAFT") {
       throw forbidden("Only draft applications can be edited");
     }
@@ -131,17 +131,29 @@ export class UploadsService {
       const link = await this.prisma.borrowerAccountLink.findFirst({
         where: { userId: user.id, status: "ACTIVE" },
       });
-      if (
-        !link ||
-        link.borrowerId !== photo.asset.application.borrowerId ||
-        photo.asset.application.status === "DRAFT"
-      ) {
+      if (!link || link.borrowerId !== photo.asset.application.borrowerId) {
         throw forbidden();
       }
     }
     const path = join(this.uploadDir, photo.storageKey);
     if (!existsSync(path)) throw notFound("File not found");
     return { stream: createReadStream(path), mimeType: photo.mimeType, filename: photo.filename };
+  }
+
+  private async assertPhotoEditor(
+    user: AuthUser,
+    application: { borrowerId: string | null },
+  ) {
+    if (user.isStaff) {
+      assertManageLending(user);
+      return;
+    }
+    const link = await this.prisma.borrowerAccountLink.findFirst({
+      where: { userId: user.id, status: "ACTIVE" },
+    });
+    if (!link || link.borrowerId !== application.borrowerId) {
+      throw forbidden();
+    }
   }
 
   /**

@@ -11,7 +11,7 @@ import { Navbar } from "../components/marketing/Navbar";
 const HELP_FAQS = [
   {
     q: "How do I apply?",
-    a: "Meet with a loan officer to complete your application together. Your security assets will be valued before manager review.",
+    a: "Sign in and apply online. Include the amount you need and the security you can offer. Staff review the application and value the collateral before a manager decides.",
   },
   {
     q: "Where do I make repayments?",
@@ -23,12 +23,12 @@ const HELP_FAQS = [
   },
   {
     q: "How can I check my application?",
-    a: "Sign in to view application progress once a staff member has linked your account.",
+    a: "Sign in to apply or to check the progress of an application you have already submitted.",
   },
 ] as const;
 
 const STEPS = [
-  { num: "01", title: "Apply with an officer", description: "Complete your application together in person." },
+  { num: "01", title: "Apply online", description: "Submit the amount you need and the security you can offer." },
   { num: "02", title: "Valuation", description: "Your security assets are reviewed before a decision." },
   { num: "03", title: "Manager decision", description: "Our team assesses the application and next steps." },
   { num: "04", title: "Security intake, then disbursement", description: "Once approved, security is taken in and funds are released." },

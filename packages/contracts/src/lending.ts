@@ -166,6 +166,7 @@ export type ApplicationDetail = ApplicationSummary & {
     identifier: string | null;
     photoCount: number;
     valuationStatus: ValuationStatus | null;
+    photos: Array<{ id: string; url: string }>;
   }>;
   terms: {
     firstPaymentDate: string | null;

@@ -565,6 +565,28 @@ img { max-width: 100%; display: block; }
 }
 .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
 .photo-grid img { width: 100%; height: 140px; object-fit: cover; border-radius: 10px; }
+.wizard-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.wizard-steps a,
+.wizard-steps button {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--navy);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.wizard-steps a.active,
+.wizard-steps button.active {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
+}
 
 @media print {
   header, nav, .staff-sidebar, .staff-mobile-bar, .offline-banner, .no-print, .hero-actions, .btn { display: none !important; }

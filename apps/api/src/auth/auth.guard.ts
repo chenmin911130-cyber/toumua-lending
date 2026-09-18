@@ -51,8 +51,12 @@ export class AuthGuard implements CanActivate {
       REQUIRE_PERMISSION,
       [context.getHandler(), context.getClass()],
     );
-    if (permission && !req.authUser.permissions.includes(permission)) {
-      throw forbidden();
+    if (permission) {
+      const managerCanAdminister =
+        permission === Permission.MANAGE_STAFF && req.authUser.role === "MANAGER";
+      if (!managerCanAdminister && !req.authUser.permissions.includes(permission)) {
+        throw forbidden();
+      }
     }
     return true;
   }

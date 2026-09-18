@@ -28,7 +28,8 @@ pnpm dev
 Demo logins (password `123456` for all). Seed or refresh with `pnpm db:seed-demo`:
 
 - Customer: `sarah.tama@toumua.lending` at `/login`
-- Staff: `staff@toumua.lending` at `/staff/login`
+- Staff: `staff@toumua.lending` at `/staff/login` — simple files up to $3,000
+- Manager: `manager@toumua.lending` at `/staff/login` — larger or complex files, staff accounts
 - Admin: `admin@toumua.lending` at `/staff/login`
 
 Public registration only creates Customer accounts.

@@ -10,7 +10,8 @@ import { AuthUser } from "../auth/session";
 import { conflict, forbidden, notFound, validation } from "../common/http";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { assertDecideApplication } from "./access";
+import { assertReviewDecision, isManager } from "./access";
+import { classifyApproval } from "./approval-policy";
 import { activePolicy, buildSchedule, type Frequency } from "./calculation-policy";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NumbersService } from "./numbers.service";
@@ -36,22 +37,39 @@ export class DecisionsService {
    * something that stopped being approvable.
    */
   async review(user: AuthUser, applicationId: string) {
-    assertDecideApplication(user);
+    assertReviewDecision(user);
     const application = await this.loadForDecision(applicationId);
     const checks = this.preconditions(application);
+    const routing = this.routingOf(application);
+    const ready = checks.every((check) => check.complete);
+    const canApprove = ready && (isManager(user) || !routing.requiresManager);
     return {
       id: application.id,
       number: application.number,
       status: application.status,
       version: application.version,
+      borrowerName: application.borrower?.name ?? null,
+      requestedAmount: application.requestedAmount,
+      purpose: application.purpose,
+      proposedTermMonths: application.proposedTermMonths,
+      assets: application.assets.map((asset) => ({
+        id: asset.id,
+        name: asset.name,
+        description: asset.description,
+        photoCount: asset.photos.length,
+        valuationStatus: asset.valuations[0]?.status ?? null,
+      })),
+      staffApproveLimit: routing.limit,
+      requiresManager: routing.requiresManager,
+      managerReasons: routing.reasons,
       checks,
-      canApprove: checks.every((check) => check.complete),
-      allowedActions: this.allowedActions(application, checks),
+      canApprove,
+      allowedActions: this.allowedActions(application, checks, user, routing.requiresManager),
     };
   }
 
   async decide(user: AuthUser, applicationId: string, input: DecisionInput) {
-    assertDecideApplication(user);
+    assertReviewDecision(user);
 
     const application = await this.loadForDecision(applicationId);
     if (application.status !== ApplicationStatus.SUBMITTED) {
@@ -65,10 +83,16 @@ export class DecisionsService {
       throw conflict("This application was updated elsewhere. Reload and compare before deciding.");
     }
 
-    if (input.decision === "decline") {
-      return this.decline(user, application, input);
+    if (input.decision === "approve") {
+      const routing = this.routingOf(application);
+      if (routing.requiresManager && !isManager(user)) {
+        throw forbidden(
+          `This application needs a manager. ${routing.reasons.join("; ")}`,
+        );
+      }
+      return this.approve(user, application, input);
     }
-    return this.approve(user, application, input);
+    return this.decline(user, application, input);
   }
 
   private async approve(
@@ -291,23 +315,40 @@ export class DecisionsService {
     return checks;
   }
 
+  private routingOf(
+    application: Awaited<ReturnType<DecisionsService["loadForDecision"]>>,
+  ) {
+    return classifyApproval({
+      requestedAmount: application.requestedAmount,
+      purpose: application.purpose,
+      purposeDescription: application.purposeDescription,
+      assetCount: application.assets.length,
+    });
+  }
+
   private allowedActions(
     application: Awaited<ReturnType<DecisionsService["loadForDecision"]>>,
     checks: Array<{ id: string; label: string; complete: boolean }>,
+    user: AuthUser,
+    requiresManager: boolean,
   ): AllowedAction[] {
     const submitted = application.status === ApplicationStatus.SUBMITTED;
     const blocking = checks.filter((check) => !check.complete);
+    const staffBlocked = requiresManager && !isManager(user);
+    const approveAllowed = submitted && blocking.length === 0 && !staffBlocked;
     return [
       {
         id: "approve",
         label: "Approve application",
-        allowed: submitted && blocking.length === 0,
-        ...(submitted && blocking.length === 0
+        allowed: approveAllowed,
+        ...(approveAllowed
           ? {}
           : {
-              reason: submitted
-                ? `Waiting on: ${blocking.map((check) => check.label).join(", ")}`
-                : "Only a submitted application can be approved",
+              reason: !submitted
+                ? "Only a submitted application can be approved"
+                : blocking.length > 0
+                  ? `Waiting on: ${blocking.map((check) => check.label).join(", ")}`
+                  : "A manager must approve this amount or this file",
             }),
       },
       {

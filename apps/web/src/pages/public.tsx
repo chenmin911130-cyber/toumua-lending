@@ -73,7 +73,9 @@ function LoginForm({ staff }: { staff?: boolean }) {
   return (
     <AuthSplit
       title="Your loan, clearly in view."
-      body="Sign in to see the application or loan our team has linked to your account."
+      body={staff
+        ? "Sign in to review applications, value security, and manage loans."
+        : "Sign in to apply, or to see an application or loan already linked to your account."}
     >
       <h1>{staff ? "Staff sign-in" : "Welcome back"}</h1>
       {!staff ? <p className="hint" style={{ marginTop: 0 }}>Sign in to your account</p> : <p className="hint" style={{ marginTop: 0 }}>Use your office account</p>}
@@ -138,10 +140,10 @@ export function RegisterPage() {
   return (
     <AuthSplit
       title="Your next step starts here."
-      body="Create an account to view an application or loan our team links for you."
+      body="Create an account to apply online, or to view a loan already linked for you."
     >
       <h1>Create your account</h1>
-      <p className="hint" style={{ marginTop: 0 }}>Register to view your application and loan details.</p>
+      <p className="hint" style={{ marginTop: 0 }}>Register, then apply with the amount you need and the security you can offer.</p>
       <form onSubmit={(event) => void onSubmit(event)}>
         <Field label="Full name" name="name" value={name} onChange={(e) => setName(e.target.value)} error={fieldError(error, "name")} />
         <Field label="Email address" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} error={fieldError(error, "email")} />
@@ -151,7 +153,7 @@ export function RegisterPage() {
       </form>
       <p>Already have an account? <Link to="/login" data-control-id="A03-02">Log in</Link></p>
       <p className="hint">We’ll send a link to verify your email.</p>
-      <p className="hint">Creating an account does not submit a loan application.</p>
+      <p className="hint">Creating an account does not submit a loan application. You apply after you sign in.</p>
       <p><Link to="/" data-control-id="A03-02">Back to home</Link></p>
     </AuthSplit>
   );
@@ -274,7 +276,7 @@ export function VerifyEmailPage() {
         <Link className="btn btn-primary" to="/login" data-control-id="A05-02">Continue to login</Link>
       </p>
       {result === "verified" || result === "already_verified" ? (
-        <p className="hint">New to Toumu’a? Contact our team to start a loan application with a loan officer. <Link to="/help" data-control-id="A05-04">Contact our team</Link></p>
+        <p className="hint">New to Toumu’a? Sign in and apply online, including the security you can offer. <Link to="/login" data-control-id="A05-04">Sign in</Link></p>
       ) : null}
       {result === "expired" || result === "invalid" || result === "already_used" ? (
         <p>

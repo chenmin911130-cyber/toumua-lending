@@ -75,7 +75,7 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
    * asserted: an unasserted failure here used to surface much later as a
    * confusing "application was not submitted" conflict.
    */
-  async function createSubmittedApplication(staff: Agent) {
+  async function createSubmittedApplication(staff: Agent, requestedAmount = "600.00") {
     const borrower = await post(staff, "/api/v1/borrowers", {
       name: "Alex Borrower",
       phone: "+64 21 555 0303",
@@ -89,7 +89,7 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
     const appId = application.body.id as string;
     const details = await patch(staff, `/api/v1/applications/${appId}`, {
       expectedVersion: application.body.version,
-      requestedAmount: "600.00",
+      requestedAmount,
       purpose: "Emergency repair",
       proposedTermMonths: 6,
     });
@@ -469,5 +469,41 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
       "repay-wrong-role",
     );
     expect(refused.status).toBe(403);
+  });
+
+  it("B04-09 staff can approve a small simple file; larger amounts need a manager", async () => {
+    const staff = await login("loan@example.com", "LoanOfficer12");
+    const { appId } = await createSubmittedApplication(staff, "600.00");
+    const staffReview = await staff.get(`/api/v1/applications/${appId}/review`);
+    expect(staffReview.status).toBe(200);
+    expect(staffReview.body.requiresManager).toBe(false);
+    expect(staffReview.body.canApprove).toBe(true);
+    const staffApproved = await post(staff, `/api/v1/applications/${appId}/decision`, {
+      expectedVersion: staffReview.body.version,
+      decision: "approve",
+      reviewed: true,
+    });
+    expect(staffApproved.status).toBe(201);
+
+    const large = await createSubmittedApplication(staff, "8000.00");
+    const blocked = await staff.get(`/api/v1/applications/${large.appId}/review`);
+    expect(blocked.body.requiresManager).toBe(true);
+    expect(blocked.body.canApprove).toBe(false);
+    const refused = await post(staff, `/api/v1/applications/${large.appId}/decision`, {
+      expectedVersion: blocked.body.version,
+      decision: "approve",
+      reviewed: true,
+    });
+    expect(refused.status).toBe(403);
+
+    const manager = await login("manager@example.com", "Manager12345");
+    const managerReview = await manager.get(`/api/v1/applications/${large.appId}/review`);
+    expect(managerReview.body.canApprove).toBe(true);
+    const approved = await post(manager, `/api/v1/applications/${large.appId}/decision`, {
+      expectedVersion: managerReview.body.version,
+      decision: "approve",
+      reviewed: true,
+    });
+    expect(approved.status).toBe(201);
   });
 });

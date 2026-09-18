@@ -21,8 +21,8 @@ export class StaffController {
 
   @RequirePermission(Permission.MANAGE_STAFF)
   @Get()
-  list() {
-    return this.staff.list();
+  list(@CurrentUser() user: AuthUser) {
+    return this.staff.list(user);
   }
 
   @RequirePermission(Permission.MANAGE_STAFF)

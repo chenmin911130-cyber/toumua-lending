@@ -6,7 +6,7 @@ const STEPS = [
     num: "01",
     icon: ClipboardList,
     title: "Apply",
-    description: "Complete a simple online application.",
+    description: "Apply online with the amount you need and the security you can offer.",
   },
   {
     num: "02",

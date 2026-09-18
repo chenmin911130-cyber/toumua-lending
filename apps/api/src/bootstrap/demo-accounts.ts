@@ -98,7 +98,7 @@ async function upsertUser(
     email: string;
     name: string;
     passwordHash: string;
-    role: "CUSTOMER" | "LOAN_OFFICER" | null;
+    role: "CUSTOMER" | "LOAN_OFFICER" | "MANAGER" | null;
     permissions?: string[];
   },
 ) {
@@ -173,6 +173,13 @@ export async function seedDemoAccounts(
     name: "Louise Staff",
     passwordHash,
     role: "LOAN_OFFICER",
+  });
+
+  await upsertUser(prisma, {
+    email: "manager@toumua.lending",
+    name: "Morgan Manager",
+    passwordHash,
+    role: "MANAGER",
   });
 
   for (const customer of DEMO_CUSTOMERS) {

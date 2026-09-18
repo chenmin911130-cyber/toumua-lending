@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { advance, buildSchedule, outstanding, quoteRepayment, quoteSettlement } from "../src/lending/calculation-policy";
+import { classifyApproval } from "../src/lending/approval-policy";
+import { buildReadiness, isReadyForCustomerSubmit, isReadyToSubmit } from "../src/lending/readiness";
 import {
   add,
   compare,
@@ -214,5 +216,59 @@ describe("demo calculation policy", () => {
     expect(quote.surplusOrShortfall).toBe("150.00");
     expect(quote.pendingSettlement).toBe(false);
     expect(quote.reason).toBeUndefined();
+  });
+});
+
+describe("customer application readiness", () => {
+  it("lets a customer submit without valuation or terms", () => {
+    const items = buildReadiness({
+      id: "app-1",
+      status: "DRAFT",
+      borrowerId: "bor-1",
+      requestedAmount: "1500.00",
+      purpose: "Vehicle repair",
+      proposedTermMonths: 12,
+      assets: [{ id: "a1", name: "Gold chain", photoCount: 1, valuationStatus: "REQUESTED" }],
+      terms: { firstPaymentDate: null, frequency: null, periods: null, policyConfigured: false },
+    });
+    expect(isReadyForCustomerSubmit(items)).toBe(true);
+    expect(isReadyToSubmit(items)).toBe(false);
+  });
+});
+
+describe("approval routing", () => {
+  it("lets staff take a small simple file and sends the rest to a manager", () => {
+    expect(
+      classifyApproval({
+        requestedAmount: "3000.00",
+        purpose: "Vehicle repair",
+        purposeDescription: null,
+        assetCount: 1,
+      }).requiresManager,
+    ).toBe(false);
+    expect(
+      classifyApproval({
+        requestedAmount: "3000.01",
+        purpose: "Vehicle repair",
+        purposeDescription: null,
+        assetCount: 1,
+      }).requiresManager,
+    ).toBe(true);
+    expect(
+      classifyApproval({
+        requestedAmount: "500.00",
+        purpose: "Other",
+        purposeDescription: null,
+        assetCount: 1,
+      }).requiresManager,
+    ).toBe(true);
+    expect(
+      classifyApproval({
+        requestedAmount: "500.00",
+        purpose: "School fees",
+        purposeDescription: null,
+        assetCount: 3,
+      }).requiresManager,
+    ).toBe(true);
   });
 });

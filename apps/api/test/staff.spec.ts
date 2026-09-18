@@ -8,6 +8,7 @@ import {
   registerCustomer,
   resetDb,
   seedAdmin,
+  seedManager,
   startApp,
 } from "./helpers";
 import { PrismaService } from "../src/prisma/prisma.service";
@@ -191,5 +192,18 @@ describe("STAFF", () => {
       reason: "oops",
     });
     expect([403, 409]).toContain(last.status);
+  });
+
+  it("STAFF-04 a manager can open the staff account list", async () => {
+    await seedManager(prisma, auth);
+    const manager = await agentWithCsrf(app);
+    const login = await post(manager, "/api/v1/auth/login", {
+      email: "manager@example.com",
+      password: "Manager12345",
+    });
+    expect(login.status).toBe(201);
+    const list = await manager.get("/api/v1/staff");
+    expect(list.status).toBe(200);
+    expect(list.body.total).toBeGreaterThan(0);
   });
 });

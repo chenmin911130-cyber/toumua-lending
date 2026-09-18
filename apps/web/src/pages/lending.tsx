@@ -357,10 +357,14 @@ export function ApplicationsPage() {
               <td>{statusLabel(row.status)}</td>
               <td>{statusLabel(row.currentStep)}</td>
               <td>
+                <Link to={`/staff/applications/${row.id}/edit/review`}>Open</Link>
                 {row.status === "SUBMITTED" ? (
-                  <Link to={`/staff/applications/${row.id}/review`}>Review</Link>
+                  <>
+                    {" · "}
+                    <Link to={`/staff/applications/${row.id}/review`}>Review</Link>
+                  </>
                 ) : (
-                  new Date(row.updatedAt).toLocaleDateString()
+                  <> · {new Date(row.updatedAt).toLocaleDateString()}</>
                 )}
               </td>
             </tr>
@@ -546,6 +550,13 @@ export function ApplicationWizardPage() {
       <Link to="/staff/applications">← Applications</Link>
       <h1>{app.number}</h1>
       <p className="hint">{statusLabel(app.status)} · version {app.version}</p>
+      {app.status === "SUBMITTED" ? (
+        <p className="hint">
+          Customer submitted this application. Complete valuation and repayment terms, then a manager can decide.
+          {" "}
+          <Link to={`/staff/applications/${id}/review`}>Open manager review</Link>
+        </p>
+      ) : null}
       <nav className="wizard-steps">
         {STEPS.map((item, index) => (
           <Link
@@ -734,11 +745,18 @@ export function ValuationPage() {
 
 export function CustomerApplicationDetailPage() {
   const { id = "" } = useParams();
+  const navigate = useNavigate();
   const [item, setItem] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
-    void api<Record<string, unknown>>(`/me/applications/${id}`).then(setItem);
-  }, [id]);
+    void api<Record<string, unknown>>(`/me/applications/${id}`).then((data) => {
+      if (data.status === "DRAFT") {
+        navigate("/customer/apply", { replace: true });
+        return;
+      }
+      setItem(data);
+    });
+  }, [id, navigate]);
 
   if (!item) return <main className="page"><p>Loading application…</p></main>;
 

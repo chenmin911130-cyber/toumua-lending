@@ -62,9 +62,24 @@ function assertRole(user: PublicUser, allowed: Set<string>, who: string) {
   throw forbidden(`Only ${who} can perform this action`);
 }
 
+const REVIEW_ROLES = new Set<string>([BusinessRole.LOAN_OFFICER, BusinessRole.MANAGER]);
+
+/** Officers prepare and may decide simple files; managers take the rest. */
+export function assertReviewDecision(user: PublicUser) {
+  assertRole(user, REVIEW_ROLES, "a loan officer or manager");
+}
+
 /** Approving or declining a submitted application is a manager decision. */
 export function assertDecideApplication(user: PublicUser) {
   assertRole(user, DECISION_ROLES, "a manager");
+}
+
+export function isManager(user: PublicUser) {
+  return user.role === BusinessRole.MANAGER;
+}
+
+export function canManageStaffAccounts(user: PublicUser) {
+  return isManager(user) || user.permissions.includes(Permission.MANAGE_STAFF);
 }
 
 /** Declaring default on an active loan is a manager decision. */

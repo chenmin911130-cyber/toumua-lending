@@ -24,6 +24,17 @@ export class NotificationsService {
     await this.notify(link.userId, title, body, href);
   }
 
+  async notifyLendingStaff(title: string, body: string, href?: string | null) {
+    const staff = await this.prisma.user.findMany({
+      where: {
+        status: "ACTIVE",
+        role: { in: ["LOAN_OFFICER", "MANAGER", "OWNER"] },
+      },
+      select: { id: true },
+    });
+    await Promise.all(staff.map((row) => this.notify(row.id, title, body, href)));
+  }
+
   async list(userId: string) {
     const [items, unread] = await Promise.all([
       this.prisma.notification.findMany({

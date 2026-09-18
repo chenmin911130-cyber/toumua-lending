@@ -7,16 +7,23 @@ import {
   CursorListQuery,
   PatchApplicationInput,
   SaveAssetInput,
+  SaveBorrowerInput,
   SaveTermsInput,
   ValuationStatus,
 } from "@toumua/contracts";
 import { AuthUser } from "../auth/session";
 import { conflict, forbidden, notFound, validation } from "../common/http";
 import { AuditService } from "../audit/audit.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { assertManageLending } from "./access";
 import { NumbersService } from "./numbers.service";
-import { attachReadiness, buildReadiness, isReadyToSubmit } from "./readiness";
+import {
+  attachReadiness,
+  buildReadiness,
+  isReadyForCustomerSubmit,
+  isReadyToSubmit,
+} from "./readiness";
 import { buildTermsPreview, termsPolicyConfigured } from "./calculation-policy";
 import { UploadsService } from "./uploads.service";
 
@@ -27,6 +34,7 @@ export class ApplicationsService {
     @Inject(NumbersService) private readonly numbers: NumbersService,
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(UploadsService) private readonly uploads: UploadsService,
+    @Inject(NotificationsService) private readonly notifications: NotificationsService,
   ) {}
 
   async list(user: AuthUser, query: CursorListQuery) {
@@ -84,6 +92,46 @@ export class ApplicationsService {
     return this.get(user, row.id);
   }
 
+  async createForCustomer(user: AuthUser, input: SaveBorrowerInput) {
+    const borrower = await this.upsertCustomerBorrower(user, input);
+    const draft = await this.prisma.application.findFirst({
+      where: { borrowerId: borrower.id, status: ApplicationStatus.DRAFT },
+      orderBy: { updatedAt: "desc" },
+    });
+    if (draft) {
+      return this.toCustomerDetail(draft.id);
+    }
+    const number = await this.numbers.nextApplicationNumber();
+    const row = await this.prisma.application.create({
+      data: {
+        number,
+        borrowerId: borrower.id,
+        createdById: user.id,
+        terms: { create: {} },
+      },
+    });
+    await this.audit.write({
+      actorId: user.id,
+      action: "application.create",
+      objectType: "Application",
+      objectId: row.id,
+      after: { id: row.id, number: row.number, source: "customer" },
+    });
+    return this.toCustomerDetail(row.id);
+  }
+
+  async getBorrowerForCustomer(userId: string) {
+    const link = await this.prisma.borrowerAccountLink.findFirst({
+      where: { userId, status: "ACTIVE" },
+      include: {
+        borrower: {
+          select: { id: true, name: true, phone: true, address: true, email: true },
+        },
+      },
+    });
+    return { borrower: link?.borrower ?? null };
+  }
+
   async get(user: AuthUser, id: string) {
     assertManageLending(user);
     return this.loadDetail(id);
@@ -96,16 +144,11 @@ export class ApplicationsService {
   }
 
   async patch(user: AuthUser, id: string, input: PatchApplicationInput) {
-    assertManageLending(user);
-    const existing = await this.prisma.application.findUnique({ where: { id } });
-    if (!existing) throw notFound("Application not found");
-    if (existing.status !== ApplicationStatus.DRAFT) {
-      throw conflict("Only draft applications can be edited");
-    }
+    const existing = await this.assertEditor(user, id);
     if (existing.version !== input.expectedVersion) {
       throw conflict("This application was updated elsewhere. Reload and try again.");
     }
-    if (input.borrowerId) {
+    if (user.isStaff && input.borrowerId) {
       const borrower = await this.prisma.borrower.findUnique({ where: { id: input.borrowerId } });
       if (!borrower) throw notFound("Borrower not found");
     }
@@ -114,7 +157,7 @@ export class ApplicationsService {
       data: {
         version: { increment: 1 },
         ...(input.currentStep ? { currentStep: input.currentStep } : {}),
-        ...(input.borrowerId !== undefined ? { borrowerId: input.borrowerId } : {}),
+        ...(user.isStaff && input.borrowerId !== undefined ? { borrowerId: input.borrowerId } : {}),
         ...(input.requestedAmount !== undefined
           ? { requestedAmount: input.requestedAmount }
           : {}),
@@ -135,7 +178,7 @@ export class ApplicationsService {
       before: { version: existing.version },
       after: { version: row.version, currentStep: row.currentStep },
     });
-    return this.loadDetail(row.id);
+    return user.isStaff ? this.loadDetail(row.id) : this.toCustomerDetail(row.id);
   }
 
   async saveTerms(user: AuthUser, id: string, input: SaveTermsInput) {
@@ -145,8 +188,11 @@ export class ApplicationsService {
       include: { terms: true },
     });
     if (!application) throw notFound("Application not found");
-    if (application.status !== ApplicationStatus.DRAFT) {
-      throw conflict("Only draft applications can be edited");
+    if (
+      application.status !== ApplicationStatus.DRAFT &&
+      application.status !== ApplicationStatus.SUBMITTED
+    ) {
+      throw conflict("Only draft or submitted applications can have terms updated");
     }
     if (application.version !== input.expectedVersion) {
       throw conflict("This application was updated elsewhere. Reload and try again.");
@@ -204,8 +250,7 @@ export class ApplicationsService {
   }
 
   async addAsset(user: AuthUser, applicationId: string, input: SaveAssetInput) {
-    assertManageLending(user);
-    await this.assertDraft(applicationId);
+    await this.assertEditor(user, applicationId);
     const count = await this.prisma.applicationAsset.count({ where: { applicationId } });
     const asset = await this.prisma.applicationAsset.create({
       data: {
@@ -223,7 +268,7 @@ export class ApplicationsService {
       data: { version: { increment: 1 } },
     });
     await this.ensureValuation(applicationId, asset.id);
-    return this.loadDetail(applicationId);
+    return user.isStaff ? this.loadDetail(applicationId) : this.toCustomerDetail(applicationId);
   }
 
   async updateAsset(
@@ -232,8 +277,7 @@ export class ApplicationsService {
     assetId: string,
     input: SaveAssetInput,
   ) {
-    assertManageLending(user);
-    await this.assertDraft(applicationId);
+    await this.assertEditor(user, applicationId);
     const asset = await this.prisma.applicationAsset.findFirst({
       where: { id: assetId, applicationId },
     });
@@ -253,12 +297,11 @@ export class ApplicationsService {
       data: { version: { increment: 1 } },
     });
     await this.invalidateValuationIfCompleted(assetId);
-    return this.loadDetail(applicationId);
+    return user.isStaff ? this.loadDetail(applicationId) : this.toCustomerDetail(applicationId);
   }
 
   async deleteAsset(user: AuthUser, applicationId: string, assetId: string) {
-    assertManageLending(user);
-    await this.assertDraft(applicationId);
+    await this.assertEditor(user, applicationId);
     const asset = await this.prisma.applicationAsset.findFirst({
       where: { id: assetId, applicationId },
     });
@@ -273,13 +316,13 @@ export class ApplicationsService {
       where: { id: applicationId },
       data: { version: { increment: 1 } },
     });
-    return this.loadDetail(applicationId);
+    return user.isStaff ? this.loadDetail(applicationId) : this.toCustomerDetail(applicationId);
   }
 
   async submit(user: AuthUser, id: string, expectedVersion: number) {
-    assertManageLending(user);
-    const application = await this.prisma.application.findUnique({ where: { id } });
-    if (!application) throw notFound("Application not found");
+    const application = user.isStaff
+      ? await this.assertStaffApplication(user, id)
+      : await this.assertCustomerOwns(user.id, id);
     if (application.status !== ApplicationStatus.DRAFT) {
       throw conflict("This application has already been submitted");
     }
@@ -287,7 +330,10 @@ export class ApplicationsService {
       throw conflict("This application was updated elsewhere. Reload and try again.");
     }
     const readiness = buildReadiness(await this.loadRaw(id));
-    if (!isReadyToSubmit(readiness)) {
+    const ready = user.isStaff
+      ? isReadyToSubmit(readiness)
+      : isReadyForCustomerSubmit(readiness);
+    if (!ready) {
       throw validation("Complete all required steps before submitting");
     }
     const row = await this.prisma.application.update({
@@ -304,9 +350,22 @@ export class ApplicationsService {
       action: "application.submit",
       objectType: "Application",
       objectId: row.id,
-      after: { status: row.status, submittedAt: row.submittedAt },
+      after: { status: row.status, submittedAt: row.submittedAt, source: user.isStaff ? "staff" : "customer" },
     });
-    return this.loadDetail(row.id);
+    if (!user.isStaff) {
+      await this.notifications.notifyLendingStaff(
+        "New customer application",
+        `${application.number} is ready for review.`,
+        `/staff/applications/${row.id}/edit/review`,
+      );
+      await this.notifications.notify(
+        user.id,
+        "Application submitted",
+        "We received your application. Our team will review it shortly.",
+        `/customer/applications/${row.id}`,
+      );
+    }
+    return user.isStaff ? this.loadDetail(row.id) : this.toCustomerDetail(row.id);
   }
 
   async listForCustomer(userId: string) {
@@ -317,10 +376,7 @@ export class ApplicationsService {
       return { items: [], nextCursor: null, total: 0 };
     }
     const items = await this.prisma.application.findMany({
-      where: {
-        borrowerId: link.borrowerId,
-        status: { not: ApplicationStatus.DRAFT },
-      },
+      where: { borrowerId: link.borrowerId },
       orderBy: { updatedAt: "desc" },
       include: { borrower: { select: { name: true } } },
     });
@@ -335,28 +391,8 @@ export class ApplicationsService {
   }
 
   async getForCustomer(userId: string, id: string) {
-    const link = await this.prisma.borrowerAccountLink.findFirst({
-      where: { userId, status: "ACTIVE" },
-    });
-    if (!link) throw forbidden();
-    const row = await this.prisma.application.findFirst({
-      where: {
-        id,
-        borrowerId: link.borrowerId,
-        status: { not: ApplicationStatus.DRAFT },
-      },
-      include: { borrower: { select: { name: true } } },
-    });
-    if (!row) throw notFound("Application not found");
-    return {
-      ...this.toSummary(row),
-      purposeDescription: row.purposeDescription,
-      stages: this.customerStages(row.status),
-      publicNote:
-        row.status === ApplicationStatus.DECLINED
-          ? "Your application was not approved. Contact our team if you have questions."
-          : null,
-    };
+    await this.assertCustomerOwns(userId, id);
+    return this.toCustomerDetail(id);
   }
 
   private customerStages(status: string) {
@@ -366,15 +402,101 @@ export class ApplicationsService {
     const approved = status === ApplicationStatus.APPROVED;
     return [
       { id: "application", label: "Application submitted", complete: submitted },
-      { id: "valuation", label: "Valuation", complete: submitted },
+      { id: "review", label: "Staff review", complete: decided },
       { id: "decision", label: "Manager decision", complete: decided },
-      { id: "intake", label: "Collateral intake", complete: false },
+      { id: "intake", label: "Collateral intake", complete: approved },
       { id: "disbursement", label: "Disbursement", complete: false },
     ].map((stage) =>
       status === ApplicationStatus.DECLINED && stage.id !== "decision"
         ? { ...stage, complete: false, pending: false }
         : stage,
     );
+  }
+
+  private async assertStaffApplication(user: AuthUser, id: string) {
+    assertManageLending(user);
+    const application = await this.prisma.application.findUnique({ where: { id } });
+    if (!application) throw notFound("Application not found");
+    return application;
+  }
+
+  private async assertCustomerOwns(userId: string, applicationId: string) {
+    const link = await this.prisma.borrowerAccountLink.findFirst({
+      where: { userId, status: "ACTIVE" },
+    });
+    if (!link) throw forbidden();
+    const application = await this.prisma.application.findFirst({
+      where: { id: applicationId, borrowerId: link.borrowerId },
+    });
+    if (!application) throw notFound("Application not found");
+    return application;
+  }
+
+  private async assertEditor(user: AuthUser, applicationId: string) {
+    if (user.isStaff) {
+      assertManageLending(user);
+      return this.assertDraft(applicationId);
+    }
+    const application = await this.assertCustomerOwns(user.id, applicationId);
+    if (application.status !== ApplicationStatus.DRAFT) {
+      throw conflict("Only draft applications can be edited");
+    }
+    return application;
+  }
+
+  private async upsertCustomerBorrower(user: AuthUser, input: SaveBorrowerInput) {
+    const link = await this.prisma.borrowerAccountLink.findFirst({
+      where: { userId: user.id, status: "ACTIVE" },
+    });
+    const data = {
+      name: input.name.trim(),
+      phone: input.phone.trim(),
+      address: input.address.trim(),
+      email: input.email?.trim() || user.email,
+    };
+    if (link) {
+      return this.prisma.borrower.update({ where: { id: link.borrowerId }, data });
+    }
+    const number = await this.numbers.nextBorrowerNumber();
+    const borrower = await this.prisma.borrower.create({
+      data: {
+        number,
+        ...data,
+        createdById: user.id,
+      },
+    });
+    await this.prisma.borrowerAccountLink.create({
+      data: {
+        borrowerId: borrower.id,
+        userId: user.id,
+        verificationMethod: "customer_self_apply",
+        notes: "Created when the customer started an online application",
+        linkedById: user.id,
+      },
+    });
+    return borrower;
+  }
+
+  private async toCustomerDetail(id: string) {
+    const detail = await this.loadDetail(id);
+    const row = await this.prisma.application.findUnique({
+      where: { id },
+      include: {
+        borrower: {
+          select: { id: true, name: true, phone: true, address: true, email: true },
+        },
+      },
+    });
+    if (!row) throw notFound("Application not found");
+    return {
+      ...detail,
+      borrower: row.borrower,
+      stages: this.customerStages(row.status),
+      publicNote:
+        row.status === ApplicationStatus.DECLINED
+          ? "Your application was not approved. Contact our team if you have questions."
+          : null,
+    };
   }
 
   private async assertDraft(applicationId: string) {
@@ -504,6 +626,10 @@ export class ApplicationsService {
         identifier: asset.identifier,
         photoCount: asset.photos.length,
         valuationStatus: (asset.valuations[0]?.status as ValuationStatus | undefined) ?? null,
+        photos: asset.photos.map((photo) => ({
+          id: photo.id,
+          url: `/api/v1/photos/${photo.id}/file`,
+        })),
       })),
       terms: row.terms
         ? {

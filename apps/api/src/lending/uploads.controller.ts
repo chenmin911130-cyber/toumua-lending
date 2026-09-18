@@ -12,7 +12,6 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
-import { RequireStaff } from "../auth/auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { AuthUser } from "../auth/session";
 import { UploadsService } from "./uploads.service";
@@ -22,7 +21,6 @@ import { UploadsService } from "./uploads.service";
 export class UploadsController {
   constructor(@Inject(UploadsService) private readonly uploads: UploadsService) {}
 
-  @RequireStaff()
   @Post("applications/:applicationId/assets/:assetId/photos")
   @UseInterceptors(FileInterceptor("file"))
   upload(
@@ -34,7 +32,6 @@ export class UploadsController {
     return this.uploads.addPhoto(user, applicationId, assetId, file);
   }
 
-  @RequireStaff()
   @Delete("applications/:applicationId/assets/:assetId/photos/:photoId")
   deletePhoto(
     @CurrentUser() user: AuthUser,

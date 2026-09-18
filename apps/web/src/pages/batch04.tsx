@@ -32,6 +32,21 @@ type Review = {
   version: number;
   canApprove: boolean;
   checks: Array<{ id: string; label: string; complete: boolean }>;
+  number?: string;
+  borrowerName?: string | null;
+  requestedAmount?: string | null;
+  purpose?: string | null;
+  proposedTermMonths?: number | null;
+  staffApproveLimit?: string;
+  requiresManager?: boolean;
+  managerReasons?: string[];
+  assets?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    photoCount: number;
+    valuationStatus: string | null;
+  }>;
 };
 
 /** Action flags come from the server so the UI cannot offer a refused action. */
@@ -600,6 +615,36 @@ export function ApplicationReviewPage() {
     <main className="staff-page">
       <Link to="/staff/applications">← Applications</Link>
       <h1>Manager review</h1>
+      <p className="hint">
+        {review.number ?? ""}{review.borrowerName ? ` · ${review.borrowerName}` : ""}
+        {review.requestedAmount ? ` · $${review.requestedAmount}` : ""}
+        {review.purpose ? ` · ${review.purpose}` : ""}
+        {review.proposedTermMonths ? ` · ${review.proposedTermMonths} months` : ""}
+      </p>
+      {review.assets?.length ? (
+        <ul>
+          {review.assets.map((asset) => (
+            <li key={asset.id}>
+              {asset.name} · {asset.photoCount} photo(s) · valuation {asset.valuationStatus ?? "requested"}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <p className="hint">
+        <Link to={`/staff/applications/${id}/valuation`}>Valuation</Link>
+        {" · "}
+        <Link to={`/staff/applications/${id}/edit/terms`}>Repayment terms</Link>
+      </p>
+      {review.requiresManager ? (
+        <p className="hint">
+          Manager approval is required{review.staffApproveLimit ? ` (staff limit $${review.staffApproveLimit})` : ""}.
+          {review.managerReasons?.length ? ` ${review.managerReasons.join(" ")}` : ""}
+        </p>
+      ) : (
+        <p className="hint">
+          Staff can approve this file. Amounts above ${review.staffApproveLimit ?? "3,000.00"}, three or more assets, or a complex purpose still go to a manager.
+        </p>
+      )}
       <ul>{review.checks.map((check) => <li key={check.id}>{check.complete ? "✓" : "○"} {check.label}</li>)}</ul>
       {decided ? (
         <p className="hint">This application already has a decision.</p>

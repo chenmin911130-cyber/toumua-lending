@@ -234,8 +234,8 @@ export function StaffLayout() {
         </nav>
         <div className="staff-side-foot">
           <nav className="staff-nav">
-            {user.permissions.includes("manage_staff") ? (
-              <NavLink to="/staff/admin/accounts" data-control-id="GLOBAL-04">Administration</NavLink>
+            {user.role === "MANAGER" || user.permissions.includes("manage_staff") ? (
+              <NavLink to="/staff/admin/accounts" data-control-id="GLOBAL-04">Staff accounts</NavLink>
             ) : null}
             {user.permissions.includes("view_audit") ? (
               <NavLink to="/staff/admin/activity">Activity log</NavLink>

@@ -267,6 +267,86 @@ describe("LENDING batch 03", () => {
     expect(after.body.version).toBe(goodDate.body.version);
   });
 
+  it("APP-03 customer can apply with collateral so staff can review", async () => {
+    const guest = await agentWithCsrf(app);
+    const registered = await registerCustomer(guest, "self-apply@example.com");
+    expect(registered.status).toBe(201);
+    const verifyToken = auth.extractTokenFromMail(
+      (await auth.latestMail("self-apply@example.com"))?.textBody,
+    );
+    await post(guest, "/api/v1/auth/email/verify", { token: verifyToken });
+    await post(guest, "/api/v1/auth/login", {
+      email: "self-apply@example.com",
+      password: "customer-pass-12",
+    });
+
+    const created = await post(guest, "/api/v1/me/applications", {
+      name: "Ava Customer",
+      phone: "+64 21 555 0888",
+      address: "10 High Street, Auckland",
+      email: "self-apply@example.com",
+    });
+    expect(created.status).toBe(201);
+    const appId = created.body.id as string;
+    expect(created.body.status).toBe("DRAFT");
+    expect(created.body.borrower.phone).toBe("+64 21 555 0888");
+
+    const early = await post(guest, `/api/v1/me/applications/${appId}/submit`, {
+      expectedVersion: created.body.version,
+    });
+    expect(early.status).toBe(422);
+
+    const patched = await patch(guest, `/api/v1/me/applications/${appId}`, {
+      expectedVersion: created.body.version,
+      requestedAmount: "1500.00",
+      purpose: "Vehicle repair",
+      proposedTermMonths: 12,
+    });
+    expect(patched.status).toBe(200);
+
+    const withAsset = await post(guest, `/api/v1/me/applications/${appId}/assets`, {
+      name: "Gold chain",
+      description: "22k chain, 18 grams",
+      condition: "Good",
+      category: "Gold",
+    });
+    expect(withAsset.status).toBe(201);
+    const assetId = withAsset.body.assets[0].id as string;
+
+    const photo = await guest
+      .post(`/api/v1/applications/${appId}/assets/${assetId}/photos`)
+      .set("x-csrf-token", (await guest.get("/api/v1/auth/csrf")).body.token)
+      .attach("file", PNG_HEADER, {
+        filename: "chain.png",
+        contentType: "image/png",
+      });
+    expect(photo.status).toBe(201);
+
+    const latest = await guest.get(`/api/v1/me/applications/${appId}`);
+    const submitted = await post(guest, `/api/v1/me/applications/${appId}/submit`, {
+      expectedVersion: latest.body.version,
+    });
+    expect(submitted.status).toBe(201);
+    expect(submitted.body.status).toBe("SUBMITTED");
+
+    const staff = await loginLoanOfficer();
+    const listed = await staff.get("/api/v1/applications?status=SUBMITTED");
+    expect(listed.body.items.some((item: { id: string }) => item.id === appId)).toBe(true);
+
+    const staffView = await staff.get(`/api/v1/applications/${appId}`);
+    const terms = await staff
+      .put(`/api/v1/applications/${appId}/terms`)
+      .set("x-csrf-token", (await staff.get("/api/v1/auth/csrf")).body.token)
+      .send({
+        expectedVersion: staffView.body.version,
+        firstPaymentDate: "2026-11-01",
+        frequency: "MONTHLY",
+        periods: 12,
+      });
+    expect(terms.status).toBe(200);
+    expect(terms.body.terms.policyConfigured).toBe(true);
+  });
+
   it("AUTHZ-01 a cashier cannot read the borrower book", async () => {
     await seedCashier(prisma, auth);
     const loanOfficer = await loginLoanOfficer();

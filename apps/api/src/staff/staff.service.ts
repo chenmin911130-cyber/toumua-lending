@@ -13,6 +13,7 @@ import { AuthService } from "../auth/auth.service";
 import { AuditService } from "../audit/audit.service";
 import { conflict, forbidden, notFound, validation } from "../common/http";
 import { AuthUser } from "../auth/session";
+import { canManageStaffAccounts } from "../lending/access";
 
 @Injectable()
 export class StaffService {
@@ -22,7 +23,8 @@ export class StaffService {
     @Inject(AuditService) private readonly audit: AuditService,
   ) {}
 
-  async list(): Promise<{ items: StaffAccount[]; nextCursor: null; total: number }> {
+  async list(actor: AuthUser): Promise<{ items: StaffAccount[]; nextCursor: null; total: number }> {
+    this.assertManageStaff(actor);
     const users = await this.prisma.user.findMany({
       where: {
         OR: [
@@ -235,7 +237,7 @@ export class StaffService {
   }
 
   private assertManageStaff(actor: AuthUser) {
-    if (!actor.permissions.includes(Permission.MANAGE_STAFF)) {
+    if (!canManageStaffAccounts(actor)) {
       throw forbidden();
     }
   }

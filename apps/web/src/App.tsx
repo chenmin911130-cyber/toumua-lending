@@ -14,6 +14,7 @@ import {
 import { HelpPage } from "./pages/help";
 import { HomePage } from "./pages/home";
 import { CustomerApplicationsPage, CustomerHomePage } from "./pages/customer";
+import { CustomerApplyPage } from "./pages/customer-apply";
 import {
   CustomerLoanDetailPage,
   CustomerLoansListPage,
@@ -72,6 +73,7 @@ export function App() {
       <Route element={<CustomerLayout />}>
         <Route path="/customer" element={<CustomerHomePage />} />
         <Route path="/customer/applications" element={<CustomerApplicationsPage />} />
+        <Route path="/customer/apply" element={<CustomerApplyPage />} />
         <Route path="/customer/applications/:id" element={<CustomerApplicationDetailPage />} />
         <Route path="/customer/loans" element={<CustomerLoansListPage />} />
         <Route path="/customer/loans/:loanId" element={<CustomerLoanDetailPage />} />
