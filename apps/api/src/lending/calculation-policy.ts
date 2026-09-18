@@ -1,15 +1,24 @@
 /**
  * Loan calculation policy.
  *
- * The office has not supplied official interest, fee, allocation or settlement
- * rules, so no production policy exists. This module therefore exposes one
- * explicitly-labelled test policy that is only enabled by configuration, and
- * reports "unconfigured" everywhere else. Nothing here may be presented as a
- * real business rule, and production submissions stay blocked without it.
+ * Alice has not yet supplied the official interest, fee, allocation or
+ * settlement rules. Until that arrives we run a labelled demo policy so
+ * approvals and quotes work in the COMP721 workspace. Nothing here may be
+ * presented as the office's real business rule. Swap this module (or set
+ * CALCULATION_POLICY=off) when the official formula is confirmed.
+ *
+ * CALCULATION_POLICY:
+ *   demo  — simple interest placeholder (default outside automated tests)
+ *   test  — zero-interest fixture used by acceptance tests
+ *   off   — block approvals and quotes
  */
 import { add, compare, fromCents, isPositive, splitEvenly, subtract, sum, toCents } from "./money";
 
 export const TEST_POLICY = "test-zero-interest";
+export const DEMO_POLICY = "demo-simple-interest";
+
+/** Homepage estimate uses 21% p.a. Same ballpark until Alice confirms a rate. */
+export const DEMO_ANNUAL_RATE_BPS_DEFAULT = 2100;
 
 export type Frequency = "WEEKLY" | "FORTNIGHTLY" | "MONTHLY";
 
@@ -26,11 +35,14 @@ export type ScheduleDraft = {
   amount: string;
 };
 
-/** The active policy id, or null when no production policy is configured. */
+/** The active policy id, or null when calculation is deliberately switched off. */
 export function activePolicy(): string | null {
-  if (process.env.CALCULATION_POLICY === "test" || process.env.NODE_ENV === "test") {
-    return TEST_POLICY;
-  }
+  const configured = (process.env.CALCULATION_POLICY ?? "").trim();
+  if (configured === "off") return null;
+  if (configured === "test") return TEST_POLICY;
+  if (configured === "demo") return DEMO_POLICY;
+  if (process.env.NODE_ENV === "test") return TEST_POLICY;
+  if (configured === "") return DEMO_POLICY;
   return null;
 }
 
@@ -46,6 +58,34 @@ export function termsPolicyConfigured(input: {
   const hasFields =
     Boolean(input.firstPaymentDate) && Boolean(input.frequency) && Boolean(input.periods);
   return hasFields && isPolicyConfigured();
+}
+
+export function demoAnnualRateBps(): number {
+  const raw = (process.env.DEMO_ANNUAL_RATE_BPS ?? "").trim();
+  if (!raw) return DEMO_ANNUAL_RATE_BPS_DEFAULT;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0 || value > 10000) {
+    throw new Error("DEMO_ANNUAL_RATE_BPS must be an integer from 0 to 10000");
+  }
+  return value;
+}
+
+function periodsPerYear(frequency: Frequency): number {
+  if (frequency === "WEEKLY") return 52;
+  if (frequency === "FORTNIGHTLY") return 26;
+  return 12;
+}
+
+/** Simple interest in cents: principal × bps/10000 × periods/periodsPerYear. */
+export function simpleInterest(principal: string, frequency: Frequency, periods: number): string {
+  const numer = toCents(principal) * demoAnnualRateBps() * periods;
+  const denom = 10000 * periodsPerYear(frequency);
+  return fromCents(Math.round(numer / denom));
+}
+
+function payableTotal(terms: PolicyTerms): string {
+  if (activePolicy() !== DEMO_POLICY) return terms.principal;
+  return add(terms.principal, simpleInterest(terms.principal, terms.frequency, terms.periods));
 }
 
 /**
@@ -74,15 +114,17 @@ export function advance(date: Date, frequency: Frequency, periods = 1): Date {
 }
 
 /**
- * Builds the approved repayment plan: zero interest, zero fees, equal principal
- * installments, with any rounding remainder carried into the final installment
- * so the installments always add up to exactly the principal.
+ * Builds the repayment plan.
+ *
+ * Test policy: zero interest, equal principal installments.
+ * Demo policy: principal plus simple interest, split evenly.
+ * Any rounding remainder is carried into the final installment.
  */
 export function buildSchedule(terms: PolicyTerms): ScheduleDraft[] {
   if (!Number.isInteger(terms.periods) || terms.periods <= 0) {
     throw new Error("Periods must be a positive integer");
   }
-  const parts = splitEvenly(terms.principal, terms.periods);
+  const parts = splitEvenly(payableTotal(terms), terms.periods);
   return parts.map((amount, index) => ({
     number: index + 1,
     dueDate: advance(terms.firstPaymentDate, terms.frequency, index + 1),
@@ -123,9 +165,8 @@ export function outstanding(entries: readonly AllocatableEntry[]): string {
 /**
  * Allocates a repayment across installments in due order.
  *
- * Rejections are returned as reasons rather than silently rounded or absorbed,
- * because the official policy for overpayment, early repayment and backdating
- * has not been provided and must not be invented here.
+ * Overpayment is still refused: the official early-repayment / surplus rule
+ * has not been provided. The demo only covers scheduled amounts.
  */
 export function quoteRepayment(
   entries: readonly AllocatableEntry[],
@@ -182,21 +223,21 @@ export function isQuoteFailure(
   return (result as QuoteFailure).reason !== undefined;
 }
 
-/** Kept for the schedule preview on the terms step (test policy only). */
-/** Official surplus/shortfall settlement is an external dependency. */
+/** Demo records surplus/shortfall. Test policy still leaves settlement pending. */
 export function isSettlementPolicyConfigured(): boolean {
-  return false;
+  return activePolicy() === DEMO_POLICY;
 }
 
 export function quoteSettlement(balanceBefore: string, saleProceeds: string) {
   const surplusOrShortfall = subtract(saleProceeds, balanceBefore);
+  const configured = isSettlementPolicyConfigured();
   return {
-    policy: null as string | null,
+    policy: configured ? activePolicy() : null,
     balanceBefore,
     saleProceeds,
     surplusOrShortfall,
-    pendingSettlement: !isSettlementPolicyConfigured(),
-    reason: isSettlementPolicyConfigured()
+    pendingSettlement: !configured,
+    reason: configured
       ? undefined
       : "Official settlement policy is not configured",
   };
@@ -222,6 +263,7 @@ export function buildTermsPreview(
     periods: input.periods,
     firstPaymentDate,
   });
+  const demo = policy === DEMO_POLICY;
   return {
     policy,
     requestedAmount,
@@ -230,11 +272,14 @@ export function buildTermsPreview(
     firstPaymentDate: input.firstPaymentDate,
     installment: schedule[0]?.amount ?? null,
     total: sum(schedule.map((entry) => entry.amount)),
+    annualRateBps: demo ? demoAnnualRateBps() : 0,
     schedule: schedule.map((entry) => ({
       number: entry.number,
       dueDate: entry.dueDate.toISOString().slice(0, 10),
       amount: entry.amount,
     })),
-    note: "Test-only schedule preview. Production policy is not configured.",
+    note: demo
+      ? "Demo schedule only. Replace these rates when the office supplies the official formula."
+      : "Test-only schedule preview. Production policy is not configured.",
   };
 }

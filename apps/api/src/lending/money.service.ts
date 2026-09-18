@@ -21,6 +21,7 @@ import {
 import { beginAttempt, describeAttempt, inspectIdempotencyKey } from "./idempotency";
 import { compare, min, subtract } from "./money";
 import { NumbersService } from "./numbers.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { LoansService } from "./loans.service";
 
 @Injectable()
@@ -30,6 +31,7 @@ export class MoneyService {
     @Inject(NumbersService) private readonly numbers: NumbersService,
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(LoansService) private readonly loans: LoansService,
+    @Inject(NotificationsService) private readonly notifications: NotificationsService,
   ) {}
 
   async disburse(
@@ -156,6 +158,12 @@ export class MoneyService {
       };
     });
 
+    await this.notifications.notifyBorrower(
+      loan.borrowerId,
+      "Your loan has been disbursed",
+      `Funds for loan ${loan.number} have been recorded. Receipt ${result.receiptNumber}.`,
+      `/customer/loans/${loanId}`,
+    );
     return result;
   }
 
@@ -326,6 +334,12 @@ export class MoneyService {
       };
     });
 
+    await this.notifications.notifyBorrower(
+      loan.borrowerId,
+      "A repayment was recorded",
+      `A repayment was posted to loan ${loan.number}. Receipt ${result.receiptNumber}.`,
+      `/customer/receipts/${result.receiptId}`,
+    );
     return result;
   }
 
@@ -579,6 +593,25 @@ export class MoneyService {
       nextCursor: next?.id ?? null,
       total,
     };
+  }
+
+  async exportTransactionsCsv(user: AuthUser) {
+    const data = await this.listTransactions(user, { limit: 100 });
+    const header = "date,loan,borrower,type,amount,method,receipt";
+    const lines = data.items.map((row) =>
+      [
+        row.businessDate,
+        row.loanNumber,
+        row.borrowerName ?? "",
+        row.type,
+        row.amount,
+        row.method,
+        row.receiptNumber ?? "",
+      ]
+        .map((value) => `"${String(value).replaceAll("\"", "\"\"")}"`)
+        .join(","),
+    );
+    return [header, ...lines].join("\n");
   }
 
   async getTransaction(user: AuthUser, id: string) {

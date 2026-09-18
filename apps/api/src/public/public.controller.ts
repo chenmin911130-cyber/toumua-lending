@@ -15,16 +15,19 @@ export class PublicController {
   @Public()
   @Get("public/contact")
   contact() {
-    const value = (key: string) => {
+    const value = (key: string, fallback: string) => {
       const raw = process.env[key]?.trim();
-      return raw ? raw : null;
+      return raw ? raw : fallback;
     };
     return {
-      phone: value("CONTACT_PHONE"),
-      email: value("CONTACT_EMAIL"),
-      address: value("CONTACT_ADDRESS"),
-      hours: value("CONTACT_HOURS"),
-      note: value("CONTACT_NOTE"),
+      phone: value("CONTACT_PHONE", "021 150 1502"),
+      email: value("CONTACT_EMAIL", "office@toumua.lending"),
+      address: value("CONTACT_ADDRESS", "Auckland, New Zealand"),
+      hours: value("CONTACT_HOURS", "Monday–Friday, 9:00am–5:00pm NZST"),
+      note: value(
+        "CONTACT_NOTE",
+        "Demo office mailbox for the COMP721 Toumu’a Lending workspace.",
+      ),
     };
   }
 }

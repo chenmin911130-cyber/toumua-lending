@@ -19,8 +19,10 @@ import { UploadsController } from "./uploads.controller";
 import { UploadsService } from "./uploads.service";
 import { ValuationsController } from "./valuations.controller";
 import { ValuationsService } from "./valuations.service";
+import { NotificationsModule } from "../notifications/notifications.module";
 
 @Module({
+  imports: [NotificationsModule],
   controllers: [
     BorrowersController,
     ApplicationsController,

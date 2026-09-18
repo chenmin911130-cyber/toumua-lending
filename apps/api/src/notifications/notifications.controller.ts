@@ -1,23 +1,29 @@
-import { Controller, Get, Param, Post } from "@nestjs/common";
+import { Controller, Get, Inject, Param, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { emptyList } from "@toumua/contracts";
 import { notFound } from "../common/http";
+import { CurrentUser } from "../auth/current-user.decorator";
+import { AuthUser } from "../auth/session";
+import { NotificationsService } from "./notifications.service";
 
 @ApiTags("notifications")
 @Controller("notifications")
 export class NotificationsController {
-  @Get()
-  list() {
-    return { ...emptyList(), unread: 0 };
-  }
+  constructor(@Inject(NotificationsService) private readonly notifications: NotificationsService) {}
 
-  @Post(":id/read")
-  read(@Param("id") _id: string) {
-    throw notFound();
+  @Get()
+  list(@CurrentUser() user: AuthUser) {
+    return this.notifications.list(user.id);
   }
 
   @Post("read-all")
-  readAll() {
-    return { unread: 0 };
+  readAll(@CurrentUser() user: AuthUser) {
+    return this.notifications.markAllRead(user.id);
+  }
+
+  @Post(":id/read")
+  async read(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    const result = await this.notifications.markRead(user.id, id);
+    if (!result) throw notFound();
+    return result;
   }
 }

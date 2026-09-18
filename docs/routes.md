@@ -11,7 +11,7 @@
 | `/forgot-password` | A01 | Implemented |
 | `/reset-password` | A07 | Implemented |
 | `/accept-invitation` | A06 | Implemented |
-| `/help` | C07 | Implemented |
+| `/help` | C07 | Implemented (demo office mailbox `office@toumua.lending`) |
 | `/account` | A02 | Implemented |
 | `/customer` | C10 when no loans | Implemented empty |
 | `/customer/applications` | C04 | List + empty state |
@@ -40,4 +40,4 @@
 | `/staff/collateral/:id/sale` | S12 sale record | Implemented |
 | `/staff/corrections`, `/staff/corrections/:id` | S18 | Implemented |
 | `/staff/payment-attempts/:id` | G01 recovery | Implemented |
-| `/notifications` | G02 | Implemented (empty state until events are wired) |
+| `/notifications` | G02 | Implemented (account link, decision, disbursement, repayment, default) |

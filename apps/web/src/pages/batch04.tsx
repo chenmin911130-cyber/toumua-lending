@@ -445,7 +445,12 @@ export function StaffTransactionsPage() {
   }, []);
   return (
     <main className="staff-page">
-      <h1>Transactions</h1>
+      <div className="section-head">
+        <h1>Transactions</h1>
+        <a className="btn btn-secondary" href="/api/v1/transactions/export.csv">
+          Export CSV
+        </a>
+      </div>
       {error ? <p className="error">{errorMessage(error, "Could not load transactions")}</p> : null}
       <table className="data-table">
         <thead><tr><th>Date</th><th>Loan</th><th>Type</th><th>Amount</th><th>Receipt</th></tr></thead>
@@ -544,7 +549,10 @@ export function StaffReceiptPage() {
         <dt>Issued by</dt><dd>{receipt.issuedBy ?? "—"}</dd>
         <dt>Issued at</dt><dd>{receipt.createdAt.slice(0, 10)}</dd>
       </dl>
-      <pre>{JSON.stringify(receipt.summary, null, 2)}</pre>
+      <button type="button" className="btn btn-primary" onClick={() => window.print()}>
+        Print receipt
+      </button>
+      <pre className="no-print">{JSON.stringify(receipt.summary, null, 2)}</pre>
     </main>
   );
 }

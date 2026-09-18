@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { Logo } from "@toumua/ui";
 import { api } from "./api";
 import { useAuth } from "./auth";
+import { GlobalSearch } from "./components/GlobalSearch";
+import { OfflineBanner } from "./components/OfflineBanner";
 import { initials, roleLabel } from "./format";
 
 const SPLIT_AUTH = new Set(["/login", "/staff/login", "/register", "/accept-invitation"]);
@@ -155,6 +157,7 @@ export function CustomerLayout() {
   if (!user || user.restrictedSession) return null;
   return (
     <div>
+      <OfflineBanner />
       <header className="customer-header">
         <div className="header-left">
           <Logo to="/customer" />
@@ -217,6 +220,7 @@ export function StaffLayout() {
           </span>
         </NavLink>
         <nav className="staff-nav">
+          <GlobalSearch />
           {STAFF_NAV.map((item) => (
             <NavLink
               key={item.to}
@@ -252,6 +256,7 @@ export function StaffLayout() {
         </div>
       </aside>
       <div className="staff-main">
+        <OfflineBanner />
         <header className="staff-mobile-bar">
           <Logo to="/staff" />
           <AccountMenu staff />

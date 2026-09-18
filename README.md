@@ -55,5 +55,5 @@ Deploy as a **new** Railway project with a **new** Postgres plugin (do not point
 ## Notes
 
 - Do not migrate or overwrite the existing Railway database.
-- Official interest, fees, and default rules are not implemented.
-- Production mail sender and contact details are unset on purpose.
+- Official interest, fees, and default rules are not implemented (client policy still required).
+- Demo office mailbox is `office@toumua.lending` / `noreply@toumua.lending`. Real SMTP still needs a purchased domain.

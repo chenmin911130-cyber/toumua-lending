@@ -1,8 +1,9 @@
-import { Controller, Get, Inject, Param, Query } from "@nestjs/common";
+import { Controller, Get, Header, Inject, Param, Query, Res } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { RequireStaff } from "../auth/auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { AuthUser } from "../auth/session";
+import type { Response } from "express";
 import { MoneyService } from "./money.service";
 
 @ApiTags("transactions")
@@ -10,6 +11,14 @@ import { MoneyService } from "./money.service";
 @Controller()
 export class TransactionsController {
   constructor(@Inject(MoneyService) private readonly moneyService: MoneyService) {}
+
+  @Get("transactions/export.csv")
+  @Header("content-type", "text/csv; charset=utf-8")
+  async exportCsv(@CurrentUser() user: AuthUser, @Res() res: Response) {
+    const csv = await this.moneyService.exportTransactionsCsv(user);
+    res.setHeader("content-disposition", "attachment; filename=\"transactions.csv\"");
+    res.send(csv);
+  }
 
   @Get("transactions")
   list(

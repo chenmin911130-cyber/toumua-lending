@@ -254,6 +254,19 @@ export function CustomerSecurityPage() {
             <dt>Photos on file</dt>
             <dd>{selected.photoCount}</dd>
           </dl>
+          {selected.photoIds.length ? (
+            <div className="photo-grid">
+              {selected.photoIds.map((photoId) => (
+                <img
+                  key={photoId}
+                  src={`/api/v1/photos/${photoId}/file`}
+                  alt={`${selected.name} photo`}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="hint">No photos have been uploaded for this item yet.</p>
+          )}
           <p className="hint">Storage location and custody notes are managed by the office and are not shown here.</p>
         </section>
       ) : (
@@ -333,7 +346,12 @@ export function CustomerReceiptPage() {
           ) : null}
         </dl>
         <p className="hint">This is your customer copy. Contact the office if anything looks incorrect.</p>
-        <Link className="btn btn-secondary" to="/help" data-control-id="C05-05">Contact our team</Link>
+        <div className="hero-actions">
+          <button type="button" className="btn btn-primary" onClick={() => window.print()}>
+            Print receipt
+          </button>
+          <Link className="btn btn-secondary" to="/help" data-control-id="C05-05">Contact our team</Link>
+        </div>
       </section>
     </main>
   );

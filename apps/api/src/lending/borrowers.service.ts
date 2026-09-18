@@ -11,6 +11,7 @@ import { conflict, forbidden, notFound, validation } from "../common/http";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { assertManageAccountLink, assertManageLending, assertRevokeAccountLink } from "./access";
+import { NotificationsService } from "../notifications/notifications.service";
 import { NumbersService } from "./numbers.service";
 
 @Injectable()
@@ -19,6 +20,7 @@ export class BorrowersService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(NumbersService) private readonly numbers: NumbersService,
     @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(NotificationsService) private readonly notifications: NotificationsService,
   ) {}
 
   async list(user: AuthUser, query: CursorListQuery) {
@@ -179,6 +181,12 @@ export class BorrowersService {
       objectId: link.id,
       after: link,
     });
+    await this.notifications.notify(
+      input.userId,
+      "Your loan record is now linked",
+      `The office linked your account to ${borrower.name}. You can now view applications and loans.`,
+      "/customer",
+    );
     return this.loadDetail(borrowerId);
   }
 

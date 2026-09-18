@@ -58,6 +58,7 @@ export async function resetDb(prisma: PrismaService) {
       "SequenceCounter",
       "RateLimitHit",
       "MailMessage",
+      "Notification",
       "AuditEvent",
       "StaffPermission",
       "VerificationToken",

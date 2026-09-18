@@ -11,7 +11,7 @@ import { AuditController } from "./audit/audit.controller";
 import { AuditService } from "./audit/audit.service";
 import { CustomerController } from "./customer/customer.controller";
 import { SearchController } from "./search/search.controller";
-import { NotificationsController } from "./notifications/notifications.controller";
+import { NotificationsModule } from "./notifications/notifications.module";
 import { PublicController } from "./public/public.controller";
 import { BootstrapService } from "./bootstrap/bootstrap.service";
 import { LendingModule } from "./lending/lending.module";
@@ -26,12 +26,12 @@ import { LendingModule } from "./lending/lending.module";
     AuthModule,
     StaffModule,
     LendingModule,
+    NotificationsModule,
   ],
   controllers: [
     AuditController,
     CustomerController,
     SearchController,
-    NotificationsController,
     PublicController,
   ],
   providers: [

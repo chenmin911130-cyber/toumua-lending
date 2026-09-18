@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { advance, buildSchedule, outstanding, quoteRepayment } from "../src/lending/calculation-policy";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { advance, buildSchedule, outstanding, quoteRepayment, quoteSettlement } from "../src/lending/calculation-policy";
 import {
   add,
   compare,
@@ -175,5 +175,44 @@ describe("calculation policy", () => {
     const quoted = quoteRepayment(settled, "10.00");
     expect("reason" in quoted).toBe(true);
     if ("reason" in quoted) expect(quoted.reason).toMatch(/no outstanding balance/i);
+  });
+});
+
+describe("demo calculation policy", () => {
+  const previous = process.env.CALCULATION_POLICY;
+
+  beforeEach(() => {
+    process.env.CALCULATION_POLICY = "demo";
+    delete process.env.DEMO_ANNUAL_RATE_BPS;
+  });
+
+  afterEach(() => {
+    if (previous === undefined) delete process.env.CALCULATION_POLICY;
+    else process.env.CALCULATION_POLICY = previous;
+    delete process.env.DEMO_ANNUAL_RATE_BPS;
+  });
+
+  it("adds 21% simple interest and splits evenly: 2000 over 4 months", () => {
+    const schedule = buildSchedule({
+      principal: "2000.00",
+      frequency: "MONTHLY",
+      periods: 4,
+      firstPaymentDate: new Date("2026-10-01T00:00:00.000Z"),
+    });
+    expect(schedule.map((entry) => entry.amount)).toEqual([
+      "535.00",
+      "535.00",
+      "535.00",
+      "535.00",
+    ]);
+    expect(sum(schedule.map((entry) => entry.amount))).toBe("2140.00");
+  });
+
+  it("records surplus on a demo settlement instead of leaving it pending", () => {
+    const quote = quoteSettlement("200.00", "350.00");
+    expect(quote.policy).toBe("demo-simple-interest");
+    expect(quote.surplusOrShortfall).toBe("150.00");
+    expect(quote.pendingSettlement).toBe(false);
+    expect(quote.reason).toBeUndefined();
   });
 });

@@ -439,6 +439,7 @@ export type CustomerAssetView = {
   valuationAmount: string | null;
   valuationStatus: ValuationStatus | null;
   photoCount: number;
+  photoIds: string[];
 };
 
 export type CustomerReceiptSummary = {

@@ -49,7 +49,5 @@ seed-capable server it needs.
 
 ## Still reserved (Batch 06+)
 
-- Customer loan detail pages C03/C05/C06
-- Official settlement/surplus policy and `POST settlement-actions`
-- Transaction CSV export
-- Notifications (G02)
+- Official settlement/surplus policy and `POST settlement-actions` (blocked on client rates)
+- Customer loan pages, notifications, search, print, and CSV are now implemented in later work.

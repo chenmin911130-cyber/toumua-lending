@@ -10,7 +10,7 @@ function createWindow() {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
-      preload: undefined,
+      preload: require("path").join(__dirname, "preload.cjs"),
     },
   });
   void window.loadURL(`${WEB_URL}/staff/login`);

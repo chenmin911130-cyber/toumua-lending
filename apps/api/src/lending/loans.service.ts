@@ -23,6 +23,7 @@ import {
   quoteRepayment,
   quoteSettlement,
 } from "./calculation-policy";
+import { NotificationsService } from "../notifications/notifications.service";
 import { subtract, sum } from "./money";
 
 @Injectable()
@@ -30,6 +31,7 @@ export class LoansService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(NotificationsService) private readonly notifications: NotificationsService,
   ) {}
 
   async list(user: AuthUser, query: CursorListQuery) {
@@ -133,6 +135,12 @@ export class LoansService {
       objectId: loanId,
       after: { status: LoanStatus.DEFAULTED, reason: input.reason },
     });
+    await this.notifications.notifyBorrower(
+      loan.borrowerId,
+      "Your loan is in default",
+      `Loan ${loan.number} has been declared in default. Please contact the office.`,
+      `/customer/loans/${loanId}`,
+    );
     return this.get(user, loanId);
   }
 
@@ -369,6 +377,7 @@ export class LoansService {
         valuationAmount: asset.valuations[0]?.amount ?? null,
         valuationStatus: (asset.valuations[0]?.status ?? null) as CustomerLoanDetail["assets"][number]["valuationStatus"],
         photoCount: asset.photos.length,
+        photoIds: asset.photos.map((photo) => photo.id),
       })) ?? [];
     return {
       id: summary.id,

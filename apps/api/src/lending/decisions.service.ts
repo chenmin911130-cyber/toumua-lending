@@ -12,6 +12,7 @@ import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { assertDecideApplication } from "./access";
 import { activePolicy, buildSchedule, type Frequency } from "./calculation-policy";
+import { NotificationsService } from "../notifications/notifications.service";
 import { NumbersService } from "./numbers.service";
 import { buildReadiness, isReadyToSubmit } from "./readiness";
 
@@ -26,6 +27,7 @@ export class DecisionsService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(NumbersService) private readonly numbers: NumbersService,
     @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(NotificationsService) private readonly notifications: NotificationsService,
   ) {}
 
   /**
@@ -159,6 +161,12 @@ export class DecisionsService {
       return loan;
     });
 
+    await this.notifications.notifyBorrower(
+      application.borrowerId as string,
+      "Your application was approved",
+      `Loan ${result.number} is ready. The office will contact you about disbursement.`,
+      "/customer/loans",
+    );
     return { outcome: ApplicationStatus.APPROVED, loanId: result.id, loanNumber: result.number };
   }
 
@@ -206,6 +214,12 @@ export class DecisionsService {
       );
     });
 
+    await this.notifications.notifyBorrower(
+      application.borrowerId as string,
+      "Your application was declined",
+      input.publicNote?.trim() || "The office declined this application. Contact the team if you have questions.",
+      "/customer/applications",
+    );
     return { outcome: ApplicationStatus.DECLINED, loanId: null, loanNumber: null };
   }
 

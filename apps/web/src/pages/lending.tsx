@@ -633,7 +633,11 @@ export function ApplicationWizardPage() {
             </select>
           </Field>
           <Field label="Periods"><input value={periods} onChange={(event) => setPeriods(event.target.value)} type="number" min={1} required /></Field>
-          {!app.terms?.policyConfigured ? <p className="hint">Production calculation policy is not configured. Test preview is available in development.</p> : null}
+          <p className="hint">
+            {app.terms?.policyConfigured
+              ? "Demo repayment schedule. Replace these rates when the office supplies the official formula."
+              : "Calculation policy is switched off. Approvals stay blocked until a demo or official policy is enabled."}
+          </p>
           <div className="hero-actions">
             <Button type="submit">Save terms</Button>
             <Button type="button" variant="secondary" onClick={() => void loadPreview()}>Preview schedule</Button>
