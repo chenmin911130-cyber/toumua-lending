@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, ShieldCheck, Users, Zap } from "lucide-react";
 import { motion } from "framer-motion";
@@ -5,45 +6,46 @@ import { FeatureItem } from "./FeatureItem";
 import { LoanCalculator } from "./LoanCalculator";
 
 export function Hero() {
+  const heroRef = useRef<HTMLElement>(null);
+
   return (
-    <section className="relative overflow-hidden bg-white">
-      <div className="absolute inset-0">
+    <section ref={heroRef} className="relative min-h-[640px] overflow-hidden bg-white lg:min-h-[760px]">
+      <div className="pointer-events-none absolute inset-0">
         <img
-          src="/images/hero-lake.jpg"
+          src="/images/hero-house.jpg"
           alt=""
-          className="h-full w-full object-cover object-[62%_42%]"
+          className="absolute inset-0 h-full w-full scale-105 object-cover object-[68%_42%]"
           aria-hidden
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-white from-[18%] via-white/80 via-[38%] to-transparent to-[58%]" />
+        <div className="absolute inset-y-0 left-0 w-[min(48%,760px)] bg-gradient-to-r from-white/55 via-white/20 to-transparent" />
       </div>
 
       <p
-        className="pointer-events-none absolute top-[20%] left-[46%] hidden max-w-[220px] rotate-[-8deg] font-[Caveat,cursive] text-[30px] leading-[1.15] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.25)] xl:block xl:text-[34px]"
+        className="pointer-events-none absolute top-[18%] left-[42%] hidden max-w-[260px] rotate-[-7deg] font-[Caveat,cursive] text-[28px] leading-[1.15] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.22)] xl:block xl:text-[32px]"
         aria-hidden
       >
-        People
+        Finance today
         <br />
-        Progress
+        for a brighter
         <br />
-        Together
+        tomorrow
       </p>
-
-      <div className="marketing-wrap relative z-10 flex flex-col gap-10 py-12 lg:flex-row lg:items-center lg:justify-between lg:gap-16 lg:py-16 xl:py-20">
+      <div className="marketing-wrap relative z-10 py-12 pb-8 lg:py-16 xl:py-20">
         <motion.div
-          className="max-w-[620px] shrink-0"
+          className="max-w-[680px]"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
         >
           <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-primary">
-            Finance a brighter tomorrow
+            Real opportunities. A brighter tomorrow.
           </p>
-          <h1 className="mt-4 max-w-[620px] text-[clamp(42px,5.4vw,68px)] font-bold leading-[1.02] tracking-[-0.03em] text-text">
+          <h1 className="mt-4 max-w-[650px] text-[clamp(42px,5.4vw,68px)] font-bold leading-[1.02] tracking-[-0.03em] text-text">
             Simple finance.
             <br />
             Built around you.
           </h1>
-          <p className="mt-5 max-w-[500px] text-[17px] leading-[1.65] text-text-secondary">
+          <p className="mt-5 max-w-[580px] text-[17px] leading-[1.65] text-text-secondary">
             At Toumu&apos;a Lending, we make borrowing simple, transparent and personal — so you
             can move forward with confidence.
           </p>
@@ -72,17 +74,13 @@ export function Hero() {
               title="Transparent terms"
               description="No hidden fees"
             />
-            <FeatureItem
-              icon={Users}
-              title="Personal support"
-              description="A team that cares"
-            />
+            <FeatureItem icon={Users} title="Personal support" description="A team that cares" />
           </div>
         </motion.div>
+      </div>
 
-        <div className="flex w-full justify-center lg:w-auto lg:shrink-0 lg:justify-end">
-          <LoanCalculator />
-        </div>
+      <div className="relative z-20 px-6 pb-10 xl:contents">
+        <LoanCalculator boundsRef={heroRef} />
       </div>
     </section>
   );

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Toumu’a Lending — Diagram brief for Ian Louw</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+    * { box-sizing: border-box; }
+    body {
+      font: 11pt/1.45 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      color: #1a1a1a;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 22pt; line-height: 1.2; margin: 0 0 8px; }
+    h2 { font-size: 14pt; margin: 22px 0 8px; page-break-after: avoid; }
+    h3 { font-size: 12pt; margin: 16px 0 6px; page-break-after: avoid; }
+    p, li { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 1.3em; }
+    .kicker { letter-spacing: 0.08em; text-transform: uppercase; font-size: 9pt; color: #555; margin-bottom: 6px; }
+    .meta { color: #444; font-size: 10.5pt; margin-bottom: 18px; }
+    .box { border: 1px solid #ccc; padding: 10px 12px; margin: 12px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 10pt; page-break-inside: avoid; }
+    th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; vertical-align: top; }
+    th { background: #f3f3f3; font-weight: 600; }
+    code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 9.5pt; }
+    .muted { color: #555; }
+    .do-not { border-color: #b35; }
+    footer { margin-top: 28px; font-size: 9pt; color: #666; }
+    a { color: #1a1a1a; }
+  </style>
+</head>
+<body>
+  <p class="kicker">COMP721 · T3 2026 · Week 2–3 design pack</p>
+  <h1>Toumu’a Lending<br />Diagram and report brief</h1>
+  <p class="meta">
+    Prepared for <strong>Ian Louw</strong> (Visio + written report)<br />
+    Client: Alice Po’uhila, Toumu’a Money Transfer Ltd · Supervisor: Havea Fonua<br />
+    Live system: <a href="https://web-production-b5acc.up.railway.app">https://web-production-b5acc.up.railway.app</a><br />
+    Source: <a href="https://github.com/chenmin911130-cyber/toumua-lending">https://github.com/chenmin911130-cyber/toumua-lending</a>
+  </p>
+
+  <div class="box">
+    <strong>Your job.</strong> Draw the diagrams in Visio and write short captions for the design report.
+    Do not write code. Do not invent extra statuses, interest rates, or actors.
+    Trace the live application and this brief. Send the <code>.vsdx</code> (or PDF export) plus captions to Myo Thant on Friday.
+  </div>
+
+  <h2>1. What the system is</h2>
+  <p>
+    Toumu’a Lending is a school-built loan workspace for a small Auckland lending office.
+    Staff and customers use a web app. Office staff can also open the same staff screens in a desktop window (Electron).
+    One API and one PostgreSQL database sit behind both clients.
+  </p>
+  <p>The supported business is:</p>
+  <ol>
+    <li>A loan officer and borrower complete an application and record collateral.</li>
+    <li>A valuation officer records a valuation.</li>
+    <li>A manager approves or declines.</li>
+    <li>Collateral is received, inspected, and stored.</li>
+    <li>A cashier disburses the loan, then records repayments and issues receipts.</li>
+    <li>On settlement the collateral is returned. On default it may be sold and the proceeds recorded.</li>
+  </ol>
+  <p>
+    Interest currently uses a <strong>labelled demo policy</strong> (21% p.a. simple interest) so the demo can approve loans.
+    This is <strong>not</strong> Alice’s official office formula. Do not draw it as a confirmed business rule.
+    Write “demo placeholder pending client confirmation” on any figure that mentions rates.
+  </p>
+
+  <h2>2. People on the paper</h2>
+  <table>
+    <tr><th>Person</th><th>Role on the paper</th><th>You work with them how</th></tr>
+    <tr><td>Min Chen</td><td>Build and Railway</td><td>Technical questions only. He reviews Friday.</td></tr>
+    <tr><td>Myo Thant</td><td>Coordinator</td><td>Send all files to Myo. He keeps time and packs the report.</td></tr>
+    <tr><td>Ian Louw (you)</td><td>Visio + report prose</td><td>Figures 1–6 this week; 7–10 next week.</td></tr>
+    <tr><td>Asinate Lolohea</td><td>Client + 3 customer pages</td><td>She talks to Alice. Do not wait for her to start your diagrams.</td></tr>
+    <tr><td>Khoi Anh Do Tran</td><td>Screenshot evidence</td><td>He photographs the live screen that matches each of your figures.</td></tr>
+  </table>
+
+  <h2>3. How many figures</h2>
+  <p><strong>Ten figures in total. Six this week. Four next week.</strong> No class diagram. No extra sequence diagram per button.</p>
+  <table>
+    <tr><th>#</th><th>Figure</th><th>Week</th><th>Type in Visio</th></tr>
+    <tr><td>1</td><td>System context</td><td>2</td><td>Context / DFD level 0</td></tr>
+    <tr><td>2</td><td>Use cases</td><td>2</td><td>UML use case</td></tr>
+    <tr><td>3</td><td>Happy-path activity</td><td>2</td><td>UML activity</td></tr>
+    <tr><td>4</td><td>Default-path activity</td><td>2</td><td>UML activity</td></tr>
+    <tr><td>5</td><td>Application and loan states</td><td>2</td><td>UML state machine</td></tr>
+    <tr><td>6</td><td>Collateral asset states</td><td>2</td><td>UML state machine</td></tr>
+    <tr><td>7</td><td>Logical ERD</td><td>3</td><td>Entity-relationship</td></tr>
+    <tr><td>8</td><td>Deployment / architecture</td><td>3</td><td>Block / deployment</td></tr>
+    <tr><td>9</td><td>Sequence — sign in</td><td>3</td><td>UML sequence</td></tr>
+    <tr><td>10</td><td>Sequence — record a repayment</td><td>3</td><td>UML sequence</td></tr>
+  </table>
+  <p>Permission matrix and page list are <strong>tables</strong>, not extra Visio files. Asinate’s three customer-page mockups (Help, customer home, application progress) are UI, not your set.</p>
+
+  <h2>4. Exact statuses — copy these labels</h2>
+  <p>Use the identifiers below. Do not add “Overdue” as a loan status (overdue is only a calculated warning). Do not add “Pending approval” — the application status is <code>SUBMITTED</code>.</p>
+  <table>
+    <tr><th>Thing</th><th>Allowed values (in order)</th></tr>
+    <tr><td>Application</td><td>DRAFT → SUBMITTED → APPROVED or DECLINED</td></tr>
+    <tr><td>Application steps (inside DRAFT)</td><td>BORROWER → LOAN_DETAILS → SECURITY → TERMS → REVIEW</td></tr>
+    <tr><td>Loan</td><td>APPROVED_UNFUNDED → ACTIVE → SETTLED, or ACTIVE → DEFAULTED</td></tr>
+    <tr><td>Collateral asset</td><td>PROPOSED → VALUED → STORED → RETURNED or SOLD</td></tr>
+    <tr><td>Valuation</td><td>REQUESTED → IN_PROGRESS → COMPLETED</td></tr>
+    <tr><td>Custody events</td><td>RECEIVED, INSPECTED, STORED, RELOCATED, RETURNED, SOLD</td></tr>
+    <tr><td>Correction</td><td>REQUESTED → APPROVED or REJECTED → POSTED (if approved)</td></tr>
+  </table>
+
+  <h2>5. Actors</h2>
+  <table>
+    <tr><th>Actor</th><th>What they do in this system</th></tr>
+    <tr><td>Customer</td><td>Register, verify email, view own applications and loans, receipts, help.</td></tr>
+    <tr><td>Loan officer</td><td>Create borrower, draft application, attach collateral, submit for review.</td></tr>
+    <tr><td>Valuation officer</td><td>Record valuation; later return or sell stored collateral.</td></tr>
+    <tr><td>Manager</td><td>Approve or decline; declare default; decide correction requests.</td></tr>
+    <tr><td>Cashier</td><td>Disburse, take repayment, record sale proceeds, request corrections.</td></tr>
+    <tr><td>Owner / admin staff</td><td>Invite staff, view audit. Owner is not a super-cashier.</td></tr>
+    <tr><td>Office (Alice)</td><td>External. Supplies official rates later. Not a system user account.</td></tr>
+    <tr><td>Email adapter</td><td>External. Verification and invites. School demo does not need real SMTP.</td></tr>
+    <tr><td>PostgreSQL</td><td>External data store. Not an actor on the use-case diagram; it belongs on context and architecture.</td></tr>
+  </table>
+  <p>Accountant exists as a role name in the design but has no separate money-posting screens. You may show it on the use-case diagram with a note “view only / not implemented as a cash role”, or omit it.</p>
+
+  <h2>6. Figure-by-figure instructions</h2>
+
+  <h3>Figure 1 — System context</h3>
+  <p>One box in the centre: <strong>Toumu’a Lending Workspace</strong>.</p>
+  <ul>
+    <li>Left/top people: Customer, Loan officer, Valuation officer, Cashier, Manager, Owner/admin.</li>
+    <li>Right systems: PostgreSQL, Email adapter, Railway host (optional, or fold into the centre box).</li>
+    <li>Office / Alice as an external information source (official rates), not a daily login.</li>
+  </ul>
+  <p>Arrows are information, not every API call. Example labels: “application and payments”, “receipts and balances”, “invite / verify email”, “persist loans”.</p>
+
+  <h3>Figure 2 — Use case diagram</h3>
+  <p>Group use cases. Stick-figure actors outside the system boundary.</p>
+  <ul>
+    <li><em>Identity:</em> Register, verify email, sign in, reset password, accept staff invitation.</li>
+    <li><em>Origination:</em> Maintain borrower, create application, add collateral, record valuation, submit, approve/decline.</li>
+    <li><em>Servicing:</em> Intake collateral, disburse, record repayment, issue receipt, correct a transaction.</li>
+    <li><em>Close:</em> Return collateral; declare default; record sale; record sale proceeds.</li>
+    <li><em>Customer portal:</em> View my loans, schedule, security photos, notifications.</li>
+  </ul>
+  <p>Include relationships only where they are real: «include» submit → completeness checks; approve «extend» decline as two outcomes of “Decide application”.</p>
+
+  <h3>Figure 3 — Activity diagram, happy path</h3>
+  <p>Swimlanes: Loan officer | Valuation officer | Manager | Cashier | Customer (optional, for viewing).</p>
+  <p>Happy path only:</p>
+  <p class="muted">
+    Create borrower → draft application (five steps) → valuation completed → submit → manager approves →
+    collateral RECEIVED / INSPECTED / STORED → cashier disburses (loan becomes ACTIVE) →
+    repayments until balance is 0.00 (SETTLED) → valuation officer returns collateral (RETURNED).
+  </p>
+  <p>Show a decision after review: Approve / Decline. Decline is a stop, not the default path.</p>
+
+  <h3>Figure 4 — Activity diagram, default path</h3>
+  <p>Starts from an ACTIVE loan. Manager declares DEFAULTED (reason required). Valuation officer records a sale. Cashier records sale proceeds. Surplus or shortfall is reported. If the debt is fully recovered the loan becomes SETTLED; collateral is SOLD, not returned.</p>
+  <p>Do not invent an automatic “overdue = default” transition.</p>
+
+  <h3>Figure 5 — Application and loan states</h3>
+  <p>Two regions on one page is fine.</p>
+  <ul>
+    <li>Application: DRAFT → SUBMITTED → APPROVED | DECLINED. No arrow back from SUBMITTED except through a new application (do not draw “unsubmit”).</li>
+    <li>Loan is created only on APPROVED: APPROVED_UNFUNDED → ACTIVE → SETTLED. From ACTIVE a manager may move to DEFAULTED. From DEFAULTED, full recovery may move to SETTLED.</li>
+  </ul>
+
+  <h3>Figure 6 — Collateral states</h3>
+  <p>PROPOSED → VALUED → STORED → RETURNED (settled loan) or SOLD (after default). Custody events sit on the arrows (RECEIVED, INSPECTED, STORED, RETURNED, SOLD).</p>
+
+  <h3>Figures 7–10 — Week 3 only (preview so you can plan)</h3>
+  <p><strong>ERD (logical).</strong> Main entities and the relationships. You do not need every column.</p>
+  <ul>
+    <li>User 1—* Session, Invitation, Notification, AuditEvent</li>
+    <li>User *—* Borrower through BorrowerAccountLink</li>
+    <li>Borrower 1—* Application, Loan</li>
+    <li>Application 1—1 ApplicationTerms, 1—* ApplicationAsset, 0—1 Loan, 0—1 ApplicationDecision</li>
+    <li>ApplicationAsset 1—* Valuation, AssetPhoto, CustodyEvent</li>
+    <li>Loan 1—* ScheduleEntry, LedgerEntry, Receipt, PaymentAttempt</li>
+    <li>LedgerEntry 0—* CorrectionRequest</li>
+  </ul>
+  <p><strong>Architecture.</strong> Customer browser and staff browser (and Electron) → Web (Railway) → API (Railway) → PostgreSQL. Secrets stay on the API. Desktop does not talk to the database.</p>
+  <p><strong>Sequence — sign in.</strong> Browser → POST /auth/login → API checks password → session cookie (HttpOnly) → GET /auth/me.</p>
+  <p><strong>Sequence — repayment.</strong> Cashier → idempotent POST repayment → API quotes allocation → writes ledger + updates schedule → receipt. Replay of the same key returns the original result.</p>
+
+  <h2>7. Writing the captions</h2>
+  <p>Under each figure write 4–8 sentences in English:</p>
+  <ul>
+    <li>What the figure shows.</li>
+    <li>Which actors or statuses appear.</li>
+    <li>One rule that must not be broken (example: “collateral cannot be returned while a balance remains”).</li>
+    <li>If a rate or fee appears, mark it demo.</li>
+  </ul>
+  <p>Myo will drop these captions into the weekly report. Put your name on the figure titles: “Figure 3. Happy-path origination and servicing (Ian Louw)”.</p>
+
+  <h2>8. Sources you may copy from</h2>
+  <ul>
+    <li>Live app: <a href="https://web-production-b5acc.up.railway.app">web-production-b5acc.up.railway.app</a></li>
+    <li>GitHub (public): <a href="https://github.com/chenmin911130-cyber/toumua-lending">github.com/chenmin911130-cyber/toumua-lending</a></li>
+    <li>Design screens: <code>design/v2/screens/</code> and <code>design/v2/index.html</code></li>
+    <li>States and API intent: <code>design/v2/IMPLEMENTATION_SPEC.md</code></li>
+    <li>Routes: <code>docs/routes.md</code></li>
+  </ul>
+  <p>You do not need to clone the repo if GitHub in the browser is enough. Do not request <code>.env</code> or Railway secrets.</p>
+
+  <div class="box do-not">
+    <strong>Do not.</strong> Invent official interest, fees, LTV multiples, or holiday-calendar rules.
+    Do not redraw all 42 UI screens (Khoi screenshots cover those).
+    Do not add a family-sharing account, online card payment, or public self-serve application — those are out of scope.
+    Do not mark the demo 21% rate as Alice’s policy.
+  </div>
+
+  <h2>9. Friday checklist</h2>
+  <ol>
+    <li>Figures 1–6 exported as PDF (and the Visio source if you have it).</li>
+    <li>Captions in a Word or Google Doc, English.</li>
+    <li>Send the pack to Myo. Khoi will attach screenshots with the matching route.</li>
+    <li>20-minute talk-through on Friday. Expect two questions from Myo or Min.</li>
+  </ol>
+
+  <footer>
+    Toumu’a Lending · COMP721 diagram brief · English · for Ian Louw · statuses taken from the Prisma schema, not invented for this note.
+  </footer>
+</body>
+</html>

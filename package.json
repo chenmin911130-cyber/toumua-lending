@@ -18,7 +18,8 @@
     "test:e2e": "pnpm --filter @toumua/e2e test",
     "db:migrate": "pnpm --filter @toumua/api prisma:migrate",
     "db:migrate:deploy": "pnpm --filter @toumua/api exec prisma migrate deploy",
-    "db:generate": "pnpm --filter @toumua/api prisma:generate"
+    "db:generate": "pnpm --filter @toumua/api prisma:generate",
+    "db:seed-demo": "pnpm --filter @toumua/api prisma:seed-demo"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

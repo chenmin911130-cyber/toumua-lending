@@ -10,6 +10,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:test": "DATABASE_URL=${TEST_DATABASE_URL} prisma migrate deploy",
+    "prisma:seed-demo": "tsx --env-file=../../.env prisma/seed-demo.ts",
     "test": "NODE_ENV=test vitest run"
   },
   "dependencies": {

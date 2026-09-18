@@ -1,6 +1,6 @@
 import { FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Button, Field, PasswordField } from "@toumua/ui";
+import { Button, Field, Logo, PasswordField } from "@toumua/ui";
 import { api, errorMessage, fieldError, type MeResponse } from "../api";
 import { useAuth } from "../auth";
 import { maskEmail } from "../format";
@@ -17,12 +17,13 @@ function AuthSplit({
   return (
     <div className="auth-split">
       <aside className="auth-brand">
-        <Link to="/" className="logo" data-control-id="GLOBAL-01">Toumu’a</Link>
+        <Logo to="/" />
         <div>
+          <p className="auth-brand-kicker">Real opportunities. A brighter tomorrow.</p>
           <h1>{title}</h1>
           <p>{body}</p>
         </div>
-        <p style={{ color: "#d7e2ea", fontSize: 14 }}>Toumu’a Money Transfer Ltd</p>
+        <p className="auth-brand-foot">Toumu’a Money Transfer Ltd</p>
       </aside>
       <section className="auth-form">
         <div className="auth-form-inner">{children}</div>

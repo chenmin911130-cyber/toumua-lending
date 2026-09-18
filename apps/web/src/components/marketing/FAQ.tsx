@@ -65,11 +65,11 @@ export function FAQItem({ question, answer }: { question: string; answer: string
 export function FAQ() {
   return (
     <section id="faq" className="bg-white py-16 md:py-24 lg:py-[96px]">
-      <div className="mx-auto max-w-[760px] px-6 lg:px-12">
-        <h2 className="text-center text-[clamp(30px,3.5vw,40px)] font-bold tracking-tight text-text">
+      <div className="marketing-wrap">
+        <h2 className="max-w-[760px] text-left text-[clamp(30px,3.5vw,40px)] font-bold tracking-tight text-text">
           Frequently asked questions
         </h2>
-        <div className="mt-10">
+        <div className="mt-10 max-w-[760px]">
           {FAQ_ITEMS.map((item) => (
             <FAQItem key={item.q} question={item.q} answer={item.a} />
           ))}

@@ -25,7 +25,13 @@ pnpm dev
 - Mailpit: http://127.0.0.1:8025
 - Desktop: `pnpm dev:desktop` (loads the staff login)
 
-Bootstrap admin comes from `BOOTSTRAP_ADMIN_*` in `.env` (`admin@example.com` / `ChangeMeAdmin12` locally). Public registration only creates Customer accounts.
+Demo logins (password `123456` for all). Seed or refresh with `pnpm db:seed-demo`:
+
+- Customer: `sarah.tama@toumua.lending` at `/login`
+- Staff: `staff@toumua.lending` at `/staff/login`
+- Admin: `admin@toumua.lending` at `/staff/login`
+
+Public registration only creates Customer accounts.
 
 ## Test
 

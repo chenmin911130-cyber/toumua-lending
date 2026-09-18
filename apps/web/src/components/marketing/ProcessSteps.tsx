@@ -33,11 +33,11 @@ export function ProcessSteps() {
           A straightforward process from application to approval.
         </p>
 
-        <div className="mt-12 flex flex-col gap-10 md:flex-row md:items-start md:gap-4 lg:gap-6">
+        <div className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
           {STEPS.map((step, index) => (
-            <div key={step.num} className="flex items-start gap-4 md:gap-5">
+            <div key={step.num} className="relative flex items-start gap-4">
               <motion.article
-                className="max-w-[250px]"
+                className="min-w-0"
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
@@ -56,7 +56,7 @@ export function ProcessSteps() {
               </motion.article>
               {index < STEPS.length - 1 ? (
                 <ChevronRight
-                  className="mt-3 hidden h-5 w-5 shrink-0 text-text-muted md:block"
+                  className="absolute top-3 -right-4 hidden h-5 w-5 text-text-muted lg:block"
                   strokeWidth={1.8}
                   aria-hidden
                 />
