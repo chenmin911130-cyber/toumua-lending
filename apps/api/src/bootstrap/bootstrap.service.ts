@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { Permission, normalizeEmail } from "@toumua/contracts";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuthService } from "../auth/auth.service";
+import { seedDemoAccounts } from "./demo-accounts";
 
 @Injectable()
 export class BootstrapService implements OnModuleInit {
@@ -13,6 +14,13 @@ export class BootstrapService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    await this.ensureBootstrapAdmin();
+    if (process.env.NODE_ENV === "test") return;
+    await seedDemoAccounts(this.prisma, (password) => this.auth.hashPassword(password));
+    this.logger.log("Seeded COMP721 demo accounts with password 123456");
+  }
+
+  private async ensureBootstrapAdmin(): Promise<void> {
     const email = process.env.BOOTSTRAP_ADMIN_EMAIL;
     const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
     const name = process.env.BOOTSTRAP_ADMIN_NAME ?? "Workspace Admin";
