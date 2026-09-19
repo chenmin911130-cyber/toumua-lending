@@ -97,7 +97,7 @@ export function LoanProductPage({ slug }: { slug: (typeof PRODUCTS)[number]["slu
         <p className="mt-8 text-[15px] text-text-secondary">{DEMO_NOTICE}</p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
-            to="/register"
+            to="/login"
             className="inline-flex h-12 items-center rounded-full bg-primary px-6 text-[15px] font-semibold text-white no-underline"
           >
             Get started

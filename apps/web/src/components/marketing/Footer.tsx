@@ -18,7 +18,7 @@ const FOOTER_LINKS = {
   company: [
     { label: "About", to: "/about" },
     { label: "Contact", to: "/help" },
-    { label: "FAQ", to: "/#faq" },
+    { label: "FAQ", to: "/help" },
   ],
   legal: [
     { label: "Privacy", to: "/privacy" },
