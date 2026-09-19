@@ -78,7 +78,7 @@ function LoginForm({ staff }: { staff?: boolean }) {
         ? "Sign in to review applications, value security, and manage loans."
         : "Sign in to apply, or to see an application or loan already linked to your account."}
     >
-      <DocumentHead title={staff ? "Staff sign-in" : "Log in"} path={staff ? "/staff/login" : "/login"} description="Sign in to the Toumu’a Lending school demonstration." />
+      <DocumentHead title={staff ? "Staff sign-in" : "Log in"} path={staff ? "/staff/login" : "/login"} description="Sign in to Toumu’a Lending." />
       <h1>{staff ? "Staff sign-in" : "Welcome back"}</h1>
       {!staff ? <p className="hint" style={{ marginTop: 0 }}>Sign in to your account</p> : <p className="hint" style={{ marginTop: 0 }}>Use your office account</p>}
       <form onSubmit={(event) => void onSubmit(event)}>
@@ -144,7 +144,7 @@ export function RegisterPage() {
       title="Your next step starts here."
       body="Create an account to apply online, or to view a loan already linked for you."
     >
-      <DocumentHead title="Create an account" path="/register" description="Register for a Toumu’a Lending demonstration account, then apply with collateral." />
+      <DocumentHead title="Create an account" path="/register" description="Register for a Toumu’a Lending account, then apply with collateral." />
       <h1>Create your account</h1>
       <p className="hint" style={{ marginTop: 0 }}>Register, then apply with the amount you need and the security you can offer.</p>
       <form onSubmit={(event) => void onSubmit(event)}>
@@ -434,7 +434,7 @@ export function AcceptInvitationPage() {
   return (
     <AuthSplit
       title="Activate your staff account."
-      body="Set a password to join the lending workspace. Your role is assigned by the office."
+      body="Set a password to join the lending office. Your role is assigned by the office."
     >
       <h1>Activate staff account</h1>
       {inspect && !inspect.valid ? (

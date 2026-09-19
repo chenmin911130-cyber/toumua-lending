@@ -256,8 +256,8 @@ export function LoanCalculator({ boundsRef }: Props) {
             </div>
           </dl>
           <p className="mt-2 text-[13px] leading-relaxed text-text-muted">
-            Demo placeholder pending the client&apos;s official formula. {estimate.weeks} weekly
-            payments. Not a credit quote.
+            Estimate only. Final terms are confirmed by our office. {estimate.weeks} weekly
+            payments.
           </p>
 
           <Link

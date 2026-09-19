@@ -222,7 +222,7 @@ export function StaffLayout() {
           <span className="staff-mark">T</span>
           <span>
             <strong>Toumu’a</strong>
-            <div className="staff-sub">Lending workspace</div>
+            <div className="staff-sub">Lending office</div>
           </span>
         </NavLink>
         <nav className="staff-nav">

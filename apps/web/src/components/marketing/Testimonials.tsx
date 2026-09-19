@@ -1,7 +1,7 @@
 const POINTS = [
   {
     title: "One office process",
-    body: "Application, valuation, decision, custody, and cashiering sit in the same workspace so a file is easy to follow.",
+    body: "Application, valuation, decision, custody, and cashiering sit in the same office process so a file is easy to follow.",
   },
   {
     title: "Written figures on the offer",

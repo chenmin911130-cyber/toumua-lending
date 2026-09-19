@@ -3,7 +3,7 @@ import { Heart, Landmark, ShieldCheck, Users } from "lucide-react";
 const TRUST_POINTS = [
   {
     icon: Landmark,
-    title: "Auckland office lending workspace",
+    title: "Auckland office lending",
   },
   {
     icon: ShieldCheck,
@@ -11,11 +11,11 @@ const TRUST_POINTS = [
   },
   {
     icon: Users,
-    title: "COMP721 demonstration for a NZ client",
+    title: "A New Zealand lending office",
   },
   {
     icon: Heart,
-    title: "Talk with the team — not a live credit advert",
+    title: "Talk with the team about your options",
   },
 ] as const;
 
