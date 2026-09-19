@@ -110,7 +110,7 @@ function applyRoute(html, route) {
     .replace(/property="og:url" content="[^"]*"/, `property="og:url" content="${canonical}"`)
     .replace(/name="twitter:title" content="[^"]*"/, `name="twitter:title" content="${escape(route.title)}"`);
 
-  const snapshot = `<div id="root"><div class="marketing-page"><p>Toumu’a Lending</p><h1>${escape(route.heading)}</h1><p>${escape(route.body)}</p><p><a href="/register">Get started</a> · <a href="/help">Talk to us</a></p></div></div>`;
+  const snapshot = `<div id="root"><div class="marketing-page"><p>Toumu’a Lending</p><h1>${escape(route.heading)}</h1><p>${escape(route.body)}</p><p><a href="/login">Get started</a> · <a href="/help">Talk to us</a></p></div></div>`;
   next = next.replace(/<div id="root">[\s\S]*?<\/div>\s*<script/, `${snapshot}\n    <script`);
   return next;
 }

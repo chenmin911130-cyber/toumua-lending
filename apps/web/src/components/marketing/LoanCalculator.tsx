@@ -261,7 +261,7 @@ export function LoanCalculator({ boundsRef }: Props) {
           </p>
 
           <Link
-            to="/register"
+            to="/login"
             className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-full bg-primary text-[14px] font-semibold text-white no-underline transition-all hover:-translate-y-px hover:bg-primary-hover"
           >
             Get started
