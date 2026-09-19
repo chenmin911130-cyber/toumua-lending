@@ -8,7 +8,6 @@ import {
   CONTACT_HOURS,
   CONTACT_PHONE,
   DEMO_NOTICE,
-  LEGAL_ENTITY,
   SITE_NAME,
 } from "../site";
 
@@ -28,7 +27,7 @@ function LegalArticle({
       <DocumentHead title={title} description={description} path={path} />
       <article className="marketing-wrap max-w-[760px] py-16 md:py-20">
         <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-primary">
-          {LEGAL_ENTITY}
+          {SITE_NAME}
         </p>
         <h1 className="mt-4 text-[clamp(36px,4.5vw,52px)] font-bold leading-[1.08] tracking-tight text-text">
           {title}
@@ -47,11 +46,10 @@ export function AboutPage() {
     <LegalArticle
       title="About"
       path="/about"
-      description="Toumu’a Lending is a COMP721 school workspace built for Toumu’a Money Transfer Ltd, a small Auckland lending office."
+      description="Toumu’a Lending is a COMP721 school workspace for a small Auckland lending office."
     >
       <p>
-        {SITE_NAME} is the teaching name for this workspace. The legal entity behind the client
-        brief is {LEGAL_ENTITY}, an Auckland money-transfer and lending office.
+        {SITE_NAME} is a COMP721 teaching workspace for a small Auckland lending office.
       </p>
       <p>
         The live site shows how staff and customers can record a secured loan: apply with
@@ -174,7 +172,6 @@ export function DisclosuresPage() {
         vehicle, business) describe demo workflows, not CCCFA disclosure documents.
       </p>
       <ul className="list-disc space-y-2 pl-5">
-        <li>Legal entity in the client brief: {LEGAL_ENTITY}.</li>
         <li>Product name on this website: {SITE_NAME}.</li>
         <li>No FSP number or NZBN is claimed on this demonstration.</li>
         <li>Interest shown in the calculator is a 21% p.a. demo placeholder.</li>

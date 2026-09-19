@@ -12,7 +12,7 @@ const routes = [
     description:
       "A COMP721 school demonstration of a New Zealand lending office workspace. Apply, review collateral, and track a secured loan. This is not an offer of credit.",
     heading: "Simple finance. Built around you.",
-    body: "A COMP721 school demonstration for Toumu’a Money Transfer Ltd. Apply online with the security you can offer.",
+    body: "A COMP721 school demonstration for Toumu’a Lending. Apply online with the security you can offer.",
   },
   {
     path: "/help",
@@ -38,7 +38,7 @@ const routes = [
   {
     path: "/about",
     title: "About · Toumu’a Lending",
-    description: "Toumu’a Lending is a COMP721 school workspace built for Toumu’a Money Transfer Ltd.",
+    description: "Toumu’a Lending is a COMP721 school workspace for a small Auckland lending office.",
     heading: "About",
     body: "A teaching workspace for a small Auckland lending office. This is not an offer of credit.",
   },

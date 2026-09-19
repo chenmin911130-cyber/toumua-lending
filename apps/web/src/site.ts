@@ -12,8 +12,10 @@ export const CONTACT_HOURS = "Monday–Friday, 9:00am–5:00pm NZST";
 export const DEFAULT_DESCRIPTION =
   "A COMP721 school demonstration of a New Zealand lending office workspace. Apply, review collateral, and track a secured loan. This is not an offer of credit.";
 
+export const OPERATED_BY = `Operated by ${LEGAL_ENTITY}`;
+
 export const DEMO_NOTICE =
-  "This website is a COMP721 teaching demonstration for Toumu’a Money Transfer Ltd. It is not a licensed consumer-credit product and does not take online payments.";
+  "This website is a COMP721 teaching demonstration. It is not a licensed consumer-credit product and does not take online payments.";
 
 export const MARKETING_PATHS = new Set([
   "/",
