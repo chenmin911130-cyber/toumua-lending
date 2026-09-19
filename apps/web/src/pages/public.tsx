@@ -24,7 +24,7 @@ function AuthSplit({
           <p className="auth-brand-title">{title}</p>
           <p>{body}</p>
         </div>
-        <p className="auth-brand-foot">Toumu’a Money Transfer Ltd</p>
+        <p className="auth-brand-foot">Toumu’a Lending</p>
       </aside>
       <section className="auth-form">
         <div className="auth-form-inner">{children}</div>
