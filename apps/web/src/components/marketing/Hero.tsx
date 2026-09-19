@@ -45,9 +45,7 @@ export function Hero() {
               Built around you.
             </h1>
             <p className="mt-5 max-w-[580px] text-[17px] leading-[1.65] text-text-secondary">
-              At Toumu&apos;a Lending we record a secured loan for a small Auckland office — so
-              you can see the process clearly. This site is a school demonstration, not a live
-              credit offer.
+              Secured loans for personal, vehicle and business needs.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">

@@ -646,8 +646,8 @@ export function ApplicationWizardPage() {
           <Field label="Periods"><input value={periods} onChange={(event) => setPeriods(event.target.value)} type="number" min={1} required /></Field>
           <p className="hint">
             {app.terms?.policyConfigured
-              ? "Demo repayment schedule. Replace these rates when the office supplies the official formula."
-              : "Calculation policy is switched off. Approvals stay blocked until a demo or official policy is enabled."}
+              ? "Repayment schedule preview. Confirm rates with the office formula."
+              : "Calculation policy is switched off. Approvals stay blocked until an official policy is enabled."}
           </p>
           <div className="hero-actions">
             <Button type="submit">Save terms</Button>

@@ -1,13 +1,13 @@
 import { Link } from "react-router-dom";
 import { DocumentHead } from "../components/DocumentHead";
 import { MarketingShell } from "../components/marketing/MarketingShell";
-import { DEMO_NOTICE } from "../site";
+import { DISCLAIMER } from "../site";
 
 const PRODUCTS = [
   {
     slug: "personal",
     title: "Personal loan",
-    summary: "A secured personal loan recorded in the office workspace, with collateral held until the balance is cleared.",
+    summary: "A secured personal loan recorded in the office, with collateral held until the balance is cleared.",
     points: [
       "Apply online with the amount you need and the security you can offer.",
       "Staff review the file; larger or complex applications go to a manager.",
@@ -17,7 +17,7 @@ const PRODUCTS = [
   {
     slug: "vehicle",
     title: "Vehicle finance",
-    summary: "The same secured-lending workflow, described for a vehicle used as security in this school demonstration.",
+    summary: "The same secured-lending workflow, with a vehicle used as security.",
     points: [
       "Record the vehicle in the application as a security asset, with photos.",
       "A valuation officer completes the valuation before a decision.",
@@ -42,14 +42,14 @@ export function LoansIndexPage() {
       <DocumentHead
         title="Loan options"
         path="/loans"
-        description="Personal, vehicle, and business secured-loan workflows in the Toumu’a Lending COMP721 demonstration."
+        description="Personal, vehicle, and business secured loans from Toumu’a Lending."
       />
       <section className="marketing-wrap py-16 md:py-20">
         <h1 className="text-[clamp(36px,4.5vw,52px)] font-bold tracking-tight text-text">
           Loan options
         </h1>
         <p className="mt-5 max-w-[560px] text-[17px] leading-relaxed text-text-secondary">
-          {DEMO_NOTICE}
+          {DISCLAIMER}
         </p>
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {PRODUCTS.map((product) => (
@@ -94,7 +94,7 @@ export function LoanProductPage({ slug }: { slug: (typeof PRODUCTS)[number]["slu
             <li key={point}>{point}</li>
           ))}
         </ul>
-        <p className="mt-8 text-[15px] text-text-secondary">{DEMO_NOTICE}</p>
+        <p className="mt-8 text-[15px] text-text-secondary">{DISCLAIMER}</p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
             to="/login"

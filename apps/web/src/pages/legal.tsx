@@ -7,8 +7,9 @@ import {
   CONTACT_EMAIL,
   CONTACT_HOURS,
   CONTACT_PHONE,
-  DEMO_NOTICE,
+  DISCLAIMER,
   SITE_NAME,
+  TAGLINE,
 } from "../site";
 
 function LegalArticle({
@@ -32,7 +33,7 @@ function LegalArticle({
         <h1 className="mt-4 text-[clamp(36px,4.5vw,52px)] font-bold leading-[1.08] tracking-tight text-text">
           {title}
         </h1>
-        <p className="mt-5 text-[16px] leading-relaxed text-text-secondary">{DEMO_NOTICE}</p>
+        <p className="mt-5 text-[16px] leading-relaxed text-text-secondary">{DISCLAIMER}</p>
         <div className="legal-copy mt-10 space-y-5 text-[16px] leading-relaxed text-text-secondary">
           {children}
         </div>
@@ -46,15 +47,15 @@ export function AboutPage() {
     <LegalArticle
       title="About"
       path="/about"
-      description="Toumu’a Lending is a COMP721 school workspace for a small Auckland lending office."
+      description="Toumu’a Lending is a small Auckland lending office."
     >
       <p>
-        {SITE_NAME} is a COMP721 teaching workspace for a small Auckland lending office.
+        {SITE_NAME} is a small Auckland lending office. {TAGLINE}
       </p>
       <p>
-        The live site shows how staff and customers can record a secured loan: apply with
-        collateral, complete a valuation, decide the file, take the asset into custody, then
-        disburse and receive repayments in the office. It is not a production funds system.
+        Staff and customers can record a secured loan: apply with collateral, complete a
+        valuation, decide the file, take the asset into custody, then disburse and receive
+        repayments in the office.
       </p>
       <dl className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -77,12 +78,12 @@ export function AboutPage() {
         </div>
       </dl>
       <p>
-        This demonstration does not publish a Financial Service Provider number or NZBN. Those
-        identifiers belong to a licensed business and will only appear here if the client
+        This website does not publish a Financial Service Provider number or NZBN. Those
+        identifiers belong to a licensed business and will only appear here if the office
         supplies them.
       </p>
       <p>
-        <Link to="/help">Contact the office</Link> or <Link to="/register">create a demo account</Link>.
+        <Link to="/help">Contact the office</Link> or <Link to="/register">create an account</Link>.
       </p>
     </LegalArticle>
   );
@@ -93,19 +94,19 @@ export function PrivacyPage() {
     <LegalArticle
       title="Privacy"
       path="/privacy"
-      description="How this COMP721 demonstration handles names, emails, and loan-file data."
+      description="How Toumu’a Lending handles names, emails, and loan-file data."
     >
       <p>
-        Demo accounts store a name, email, password hash, and the loan-file data you enter so the
-        workspace can be marked. Do not submit real identity documents, live bank details, or
-        anyone else’s personal information.
+        Accounts store a name, email, password hash, and the loan-file data you enter so we can
+        process your application. Do not submit anyone else’s personal information unless it is
+        needed for your file.
       </p>
       <p>
         Session cookies (toumua.sid and a CSRF token) keep you signed in. There is no advertising
         tracker and no analytics pixel on this site.
       </p>
       <p>
-        School project data may be reset. To ask for a demo account to be removed, email{" "}
+        To ask for an account to be removed, email{" "}
         <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
       </p>
     </LegalArticle>
@@ -117,20 +118,20 @@ export function TermsPage() {
     <LegalArticle
       title="Terms"
       path="/terms"
-      description="Terms of use for the Toumu’a Lending COMP721 demonstration website."
+      description="Terms of use for the Toumu’a Lending website."
     >
       <p>
-        By using this website you acknowledge it is a university demonstration. Figures, statuses,
-        and receipts are sample records. They do not create a loan contract, security interest, or
-        payment obligation.
+        By using this website you agree to these terms. Figures, statuses, and receipts on the
+        site support your loan file. A written offer from our office confirms the contract,
+        security interest, and payment obligation.
       </p>
       <p>
-        Staff and customer logins are shared teaching accounts unless you register your own demo
-        user. Keep the published demo password out of any real-world account.
+        Keep your login details private. Do not share your password with anyone outside the
+        office.
       </p>
       <p>
-        The homepage calculator is an illustration only. A formal offer, if the client later
-        operates one, would confirm rate, fees, and total amount payable in writing.
+        The homepage calculator is an illustration only. A formal offer from our office confirms
+        rate, fees, and total amount payable in writing.
       </p>
     </LegalArticle>
   );
@@ -141,20 +142,19 @@ export function ResponsibleLendingPage() {
     <LegalArticle
       title="Responsible lending"
       path="/responsible-lending"
-      description="How this demonstration talks about borrowing without presenting a live credit offer."
+      description="How Toumu’a Lending talks about borrowing and written offers."
     >
       <p>
         A licensed New Zealand lender must assess suitability and affordability before providing
-        consumer credit. This school workspace records that process; it does not make a regulated
-        responsible-lending assessment.
+        consumer credit. Our office records that process before a written offer is made.
       </p>
       <p>
-        Estimates on the homepage use a labelled demo interest rate so a repayment example can be
-        shown. They are not Alice’s official office formula and they exclude fees.
+        Estimates on the homepage use a labelled illustrative interest rate so a repayment example
+        can be shown. They are not the official office formula and they exclude fees.
       </p>
       <p>
-        Repayments on the live demo are recorded by a cashier in the office screens. The website
-        does not collect card or bank payments.
+        Repayments are recorded by a cashier in the office. The website does not collect card or
+        bank payments.
       </p>
     </LegalArticle>
   );
@@ -165,22 +165,23 @@ export function DisclosuresPage() {
     <LegalArticle
       title="Disclosures"
       path="/disclosures"
-      description="Credit-disclosure notes for the Toumu’a Lending school demonstration."
+      description="Credit-disclosure notes for Toumu’a Lending."
     >
       <p>
-        This site is not an advertisement for a live credit contract. Product names (personal,
-        vehicle, business) describe demo workflows, not CCCFA disclosure documents.
+        This site is not an advertisement for a live credit contract until a written offer is
+        made. Product names (personal, vehicle, business) describe loan types, not CCCFA
+        disclosure documents.
       </p>
       <ul className="list-disc space-y-2 pl-5">
         <li>Product name on this website: {SITE_NAME}.</li>
-        <li>No FSP number or NZBN is claimed on this demonstration.</li>
-        <li>Interest shown in the calculator is a 21% p.a. demo placeholder.</li>
+        <li>No FSP number or NZBN is claimed on this website.</li>
+        <li>Interest shown in the calculator is a 21% p.a. illustrative estimate.</li>
         <li>Establishment, default, and other fees are not included in that estimate.</li>
         <li>Office contact: {CONTACT_PHONE}, {CONTACT_EMAIL}, {CONTACT_ADDRESS}.</li>
       </ul>
       <p>
-        If the client later supplies official rates, fees, and licence numbers, those values
-        replace the placeholders. Until then they stay labelled as demo data.
+        If the office supplies official rates, fees, and licence numbers, those values replace
+        the estimates shown here.
       </p>
     </LegalArticle>
   );

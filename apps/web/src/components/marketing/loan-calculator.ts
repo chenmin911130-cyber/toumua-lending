@@ -1,5 +1,5 @@
 /** Illustrative rate for homepage estimates only — not a live offer. */
-/** Tuned so $10,000 over 36 months ≈ $87/week in the homepage demo. */
+/** Tuned so $10,000 over 36 months ≈ $87/week in the homepage estimate. */
 export const ESTIMATE_ANNUAL_RATE = 0.21;
 
 export const LOAN_AMOUNT_MIN = 1_000;
