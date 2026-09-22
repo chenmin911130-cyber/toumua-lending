@@ -16,6 +16,19 @@ import { PrismaService } from "../prisma/prisma.service";
 import { assertApproveCorrection, assertReadLedger, assertRequestCorrection } from "./access";
 import { compare, fromCents, isPositive, toCents } from "./money";
 
+function assertDisbursementAmountUnchanged(
+  original: { type: string; amount: string },
+  proposed: Record<string, unknown>,
+) {
+  if (original.type !== "DISBURSEMENT") return;
+  if (typeof proposed.amount !== "string") return;
+  if (compare(proposed.amount, original.amount.replace(/^-/, "")) !== 0) {
+    throw validation(
+      "Disbursement amounts cannot be corrected. Reverse and re-disburse with manager approval.",
+    );
+  }
+}
+
 @Injectable()
 export class CorrectionsService {
   constructor(
@@ -85,6 +98,7 @@ export class CorrectionsService {
         amount: ["Enter an amount greater than zero"],
       });
     }
+    assertDisbursementAmountUnchanged(original, input.proposedValues as Record<string, unknown>);
     const row = await this.prisma.correctionRequest.create({
       data: {
         originalLedgerEntryId: original.id,
@@ -116,6 +130,12 @@ export class CorrectionsService {
     }
     if (row.version !== input.expectedVersion) {
       throw conflict("This correction was updated elsewhere. Reload and try again.");
+    }
+    if (input.decision === "approve") {
+      assertDisbursementAmountUnchanged(
+        row.originalLedgerEntry,
+        row.proposedValues as Record<string, unknown>,
+      );
     }
     // Claim the decision with a conditional write. A pre-read check is not
     // enough: two simultaneous decisions both read REQUESTED and both write, so
@@ -169,6 +189,7 @@ export class CorrectionsService {
 
     const original = existing.originalLedgerEntry;
     const proposed = existing.proposedValues as Record<string, unknown>;
+    assertDisbursementAmountUnchanged(original, proposed);
     const replacementAmount = typeof proposed.amount === "string" ? proposed.amount : null;
     if (!replacementAmount) {
       throw validation("Proposed amount is required to post a correction", {
