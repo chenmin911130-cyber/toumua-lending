@@ -71,6 +71,8 @@ describe("BATCH 05 default, return, sale, corrections", () => {
   }
 
   async function createSubmittedApplication(staff: Agent) {
+    const requestedAmount = "600.00";
+    const valuationAmount = requestedAmount;
     const borrower = await post(staff, "/api/v1/borrowers", {
       name: "Alex Borrower",
       phone: "+64 21 555 0303",
@@ -82,7 +84,7 @@ describe("BATCH 05 default, return, sale, corrections", () => {
     const appId = application.body.id as string;
     await patch(staff, `/api/v1/applications/${appId}`, {
       expectedVersion: application.body.version,
-      requestedAmount: "600.00",
+      requestedAmount,
       purpose: "Emergency repair",
       proposedTermMonths: 6,
     });
@@ -110,7 +112,7 @@ describe("BATCH 05 default, return, sale, corrections", () => {
     const valAgent = await login("val@example.com", "Valuation12");
     await post(valAgent, `/api/v1/valuations/${valuations.body.items[0].id}/complete`, {
       expectedVersion: 1,
-      amount: "400.00",
+      amount: valuationAmount,
       valuationDate: "2026-09-18",
       basis: "Comparable sales",
       borrowerPresent: true,

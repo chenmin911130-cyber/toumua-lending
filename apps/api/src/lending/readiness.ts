@@ -4,6 +4,43 @@ import {
   ReadinessItem,
   ValuationStatus,
 } from "@toumua/contracts";
+import { fromCents, toCents } from "./money";
+
+/**
+ * Minimum collateral coverage ratio (security valuation ÷ loan amount).
+ * The client requires the value of the security assets to be significantly
+ * greater than the loan amount. Set to, e.g., 1.10 to require 110% coverage;
+ * the default 1.00 requires valuation >= loan.
+ */
+export function minAssetCoverage(): number {
+  const raw = process.env.MIN_ASSET_COVERAGE?.trim();
+  if (!raw) return 1.0;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) return 1.0;
+  return value;
+}
+
+/**
+ * True when the total completed valuation of the security assets covers the
+ * requested loan amount at the configured coverage ratio. Works in integer
+ * cents so a rounding drift can never flip the outcome.
+ */
+export function isValuationCovered(
+  requestedAmount: string | null,
+  valuationTotal: string,
+): boolean {
+  if (!requestedAmount || toCents(requestedAmount) === 0) return true;
+  const required = toCents(requestedAmount) * minAssetCoverage();
+  return toCents(valuationTotal) >= Math.round(required);
+}
+
+function valuationTotalOf(input: ReadinessInput): string {
+  const cents = input.assets.reduce(
+    (total, asset) => total + (asset.valuationAmount ?? 0),
+    0,
+  );
+  return fromCents(cents);
+}
 
 type ReadinessInput = {
   id: string;
@@ -17,6 +54,8 @@ type ReadinessInput = {
     name: string;
     photoCount: number;
     valuationStatus: string | null;
+    /** Completed valuation in cents, 0 when none. */
+    valuationAmount?: number | null;
   }>;
   terms: {
     firstPaymentDate: Date | null;
@@ -74,6 +113,12 @@ export function buildReadiness(input: ReadinessInput): ReadinessItem[] {
       href: `/staff/applications/${input.id}/valuation`,
     },
     {
+      id: "assets-covered",
+      label: "Security value covers the loan amount",
+      complete: isValuationCovered(input.requestedAmount, valuationTotalOf(input)),
+      href: `/staff/applications/${input.id}/valuation`,
+    },
+    {
       id: "terms",
       label: "Repayment terms configured",
       complete: termsComplete,
@@ -84,6 +129,26 @@ export function buildReadiness(input: ReadinessInput): ReadinessItem[] {
 
 export function isReadyToSubmit(items: ReadinessItem[]) {
   return items.every((item) => item.complete);
+}
+
+/**
+ * Staff submit gate. It requires valuation completion so a manager reviews a
+ * valued file, but it does NOT require the coverage rule: that is enforced only
+ * at the approval decision, because the coverage wording depends on the final
+ * loan amount and is a decision-time business rule, not a submit prerequisite.
+ */
+export const STAFF_SUBMIT_IDS = new Set([
+  "borrower",
+  "loan-details",
+  "security",
+  "valuations",
+  "terms",
+]);
+
+export function isReadyForStaffSubmit(items: ReadinessItem[]) {
+  return items
+    .filter((item) => STAFF_SUBMIT_IDS.has(item.id))
+    .every((item) => item.complete);
 }
 
 /** Customer online apply: contact + loan + security photos. Valuation and terms stay with staff. */

@@ -4,6 +4,7 @@ import {
   DecisionInput,
   LoanStatus,
   PaymentAttemptStatus,
+  ValuationStatus,
   type AllowedAction,
 } from "@toumua/contracts";
 import { AuthUser } from "../auth/session";
@@ -13,10 +14,10 @@ import { PrismaService } from "../prisma/prisma.service";
 import { assertReviewDecision, isManager } from "./access";
 import { classifyApproval } from "./approval-policy";
 import { activePolicy, buildSchedule, type Frequency } from "./calculation-policy";
-import { sum } from "./money";
+import { sum, toCents } from "./money";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NumbersService } from "./numbers.service";
-import { buildReadiness, isReadyToSubmit } from "./readiness";
+import { buildReadiness } from "./readiness";
 
 /**
  * The manager decision. Approval freezes the reviewed snapshot into a loan and
@@ -292,6 +293,10 @@ export class DecisionsService {
         name: asset.name,
         photoCount: asset.photos.length,
         valuationStatus: asset.valuations[0]?.status ?? null,
+        valuationAmount:
+          asset.valuations[0]?.status === ValuationStatus.COMPLETED
+            ? toCents(asset.valuations[0].amount ?? "0")
+            : 0,
       })),
       terms: application.terms
         ? {
