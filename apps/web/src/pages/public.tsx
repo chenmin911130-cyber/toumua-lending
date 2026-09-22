@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { Button, Field, Logo, PasswordField } from "@toumua/ui";
 import { api, errorMessage, fieldError, type MeResponse } from "../api";
 import { useAuth } from "../auth";
+import { CUSTOMER_SELF_APPLY } from "../features";
 import { maskEmail } from "../format";
 import { DocumentHead } from "../components/DocumentHead";
 
@@ -76,7 +77,9 @@ function LoginForm({ staff }: { staff?: boolean }) {
       title="Your loan, clearly in view."
       body={staff
         ? "Sign in to review applications, value security, and manage loans."
-        : "Sign in to apply, or to see an application or loan already linked to your account."}
+        : CUSTOMER_SELF_APPLY
+          ? "Sign in to apply, or to see an application or loan already linked to your account."
+          : "Sign in to see an application or loan already linked to your account."}
     >
       <DocumentHead title={staff ? "Staff sign-in" : "Log in"} path={staff ? "/staff/login" : "/login"} description="Sign in to Toumu’a Lending." />
       <h1>{staff ? "Staff sign-in" : "Welcome back"}</h1>
@@ -142,11 +145,13 @@ export function RegisterPage() {
   return (
     <AuthSplit
       title="Your next step starts here."
-      body="Create an account to apply online, or to view a loan already linked for you."
+      body={CUSTOMER_SELF_APPLY
+        ? "Create an account to apply online, or to view a loan already linked for you."
+        : "Create an account to view a loan a loan officer has linked for you."}
     >
-      <DocumentHead title="Create an account" path="/register" description="Register for a Toumu’a Lending account, then apply with collateral." />
+      <DocumentHead title="Create an account" path="/register" description={CUSTOMER_SELF_APPLY ? "Register for a Toumu’a Lending account, then apply with collateral." : "Register for a Toumu’a Lending account to view a linked loan."} />
       <h1>Create your account</h1>
-      <p className="hint" style={{ marginTop: 0 }}>Register, then apply with the amount you need and the security you can offer.</p>
+      <p className="hint" style={{ marginTop: 0 }}>{CUSTOMER_SELF_APPLY ? "Register, then apply with the amount you need and the security you can offer." : "Register to view an application or loan the office has linked to you."}</p>
       <form onSubmit={(event) => void onSubmit(event)}>
         <Field label="Full name" name="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} error={fieldError(error, "name")} />
         <Field label="Email address" name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={fieldError(error, "email")} />
@@ -156,7 +161,7 @@ export function RegisterPage() {
       </form>
       <p>Already have an account? <Link to="/login" data-control-id="A03-02">Log in</Link></p>
       <p className="hint">We’ll send a link to verify your email.</p>
-      <p className="hint">Creating an account does not submit a loan application. You apply after you sign in.</p>
+      <p className="hint">{CUSTOMER_SELF_APPLY ? "Creating an account does not submit a loan application. You apply after you sign in." : "Creating an account does not submit a loan application. Contact our office to apply."}</p>
       <p><Link to="/" data-control-id="A03-02">Back to home</Link></p>
     </AuthSplit>
   );
@@ -279,7 +284,7 @@ export function VerifyEmailPage() {
         <Link className="btn btn-primary" to="/login" data-control-id="A05-02">Continue to login</Link>
       </p>
       {result === "verified" || result === "already_verified" ? (
-        <p className="hint">New to Toumu’a? Sign in and apply online, including the security you can offer. <Link to="/login" data-control-id="A05-04">Sign in</Link></p>
+        <p className="hint">{CUSTOMER_SELF_APPLY ? "New to Toumu’a? Sign in and apply online, including the security you can offer." : "New to Toumu’a? Sign in to view a loan the office has linked for you. Contact our office to apply."} <Link to="/login" data-control-id="A05-04">Sign in</Link></p>
       ) : null}
       {result === "expired" || result === "invalid" || result === "already_used" ? (
         <p>
