@@ -5,7 +5,6 @@ import type {
   ApplicationSummary,
   AuditEvent,
   CursorListResponse,
-  LoanSummary,
   StaffAccount,
   StaffBusinessRole,
 } from "@toumua/contracts";
@@ -30,38 +29,51 @@ const ROLES: StaffBusinessRole[] = [
   "OWNER",
 ];
 
+type BusinessStatus = {
+  money: { outstandingPrincipal: string };
+  dueToday: number;
+  applications: { submitted: number };
+};
+
 export function StaffHomePage() {
   const { user } = useAuth();
-  const [loans, setLoans] = useState<CursorListResponse<LoanSummary> | null>(null);
+  const role = user?.role ?? null;
+  const showStatus = role === "OWNER" || role === "MANAGER" || role === "ACCOUNTANT";
+  const showReviews = role === "MANAGER" || role === "LOAN_OFFICER";
+  const showTransactions = role === "OWNER" || role === "MANAGER" || role === "ACCOUNTANT" || role === "CASHIER";
+  const [status, setStatus] = useState<BusinessStatus | null>(null);
+  const [statusError, setStatusError] = useState<unknown>(null);
+  const [mine, setMine] = useState<number | null>(null);
   const [applications, setApplications] = useState<CursorListResponse<ApplicationSummary> | null>(null);
+  const [applicationsError, setApplicationsError] = useState<unknown>(null);
   const [transactions, setTransactions] = useState<CursorListResponse<TransactionRow> | null>(null);
-  const [error, setError] = useState<unknown>(null);
+  const [transactionsError, setTransactionsError] = useState<unknown>(null);
 
   useEffect(() => {
-    void Promise.all([
-      api<CursorListResponse<LoanSummary>>("/loans?limit=100"),
-      api<CursorListResponse<ApplicationSummary>>("/applications?status=SUBMITTED&limit=5"),
-      api<CursorListResponse<TransactionRow>>("/transactions?limit=5"),
-    ])
-      .then(([loanData, appData, txData]) => {
-        setLoans(loanData);
-        setApplications(appData);
-        setTransactions(txData);
-      })
-      .catch(setError);
-  }, []);
+    if (!showStatus) return;
+    void api<BusinessStatus>("/reports/business-status").then(setStatus).catch(setStatusError);
+  }, [showStatus]);
 
-  const outstanding = (loans?.items ?? [])
-    .filter((loan) => loan.status === "ACTIVE" || loan.status === "DEFAULTED")
-    .reduce((sum, loan) => sum + Number.parseFloat(loan.balance), 0);
-  const dueToday = (loans?.items ?? []).filter((loan) => {
-    if (!loan.nextDueDate || loan.status !== "ACTIVE") return false;
-    const due = new Date(loan.nextDueDate);
-    const now = new Date();
-    return due.getFullYear() === now.getFullYear()
-      && due.getMonth() === now.getMonth()
-      && due.getDate() === now.getDate();
-  }).length;
+  useEffect(() => {
+    if (role !== "LOAN_OFFICER") return;
+    void api<CursorListResponse<ApplicationSummary>>("/applications?limit=1")
+      .then((data) => setMine(data.total))
+      .catch(() => setMine(null));
+  }, [role]);
+
+  useEffect(() => {
+    if (!showReviews) return;
+    void api<CursorListResponse<ApplicationSummary>>("/applications?status=SUBMITTED&limit=5")
+      .then(setApplications)
+      .catch(setApplicationsError);
+  }, [showReviews]);
+
+  useEffect(() => {
+    if (!showTransactions) return;
+    void api<CursorListResponse<TransactionRow>>("/transactions?limit=5")
+      .then(setTransactions)
+      .catch(setTransactionsError);
+  }, [showTransactions]);
 
   return (
     <main className="staff-page">
@@ -70,75 +82,93 @@ export function StaffHomePage() {
         <span>{user?.name}</span>
       </div>
       <h1>Overview</h1>
-      {error ? <p className="error">{errorMessage(error, "Could not load overview")}</p> : null}
-      <section className="metrics">
-        <article>
-          <div className="metric-label">Outstanding balance</div>
-          <div className="metric-value">
-            {loans ? `$${outstanding.toFixed(2)}` : "…"}
+      {showStatus ? (
+        <section className="metrics">
+          <article>
+            <div className="metric-label">Outstanding balance</div>
+            <div className="metric-value">
+              {statusError ? "Not available for your role" : status ? `$${status.money.outstandingPrincipal}` : "…"}
+            </div>
+          </article>
+          <article>
+            <div className="metric-label">Due today</div>
+            <div className="metric-value">{statusError ? "Not available for your role" : status ? String(status.dueToday) : "…"}</div>
+          </article>
+        </section>
+      ) : role === "LOAN_OFFICER" ? (
+        <section className="metrics">
+          <article>
+            <div className="metric-label">My applications</div>
+            <div className="metric-value">{mine ?? "…"}</div>
+          </article>
+        </section>
+      ) : role === "VALUATION_OFFICER" ? (
+        <p className="hint"><Link to="/staff/applications">Open the valuation queue</Link></p>
+      ) : null}
+      {showReviews ? (
+        <>
+          <div className="section-head">
+            <h2>Pending reviews</h2>
+            <Link to="/staff/applications?status=SUBMITTED">View all</Link>
           </div>
-        </article>
-        <article>
-          <div className="metric-label">Pending reviews</div>
-          <div className="metric-value">{applications?.total ?? "…"}</div>
-        </article>
-        <article>
-          <div className="metric-label">Due today</div>
-          <div className="metric-value">{loans ? String(dueToday) : "…"}</div>
-        </article>
-      </section>
-      <div className="section-head">
-        <h2>Pending reviews</h2>
-        <Link to="/staff/applications?status=SUBMITTED">View all</Link>
-      </div>
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Application</th>
-            <th>Borrower</th>
-            <th>Status</th>
-            <th>Updated</th>
-          </tr>
-        </thead>
-        <tbody>
-          {applications?.items.length ? applications.items.map((item) => (
-            <tr key={item.id}>
-              <td><Link to={`/staff/applications/${item.id}/review`}>{item.number}</Link></td>
-              <td>{item.borrowerName ?? "—"}</td>
-              <td>{statusLabel(item.status)}</td>
-              <td>{formatDate(item.updatedAt)}</td>
-            </tr>
-          )) : (
-            <tr><td className="empty-row" colSpan={4}>No applications are waiting for review.</td></tr>
+          {applicationsError ? <p className="hint">Not available for your role</p> : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Application</th>
+                  <th>Borrower</th>
+                  <th>Status</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {applications?.items.length ? applications.items.map((item) => (
+                  <tr key={item.id}>
+                    <td><Link to={`/staff/applications/${item.id}/review`}>{item.number}</Link></td>
+                    <td>{item.borrowerName ?? "—"}</td>
+                    <td>{statusLabel(item.status)}</td>
+                    <td>{formatDate(item.updatedAt)}</td>
+                  </tr>
+                )) : (
+                  <tr><td className="empty-row" colSpan={4}>{applications ? "No applications are waiting for review." : "Loading…"}</td></tr>
+                )}
+              </tbody>
+            </table>
           )}
-        </tbody>
-      </table>
-      <div className="section-head">
-        <h2>Recent transactions</h2>
-        <Link to="/staff/transactions">View all</Link>
-      </div>
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Type</th>
-            <th>Loan</th>
-            <th>Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {transactions?.items.length ? transactions.items.map((item) => (
-            <tr key={item.id}>
-              <td>{formatDate(item.businessDate)}</td>
-              <td>{statusLabel(item.type)}</td>
-              <td>{item.loanNumber ?? "—"}</td>
-              <td>${item.amount.replace(/^-/, "")}</td>
-            </tr>
-          )) : (
-            <tr><td className="empty-row" colSpan={4}>No transactions have been recorded.</td></tr>
+        </>
+      ) : null}
+      {showTransactions ? (
+        <>
+          <div className="section-head">
+            <h2>Recent transactions</h2>
+            <Link to="/staff/transactions">View all</Link>
+          </div>
+          {transactionsError ? <p className="hint">Not available for your role</p> : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Loan</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions?.items.length ? transactions.items.map((item) => (
+                  <tr key={item.id}>
+                    <td>{formatDate(item.businessDate)}</td>
+                    <td>{statusLabel(item.type)}</td>
+                    <td>{item.loanNumber ?? "—"}</td>
+                    <td>${item.amount.replace(/^-/, "")}</td>
+                  </tr>
+                )) : (
+                  <tr><td className="empty-row" colSpan={4}>{transactions ? "No transactions have been recorded." : "Loading…"}</td></tr>
+                )}
+              </tbody>
+            </table>
           )}
-        </tbody>
-      </table>
+        </>
+      ) : null}
     </main>
   );
 }

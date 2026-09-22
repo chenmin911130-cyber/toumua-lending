@@ -14,6 +14,8 @@ import { LoansController } from "./loans.controller";
 import { LoansService } from "./loans.service";
 import { MoneyService } from "./money.service";
 import { NumbersService } from "./numbers.service";
+import { ReportsController } from "./reports.controller";
+import { ReportsService } from "./reports.service";
 import { TransactionsController } from "./transactions.controller";
 import { UploadsController } from "./uploads.controller";
 import { UploadsService } from "./uploads.service";
@@ -33,6 +35,7 @@ import { NotificationsModule } from "../notifications/notifications.module";
     AssetsController,
     TransactionsController,
     CorrectionsController,
+    ReportsController,
   ],
   providers: [
     NumbersService,
@@ -45,8 +48,19 @@ import { NotificationsModule } from "../notifications/notifications.module";
     CustodyService,
     MoneyService,
     CorrectionsService,
+    ReportsService,
     AuditService,
   ],
-  exports: [ApplicationsService, BorrowersService, LoansService, MoneyService],
+  exports: [
+    ApplicationsService,
+    BorrowersService,
+    LoansService,
+    MoneyService,
+    DecisionsService,
+    ValuationsService,
+    CustodyService,
+    UploadsService,
+    CorrectionsService,
+  ],
 })
 export class LendingModule {}
