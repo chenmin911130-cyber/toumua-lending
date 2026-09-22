@@ -8,6 +8,7 @@ import type {
   CursorListResponse,
 } from "@toumua/contracts";
 import { api, errorMessage, fieldError, uploadFile } from "../api";
+import { CUSTOMER_SELF_APPLY } from "../features";
 import { aucklandDate } from "../format";
 
 type BorrowerDetail = BorrowerSummary & {
@@ -490,8 +491,16 @@ export function ApplicationWizardPage() {
   }
 
   async function uploadPhoto(assetId: string, file: File) {
-    await uploadFile(`/applications/${id}/assets/${assetId}/photos`, file);
-    await reload();
+    if (file.size > 8 * 1024 * 1024) {
+      setError(new Error("Photo must be under 8 MB"));
+      return;
+    }
+    try {
+      await uploadFile(`/applications/${id}/assets/${assetId}/photos`, file);
+      await reload();
+    } catch (err) {
+      setError(err);
+    }
   }
 
   async function saveTerms(event: FormEvent) {
@@ -750,7 +759,7 @@ export function CustomerApplicationDetailPage() {
 
   useEffect(() => {
     void api<Record<string, unknown>>(`/me/applications/${id}`).then((data) => {
-      if (data.status === "DRAFT") {
+      if (data.status === "DRAFT" && CUSTOMER_SELF_APPLY) {
         navigate("/customer/apply", { replace: true });
         return;
       }

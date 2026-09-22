@@ -19,7 +19,12 @@
     "db:migrate": "pnpm --filter @toumua/api prisma:migrate",
     "db:migrate:deploy": "pnpm --filter @toumua/api exec prisma migrate deploy",
     "db:generate": "pnpm --filter @toumua/api prisma:generate",
-    "db:seed-demo": "pnpm --filter @toumua/api prisma:seed-demo"
+    "db:seed-demo": "pnpm --filter @toumua/api prisma:seed-demo",
+    "seed:demo": "pnpm --filter @toumua/api prisma:seed-demo && pnpm --filter @toumua/api prisma:seed-demo-data"
+  },
+  "devDependencies": {
+    "cross-env": "7.0.3",
+    "shx": "0.3.4"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

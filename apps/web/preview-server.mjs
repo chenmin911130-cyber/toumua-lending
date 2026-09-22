@@ -87,6 +87,7 @@ function applyCache(pathname, res) {
 }
 
 function safeFile(pathname) {
+  if (pathname.split("/").includes("..")) return null;
   const relative = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
   const full = normalize(join(root, relative));
   if (!full.startsWith(root + sep) && full !== root) return null;
@@ -139,10 +140,26 @@ function proxyApi(req, res) {
   req.pipe(proxy);
 }
 
+process.on("uncaughtException", (error) => {
+  console.error("uncaughtException", error);
+});
+
 const server = http.createServer((req, res) => {
   applySecurity(res);
   const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
-  const pathname = decodeURIComponent(url.pathname);
+  let pathname;
+  try {
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    res.statusCode = 400;
+    res.end("Bad request");
+    return;
+  }
+  if (pathname.split("/").includes("..")) {
+    res.statusCode = 400;
+    res.end("Bad request");
+    return;
+  }
 
   if (pathname === "/api" || pathname.startsWith("/api/")) {
     proxyApi(req, res);
