@@ -4,6 +4,7 @@ import { DocumentHead } from "../components/DocumentHead";
 import { ChevronRight, Clock, Mail, MapPin, Phone } from "lucide-react";
 import { api, type ContactResponse } from "../api";
 import { useAuth } from "../auth";
+import { CUSTOMER_SELF_APPLY } from "../features";
 import { FAQItem } from "../components/marketing/FAQ";
 import { Footer } from "../components/marketing/Footer";
 import { Navbar } from "../components/marketing/Navbar";
@@ -11,7 +12,9 @@ import { Navbar } from "../components/marketing/Navbar";
 const HELP_FAQS = [
   {
     q: "How do I apply?",
-    a: "Sign in and apply online. Include the amount you need and the security you can offer. Staff review the application and value the collateral before a manager decides.",
+    a: CUSTOMER_SELF_APPLY
+      ? "Sign in and apply online. Include the amount you need and the security you can offer. Staff review the application and value the collateral before a manager decides."
+      : "Contact our office to apply. A loan officer completes the application with you. Staff value the collateral before a manager decides.",
   },
   {
     q: "Where do I make repayments?",
@@ -23,12 +26,20 @@ const HELP_FAQS = [
   },
   {
     q: "How can I check my application?",
-    a: "Sign in to apply or to check the progress of an application you have already submitted.",
+    a: CUSTOMER_SELF_APPLY
+      ? "Sign in to apply or to check the progress of an application you have already submitted."
+      : "Sign in to check the progress of an application a loan officer has already recorded for you.",
   },
 ] as const;
 
 const STEPS = [
-  { num: "01", title: "Apply online", description: "Submit the amount you need and the security you can offer." },
+  {
+    num: "01",
+    title: CUSTOMER_SELF_APPLY ? "Apply online" : "Contact the office",
+    description: CUSTOMER_SELF_APPLY
+      ? "Submit the amount you need and the security you can offer."
+      : "Contact our office to apply. A loan officer completes the application with you.",
+  },
   { num: "02", title: "Valuation", description: "Your security assets are reviewed before a decision." },
   { num: "03", title: "Manager decision", description: "Our team assesses the application and next steps." },
   { num: "04", title: "Security intake, then disbursement", description: "Once approved, security is taken in and funds are released." },

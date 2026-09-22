@@ -22,7 +22,7 @@ export class UploadsController {
   constructor(@Inject(UploadsService) private readonly uploads: UploadsService) {}
 
   @Post("applications/:applicationId/assets/:assetId/photos")
-  @UseInterceptors(FileInterceptor("file"))
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 8 * 1024 * 1024, files: 1 } }))
   upload(
     @CurrentUser() user: AuthUser,
     @Param("applicationId") applicationId: string,

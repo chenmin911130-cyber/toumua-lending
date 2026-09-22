@@ -471,19 +471,31 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
     expect(refused.status).toBe(403);
   });
 
-  it("B04-09 staff can approve a small simple file; larger amounts need a manager", async () => {
+  it("B04-09 only a manager can approve; a loan officer cannot", async () => {
     const staff = await login("loan@example.com", "LoanOfficer12");
     const { appId } = await createSubmittedApplication(staff, "600.00");
     const staffReview = await staff.get(`/api/v1/applications/${appId}/review`);
     expect(staffReview.status).toBe(200);
-    expect(staffReview.body.requiresManager).toBe(false);
-    expect(staffReview.body.canApprove).toBe(true);
+    expect(staffReview.body.requiresManager).toBe(true);
+    expect(staffReview.body.canApprove).toBe(false);
+    expect(staffReview.body.valuationTotal).toBe("400.00");
+    expect(staffReview.body.assets[0].valuationAmount).toBe("400.00");
     const staffApproved = await post(staff, `/api/v1/applications/${appId}/decision`, {
       expectedVersion: staffReview.body.version,
       decision: "approve",
       reviewed: true,
     });
-    expect(staffApproved.status).toBe(201);
+    expect(staffApproved.status).toBe(403);
+
+    const manager = await login("manager@example.com", "Manager12345");
+    const smallReview = await manager.get(`/api/v1/applications/${appId}/review`);
+    expect(smallReview.body.canApprove).toBe(true);
+    const smallApproved = await post(manager, `/api/v1/applications/${appId}/decision`, {
+      expectedVersion: smallReview.body.version,
+      decision: "approve",
+      reviewed: true,
+    });
+    expect(smallApproved.status).toBe(201);
 
     const large = await createSubmittedApplication(staff, "8000.00");
     const blocked = await staff.get(`/api/v1/applications/${large.appId}/review`);
@@ -496,7 +508,6 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
     });
     expect(refused.status).toBe(403);
 
-    const manager = await login("manager@example.com", "Manager12345");
     const managerReview = await manager.get(`/api/v1/applications/${large.appId}/review`);
     expect(managerReview.body.canApprove).toBe(true);
     const approved = await post(manager, `/api/v1/applications/${large.appId}/decision`, {
@@ -505,5 +516,26 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
       reviewed: true,
     });
     expect(approved.status).toBe(201);
+  });
+
+  it("B04-10 a disbursement amount cannot be corrected; the method can", async () => {
+    const { cashier } = await activeLoan();
+    const transactions = await cashier.get("/api/v1/transactions");
+    const disbursement = transactions.body.items.find(
+      (item: { type: string }) => item.type === "DISBURSEMENT",
+    );
+    expect(disbursement).toBeTruthy();
+    const changed = await post(cashier, "/api/v1/corrections", {
+      originalLedgerEntryId: disbursement.id,
+      reason: "Wrong amount",
+      proposedValues: { amount: "1.00" },
+    });
+    expect(changed.status).toBe(422);
+    const methodOnly = await post(cashier, "/api/v1/corrections", {
+      originalLedgerEntryId: disbursement.id,
+      reason: "Wrong method",
+      proposedValues: { method: "CARD", externalReference: "CARD-1" },
+    });
+    expect(methodOnly.status).toBe(201);
   });
 });

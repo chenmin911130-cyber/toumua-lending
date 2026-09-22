@@ -25,6 +25,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let fieldErrors: Record<string, string[]> | undefined;
     let retryAfterSeconds: number | undefined;
 
+    const multerCode =
+      exception && typeof exception === "object" && "code" in exception
+        ? (exception as { code?: string }).code
+        : undefined;
+    if (multerCode === "LIMIT_FILE_SIZE") {
+      response.status(HttpStatus.PAYLOAD_TOO_LARGE).json({
+        code: ErrorCode.VALIDATION,
+        message: "Photo must be under 8 MB",
+        requestId,
+      });
+      return;
+    }
+
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const payload = exception.getResponse();

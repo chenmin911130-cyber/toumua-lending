@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { Button, Field } from "@toumua/ui";
 import type { CursorListResponse, LoanDetail, LoanSummary } from "@toumua/contracts";
 import { api, errorMessage, fieldError, postIdempotent } from "../api";
+import { useAuth } from "../auth";
 
 type AssetView = {
   id: string;
@@ -35,6 +36,7 @@ type Review = {
   number?: string;
   borrowerName?: string | null;
   requestedAmount?: string | null;
+  valuationTotal?: string;
   purpose?: string | null;
   proposedTermMonths?: number | null;
   staffApproveLimit?: string;
@@ -46,6 +48,7 @@ type Review = {
     description: string;
     photoCount: number;
     valuationStatus: string | null;
+    valuationAmount?: string | null;
   }>;
 };
 
@@ -574,6 +577,7 @@ export function StaffReceiptPage() {
 
 export function ApplicationReviewPage() {
   const { id = "" } = useParams();
+  const { user } = useAuth();
   const [review, setReview] = useState<Review | null>(null);
   const [reason, setReason] = useState("");
   const [publicNote, setPublicNote] = useState("");
@@ -611,13 +615,15 @@ export function ApplicationReviewPage() {
   if (error && !review) return <main className="staff-page"><p className="error">{errorMessage(error, "Could not load review")}</p></main>;
   if (!review) return <main className="staff-page"><p>Loading review…</p></main>;
   const decided = review.checks.find((check) => check.id === "no-loan")?.complete === false;
+  const officerView = user?.role !== "MANAGER";
   return (
     <main className="staff-page">
       <Link to="/staff/applications">← Applications</Link>
       <h1>Manager review</h1>
       <p className="hint">
         {review.number ?? ""}{review.borrowerName ? ` · ${review.borrowerName}` : ""}
-        {review.requestedAmount ? ` · $${review.requestedAmount}` : ""}
+        {review.requestedAmount ? ` · Requested $${review.requestedAmount}` : ""}
+        {review.valuationTotal ? ` · Security valued $${review.valuationTotal}` : ""}
         {review.purpose ? ` · ${review.purpose}` : ""}
         {review.proposedTermMonths ? ` · ${review.proposedTermMonths} months` : ""}
       </p>
@@ -625,7 +631,7 @@ export function ApplicationReviewPage() {
         <ul>
           {review.assets.map((asset) => (
             <li key={asset.id}>
-              {asset.name} · {asset.photoCount} photo(s) · valuation {asset.valuationStatus ?? "requested"}
+              {asset.name} · {asset.photoCount} photo(s) · valuation {asset.valuationAmount ? `$${asset.valuationAmount}` : asset.valuationStatus ?? "requested"}
             </li>
           ))}
         </ul>
@@ -635,20 +641,22 @@ export function ApplicationReviewPage() {
         {" · "}
         <Link to={`/staff/applications/${id}/edit/terms`}>Repayment terms</Link>
       </p>
-      {review.requiresManager ? (
+      {officerView ? (
+        <p className="hint">Approval is a manager decision. Submit the file for manager review.</p>
+      ) : review.requiresManager ? (
         <p className="hint">
-          Manager approval is required{review.staffApproveLimit ? ` (staff limit $${review.staffApproveLimit})` : ""}.
+          Manager approval is required{review.staffApproveLimit && review.staffApproveLimit !== "0.00" ? ` (staff limit $${review.staffApproveLimit})` : ""}.
           {review.managerReasons?.length ? ` ${review.managerReasons.join(" ")}` : ""}
         </p>
       ) : (
         <p className="hint">
-          Staff can approve this file. Amounts above ${review.staffApproveLimit ?? "3,000.00"}, three or more assets, or a complex purpose still go to a manager.
+          Staff can approve this file. Amounts above ${review.staffApproveLimit ?? "0.00"}, three or more assets, or a complex purpose still go to a manager.
         </p>
       )}
       <ul>{review.checks.map((check) => <li key={check.id}>{check.complete ? "✓" : "○"} {check.label}</li>)}</ul>
       {decided ? (
         <p className="hint">This application already has a decision.</p>
-      ) : (
+      ) : officerView ? null : (
         <>
           <Field label="Reason (required to decline)">
             <input value={reason} onChange={(e) => setReason(e.target.value)} />

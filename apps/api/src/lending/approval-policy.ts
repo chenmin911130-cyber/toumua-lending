@@ -1,15 +1,13 @@
 import { compare, fromCents, toCents } from "./money";
 
-/** Staff may approve at or below this amount when the file is also simple. */
-export const DEFAULT_STAFF_APPROVE_LIMIT = "3000.00";
-
+/** Profile default: a loan officer never approves. Set STAFF_APPROVE_LIMIT to opt back in. */
 export function staffApproveLimit(): string {
   const raw = process.env.STAFF_APPROVE_LIMIT?.trim();
-  if (!raw) return DEFAULT_STAFF_APPROVE_LIMIT;
+  if (!raw) return "0.00";
   try {
     return fromCents(toCents(raw));
   } catch {
-    return DEFAULT_STAFF_APPROVE_LIMIT;
+    return "0.00";
   }
 }
 
@@ -42,9 +40,13 @@ export function classifyApproval(input: {
   if ((input.purposeDescription ?? "").trim().length >= COMPLEX_NOTE_CHARS) {
     reasons.push("The application notes are long enough to need manager help");
   }
+  const officersNeverApprove = compare(limit, "0.00") === 0;
+  if (officersNeverApprove) {
+    reasons.unshift("Approval is a manager decision");
+  }
   return {
     limit,
-    requiresManager: reasons.length > 0,
+    requiresManager: officersNeverApprove || reasons.length > 0,
     reasons,
   };
 }

@@ -13,6 +13,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { assertReviewDecision, isManager } from "./access";
 import { classifyApproval } from "./approval-policy";
 import { activePolicy, buildSchedule, type Frequency } from "./calculation-policy";
+import { sum } from "./money";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NumbersService } from "./numbers.service";
 import { buildReadiness, isReadyToSubmit } from "./readiness";
@@ -43,6 +44,18 @@ export class DecisionsService {
     const routing = this.routingOf(application);
     const ready = checks.every((check) => check.complete);
     const canApprove = ready && (isManager(user) || !routing.requiresManager);
+    const assets = application.assets.map((asset) => {
+      const valuation = asset.valuations[0];
+      const valuationAmount = valuation?.status === "COMPLETED" ? valuation.amount : null;
+      return {
+        id: asset.id,
+        name: asset.name,
+        description: asset.description,
+        photoCount: asset.photos.length,
+        valuationStatus: valuation?.status ?? null,
+        valuationAmount,
+      };
+    });
     return {
       id: application.id,
       number: application.number,
@@ -52,13 +65,8 @@ export class DecisionsService {
       requestedAmount: application.requestedAmount,
       purpose: application.purpose,
       proposedTermMonths: application.proposedTermMonths,
-      assets: application.assets.map((asset) => ({
-        id: asset.id,
-        name: asset.name,
-        description: asset.description,
-        photoCount: asset.photos.length,
-        valuationStatus: asset.valuations[0]?.status ?? null,
-      })),
+      assets,
+      valuationTotal: sum(assets.map((asset) => asset.valuationAmount ?? "0.00")),
       staffApproveLimit: routing.limit,
       requiresManager: routing.requiresManager,
       managerReasons: routing.reasons,
@@ -348,7 +356,7 @@ export class DecisionsService {
                 ? "Only a submitted application can be approved"
                 : blocking.length > 0
                   ? `Waiting on: ${blocking.map((check) => check.label).join(", ")}`
-                  : "A manager must approve this amount or this file",
+                  : "Approval is a manager decision. Submit the file for manager review.",
             }),
       },
       {

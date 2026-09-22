@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { DocumentHead } from "../components/DocumentHead";
 import { MarketingShell } from "../components/marketing/MarketingShell";
+import { CUSTOMER_SELF_APPLY } from "../features";
 import { DISCLAIMER } from "../site";
 
 const PRODUCTS = [
@@ -9,7 +10,9 @@ const PRODUCTS = [
     title: "Personal loan",
     summary: "A secured personal loan recorded in the office, with collateral held until the balance is cleared.",
     points: [
-      "Apply online with the amount you need and the security you can offer.",
+      CUSTOMER_SELF_APPLY
+        ? "Apply online with the amount you need and the security you can offer."
+        : "Contact our office to apply. A loan officer completes the application with you.",
       "Staff review the file; larger or complex applications go to a manager.",
       "Repayments are taken by the cashier. This website does not take online payments.",
     ],

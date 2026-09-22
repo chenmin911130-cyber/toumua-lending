@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, ShieldCheck, Users, Zap } from "lucide-react";
 import { FeatureItem } from "./FeatureItem";
+import { CUSTOMER_SELF_APPLY } from "../../features";
 import { LoanCalculator } from "./LoanCalculator";
 
 export function Hero() {
@@ -66,7 +67,7 @@ export function Hero() {
             </div>
 
             <div className="mt-10 grid gap-5 sm:grid-cols-3">
-              <FeatureItem icon={Zap} title="Clear process" description="Apply, review, decide" />
+              <FeatureItem icon={Zap} title="Clear process" description={CUSTOMER_SELF_APPLY ? "Apply, review, decide" : "Contact the office to apply"} />
               <FeatureItem
                 icon={ShieldCheck}
                 title="Fees on the offer"
