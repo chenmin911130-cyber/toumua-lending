@@ -562,4 +562,414 @@ describe("BATCH 05 default, return, sale, corrections", () => {
     expect(quote.body.ok).toBe(true);
     expect(quote.body.quote.pendingSettlement).toBe(true);
   });
+
+  it("B05-12 a disbursement correction is refused at request time", async () => {
+    const { loanId, cashier } = await activeLoan();
+    const disbursement = await prisma.ledgerEntry.findFirstOrThrow({
+      where: { loanId, type: "DISBURSEMENT" },
+    });
+    const before = await cashier.get(`/api/v1/loans/${loanId}`);
+
+    // Raising the disbursement from principal to "principal + 500" would make
+    // 500 look like a repayment, inventing a payment nobody made. The office
+    // has no principal-correction policy, so the request must not even open.
+    const requested = await post(cashier, "/api/v1/corrections", {
+      originalLedgerEntryId: disbursement.id,
+      reason: "Increase the recorded principal",
+      proposedValues: { amount: "1100.00" },
+    });
+    expect(requested.status).toBe(422);
+    expect(requested.body.message).toMatch(/repayment/i);
+
+    const corrections = await prisma.correctionRequest.count({
+      where: { originalLedgerEntryId: disbursement.id },
+    });
+    expect(corrections).toBe(0);
+    const after = await cashier.get(`/api/v1/loans/${loanId}`);
+    expect(after.body.balance).toBe(before.body.balance);
+    expect(after.body.status).toBe(before.body.status);
+  });
+
+  it("B05-13 an approved legacy disbursement correction is refused at post time", async () => {
+    const { loanId, cashier } = await activeLoan();
+    const disbursement = await prisma.ledgerEntry.findFirstOrThrow({
+      where: { loanId, type: "DISBURSEMENT" },
+    });
+    const cashierRow = await prisma.user.findUniqueOrThrow({
+      where: { emailNormalized: "cashier@example.com" },
+    });
+    const managerRow = await prisma.user.findUniqueOrThrow({
+      where: { emailNormalized: "manager@example.com" },
+    });
+    // Simulate a request that slipped through before the guard existed.
+    const legacy = await prisma.correctionRequest.create({
+      data: {
+        originalLedgerEntryId: disbursement.id,
+        proposedValues: { amount: "1100.00" },
+        reason: "Legacy approved principal change",
+        requestedById: cashierRow.id,
+        decidedById: managerRow.id,
+        status: "APPROVED",
+      },
+    });
+
+    const before = await cashier.get(`/api/v1/loans/${loanId}`);
+    const posted = await postIdempotent(
+      cashier,
+      `/api/v1/corrections/${legacy.id}/post`,
+      {},
+      "legacy-disbursement-correction",
+    );
+    expect(posted.status).toBe(422);
+    expect(posted.body.message).toMatch(/repayment/i);
+
+    // Nothing moved: no reversal/replacement ledger rows, same balance and plan.
+    const ledgers = await prisma.ledgerEntry.findMany({ where: { loanId } });
+    expect(ledgers).toHaveLength(1);
+    expect(ledgers[0].amount).toBe("600.00");
+    const schedule = await prisma.scheduleEntry.findMany({
+      where: { loanId },
+      orderBy: { number: "asc" },
+    });
+    expect(schedule.map((row) => row.paidAmount)).toEqual([
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.00",
+    ]);
+    const after = await cashier.get(`/api/v1/loans/${loanId}`);
+    expect(after.body.balance).toBe(before.body.balance);
+    const stillApproved = await prisma.correctionRequest.findUniqueOrThrow({
+      where: { id: legacy.id },
+    });
+    expect(stillApproved.status).toBe("APPROVED");
+  });
+
+  it("B05-14 a correction reversal or replacement cannot be corrected again", async () => {
+    const { loanId, cashier } = await activeLoan();
+    const active = await cashier.get(`/api/v1/loans/${loanId}`);
+    const repayment = await postIdempotent(
+      cashier,
+      `/api/v1/loans/${loanId}/repayments`,
+      {
+        expectedVersion: active.body.version,
+        amount: "100.00",
+        businessDate: "2026-10-01",
+        method: "CASH",
+      },
+      "repay-recorrect",
+    );
+    const requested = await post(cashier, "/api/v1/corrections", {
+      originalLedgerEntryId: repayment.body.ledgerEntryId,
+      reason: "Understated the amount taken at the counter",
+      proposedValues: { amount: "120.00" },
+    });
+    const manager = await login("manager@example.com", "Manager12345");
+    await post(manager, `/api/v1/corrections/${requested.body.id}/decision`, {
+      expectedVersion: requested.body.version,
+      decision: "approve",
+    });
+    const posted = await postIdempotent(
+      cashier,
+      `/api/v1/corrections/${requested.body.id}/post`,
+      {},
+      "correction-recorrect-post",
+    );
+    expect(posted.status).toBe(201);
+    const row = await prisma.correctionRequest.findUniqueOrThrow({
+      where: { id: requested.body.id },
+    });
+    expect(row.replacementEntryId).toBeTruthy();
+
+    // The replacement is itself a REPAYMENT, but it is an artefact of this
+    // correction. Correcting it would compound reversals and invent balances,
+    // so it is refused explicitly rather than treated as a fresh counter entry.
+    const second = await post(cashier, "/api/v1/corrections", {
+      originalLedgerEntryId: row.replacementEntryId!,
+      reason: "Correct the correction",
+      proposedValues: { amount: "130.00" },
+    });
+    expect(second.status).toBe(422);
+    expect(second.body.message).toMatch(/earlier correction/i);
+  });
+
+  it("B05-15 a sale receipt cannot be corrected", async () => {
+    const { loanId, assetId, cashier, staff, mgr, val } = await activeLoan();
+    const active = await staff.get(`/api/v1/loans/${loanId}`);
+    await post(mgr, `/api/v1/loans/${loanId}/default`, {
+      expectedVersion: active.body.version,
+      businessDate: "2026-09-20",
+      reason: "Missed installments",
+      policyBasis: "Office default policy clause 4",
+    });
+    const afterDefault = await staff.get(`/api/v1/loans/${loanId}`);
+    await post(val, `/api/v1/assets/${assetId}/sale`, {
+      expectedVersion: afterDefault.body.version,
+      buyerName: "Second-hand dealer",
+      buyerContact: "+64 21 555 0404",
+      saleAmount: "350.00",
+      saleDate: "2026-09-21",
+      method: "Private sale",
+    });
+    const forReceipt = await cashier.get(`/api/v1/loans/${loanId}`);
+    const receipt = await postIdempotent(
+      cashier,
+      `/api/v1/loans/${loanId}/sale-receipts`,
+      {
+        expectedVersion: forReceipt.body.version,
+        amount: "350.00",
+        businessDate: "2026-09-21",
+        method: "CASH",
+      },
+      "sale-receipt-correction-block",
+    );
+    expect(receipt.status).toBe(201);
+    const saleLedger = await prisma.ledgerEntry.findFirstOrThrow({
+      where: { loanId, type: "SALE_RECEIPT" },
+    });
+
+    // Recovered sale proceeds are not a counter repayment; the office has not
+    // supplied a policy for amending them.
+    const requested = await post(cashier, "/api/v1/corrections", {
+      originalLedgerEntryId: saleLedger.id,
+      reason: "Adjust the sale proceeds",
+      proposedValues: { amount: "400.00" },
+    });
+    expect(requested.status).toBe(422);
+    expect(requested.body.message).toMatch(/repayment/i);
+    expect(
+      await prisma.correctionRequest.count({ where: { originalLedgerEntryId: saleLedger.id } }),
+    ).toBe(0);
+  });
+
+  async function paidPlan(loanId: string) {
+    const schedule = await prisma.scheduleEntry.findMany({ where: { loanId } });
+    return schedule.reduce((total, row) => total + Math.round(Number(row.paidAmount) * 100), 0);
+  }
+
+  async function approveCorrection(manager: Agent, correctionId: string, version: number) {
+    return post(manager, `/api/v1/corrections/${correctionId}/decision`, {
+      expectedVersion: version,
+      decision: "approve",
+    });
+  }
+
+  it("B05-16 a repayment that was already corrected cannot be corrected again", async () => {
+    const { loanId, cashier } = await activeLoan();
+    const active = await cashier.get(`/api/v1/loans/${loanId}`);
+    const repayment = await postIdempotent(
+      cashier,
+      `/api/v1/loans/${loanId}/repayments`,
+      {
+        expectedVersion: active.body.version,
+        amount: "100.00",
+        businessDate: "2026-10-01",
+        method: "CASH",
+      },
+      "repay-rec-correct-once",
+    );
+    const requested = await post(cashier, "/api/v1/corrections", {
+      originalLedgerEntryId: repayment.body.ledgerEntryId,
+      reason: "Wrong amount entered at counter",
+      proposedValues: { amount: "120.00" },
+    });
+    expect(requested.status).toBe(201);
+    const manager = await login("manager@example.com", "Manager12345");
+    await approveCorrection(manager, requested.body.id, requested.body.version);
+    const posted = await postIdempotent(
+      cashier,
+      `/api/v1/corrections/${requested.body.id}/post`,
+      {},
+      "rec-correct-once-post",
+    );
+    expect(posted.status).toBe(201);
+
+    // Re-requesting a correction against the same entry would apply its delta
+    // on top of the first; it must be refused before any row is written.
+    const second = await post(cashier, "/api/v1/corrections", {
+      originalLedgerEntryId: repayment.body.ledgerEntryId,
+      reason: "Correct it a second time",
+      proposedValues: { amount: "130.00" },
+    });
+    expect(second.status).toBe(409);
+    expect(second.body.message).toMatch(/already been corrected/i);
+
+    const ledger = await prisma.ledgerEntry.findMany({ where: { loanId, type: "REPAYMENT" } });
+    expect(ledger).toHaveLength(3);
+    expect(
+      await prisma.correctionRequest.count({
+        where: { originalLedgerEntryId: repayment.body.ledgerEntryId },
+      }),
+    ).toBe(1);
+    expect(await paidPlan(loanId)).toBe(12000);
+  });
+
+  it("B05-17 a legacy duplicate approved correction cannot post twice", async () => {
+    const { loanId, cashier } = await activeLoan();
+    const active = await cashier.get(`/api/v1/loans/${loanId}`);
+    const repayment = await postIdempotent(
+      cashier,
+      `/api/v1/loans/${loanId}/repayments`,
+      {
+        expectedVersion: active.body.version,
+        amount: "100.00",
+        businessDate: "2026-10-01",
+        method: "CASH",
+      },
+      "repay-legacy-dup",
+    );
+    const requested = await post(cashier, "/api/v1/corrections", {
+      originalLedgerEntryId: repayment.body.ledgerEntryId,
+      reason: "First correction",
+      proposedValues: { amount: "120.00" },
+    });
+    const manager = await login("manager@example.com", "Manager12345");
+    await approveCorrection(manager, requested.body.id, requested.body.version);
+
+    const cashierRow = await prisma.user.findUniqueOrThrow({
+      where: { emailNormalized: "cashier@example.com" },
+    });
+    const managerRow = await prisma.user.findUniqueOrThrow({
+      where: { emailNormalized: "manager@example.com" },
+    });
+    // Simulate a second approval that slipped through before the guard existed.
+    const legacy = await prisma.correctionRequest.create({
+      data: {
+        originalLedgerEntryId: repayment.body.ledgerEntryId,
+        proposedValues: { amount: "130.00" },
+        reason: "Legacy duplicate approval",
+        requestedById: cashierRow.id,
+        decidedById: managerRow.id,
+        status: "APPROVED",
+      },
+    });
+
+    const first = await postIdempotent(
+      cashier,
+      `/api/v1/corrections/${requested.body.id}/post`,
+      {},
+      "legacy-dup-first",
+    );
+    expect(first.status).toBe(201);
+    const second = await postIdempotent(
+      cashier,
+      `/api/v1/corrections/${legacy.id}/post`,
+      {},
+      "legacy-dup-second",
+    );
+    expect(second.status).toBe(409);
+    expect(second.body.message).toMatch(/already been corrected/i);
+
+    const ledger = await prisma.ledgerEntry.findMany({ where: { loanId, type: "REPAYMENT" } });
+    expect(ledger).toHaveLength(3);
+    expect(await paidPlan(loanId)).toBe(12000);
+    const legacyRow = await prisma.correctionRequest.findUniqueOrThrow({ where: { id: legacy.id } });
+    expect(legacyRow.status).toBe("APPROVED");
+  });
+
+  it("B05-18 two different approved corrections for one repayment post only once", async () => {
+    const { loanId, cashier } = await activeLoan();
+    const active = await cashier.get(`/api/v1/loans/${loanId}`);
+    const repayment = await postIdempotent(
+      cashier,
+      `/api/v1/loans/${loanId}/repayments`,
+      {
+        expectedVersion: active.body.version,
+        amount: "100.00",
+        businessDate: "2026-10-01",
+        method: "CASH",
+      },
+      "repay-concurrent-correct",
+    );
+    const requested = await post(cashier, "/api/v1/corrections", {
+      originalLedgerEntryId: repayment.body.ledgerEntryId,
+      reason: "First correction",
+      proposedValues: { amount: "120.00" },
+    });
+    const manager = await login("manager@example.com", "Manager12345");
+    await approveCorrection(manager, requested.body.id, requested.body.version);
+    const cashierRow = await prisma.user.findUniqueOrThrow({
+      where: { emailNormalized: "cashier@example.com" },
+    });
+    const managerRow = await prisma.user.findUniqueOrThrow({
+      where: { emailNormalized: "manager@example.com" },
+    });
+    const legacy = await prisma.correctionRequest.create({
+      data: {
+        originalLedgerEntryId: repayment.body.ledgerEntryId,
+        proposedValues: { amount: "130.00" },
+        reason: "Legacy duplicate approval",
+        requestedById: cashierRow.id,
+        decidedById: managerRow.id,
+        status: "APPROVED",
+      },
+    });
+
+    // Two independent sessions so the race is in the database path, not a
+    // shared cookie jar. The loan row lock must let exactly one allocate.
+    const first = await login("cashier@example.com", "Cashier12345");
+    const second = await login("cashier@example.com", "Cashier12345");
+    const [a, b] = await allowingSocketFlake(() =>
+      Promise.all([
+        postIdempotent(first, `/api/v1/corrections/${requested.body.id}/post`, {}, "concurrent-correct-a"),
+        postIdempotent(second, `/api/v1/corrections/${legacy.id}/post`, {}, "concurrent-correct-b"),
+      ]),
+    );
+    expect([a.status, b.status].sort()).toEqual([201, 409]);
+    expect(
+      await prisma.correctionRequest.count({
+        where: { originalLedgerEntryId: repayment.body.ledgerEntryId, status: "POSTED" },
+      }),
+    ).toBe(1);
+    const ledger = await prisma.ledgerEntry.findMany({ where: { loanId, type: "REPAYMENT" } });
+    expect(ledger).toHaveLength(3);
+    // Exactly one delta was applied, never both.
+    expect([12000, 13000]).toContain(await paidPlan(loanId));
+    const balance = (await first.get(`/api/v1/loans/${loanId}`)).body.balance as string;
+    expect(["480.00", "470.00"]).toContain(balance);
+  });
+
+  it("B05-19 replaying the same correction and key does not adjust twice", async () => {
+    const { loanId, cashier } = await activeLoan();
+    const active = await cashier.get(`/api/v1/loans/${loanId}`);
+    const repayment = await postIdempotent(
+      cashier,
+      `/api/v1/loans/${loanId}/repayments`,
+      {
+        expectedVersion: active.body.version,
+        amount: "100.00",
+        businessDate: "2026-10-01",
+        method: "CASH",
+      },
+      "repay-correct-replay",
+    );
+    const requested = await post(cashier, "/api/v1/corrections", {
+      originalLedgerEntryId: repayment.body.ledgerEntryId,
+      reason: "Wrong amount entered at counter",
+      proposedValues: { amount: "120.00" },
+    });
+    const manager = await login("manager@example.com", "Manager12345");
+    await approveCorrection(manager, requested.body.id, requested.body.version);
+    const posted = await postIdempotent(
+      cashier,
+      `/api/v1/corrections/${requested.body.id}/post`,
+      {},
+      "correct-replay-key",
+    );
+    expect(posted.status).toBe(201);
+    const replay = await postIdempotent(
+      cashier,
+      `/api/v1/corrections/${requested.body.id}/post`,
+      {},
+      "correct-replay-key",
+    );
+    expect(replay.status).toBe(201);
+    expect(replay.body.reversalEntryId).toBe(posted.body.reversalEntryId);
+    expect(replay.body.replacementEntryId).toBe(posted.body.replacementEntryId);
+    const ledger = await prisma.ledgerEntry.findMany({ where: { loanId, type: "REPAYMENT" } });
+    expect(ledger).toHaveLength(3);
+    expect(await paidPlan(loanId)).toBe(12000);
+  });
 });

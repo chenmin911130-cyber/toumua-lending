@@ -1,5 +1,5 @@
 import { Route, Routes } from "react-router-dom";
-import { AccountLayout, CustomerLayout, PublicLayout, StaffLayout } from "./layouts";
+import { AccountLayout, CustomerLayout, NotificationsShell, PublicLayout, StaffLayout } from "./layouts";
 import {
   AcceptInvitationPage,
   AccountPage,
@@ -104,7 +104,6 @@ export function App() {
         <Route path="/customer/loans/:loanId/repayments" element={<CustomerRepaymentsPage />} />
         <Route path="/customer/loans/:loanId/security/:assetId?" element={<CustomerSecurityPage />} />
         <Route path="/customer/receipts/:id" element={<CustomerReceiptPage />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
       </Route>
 
       <Route element={<AccountLayout />}>
@@ -140,7 +139,11 @@ export function App() {
         <Route path="/staff/payment-attempts/:id" element={<StaffPaymentAttemptPage />} />
         <Route path="/staff/admin/accounts" element={<StaffAccountsPage />} />
         <Route path="/staff/admin/activity" element={<ActivityLogPage />} />
+      </Route>
+
+      <Route element={<NotificationsShell />}>
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/staff/notifications" element={<NotificationsPage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />

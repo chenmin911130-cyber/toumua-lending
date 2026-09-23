@@ -1,30 +1,31 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { LoanSummary } from "@toumua/contracts";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import { CUSTOMER_SELF_APPLY } from "../features";
 import { firstName, formatDate, statusLabel } from "../format";
+import { ResourceGate, useAsyncResource } from "../load-state";
 
 type ListResponse = { items: LoanSummary[]; total: number };
 
 export function CustomerHomePage() {
   const { user } = useAuth();
-  const [loans, setLoans] = useState<ListResponse | null>(null);
-  const [applications, setApplications] = useState<ListResponse | null>(null);
-
-  useEffect(() => {
-    void Promise.all([
-      api<ListResponse>("/me/loans"),
-      api<ListResponse>("/me/applications"),
-    ]).then(([loanData, appData]) => {
-      setLoans(loanData);
-      setApplications(appData);
-    });
-  }, []);
+  const resource = useAsyncResource("home", async (_key, signal) => {
+    const [loanData, appData] = await Promise.all([
+      api<ListResponse>("/me/loans", { signal }),
+      api<ListResponse>("/me/applications", { signal }),
+    ]);
+    return { loans: loanData, applications: appData };
+  });
+  const loans = resource.data?.loans ?? null;
+  const applications = resource.data?.applications ?? null;
 
   if (!loans || !applications) {
-    return <main className="page"><p>Loading your account…</p></main>;
+    return (
+      <main className="page">
+        <ResourceGate loading={resource.loading} error={resource.error} ready={false} onRetry={resource.retry} loadingLabel="Loading your account…" errorFallback="Could not load your account" />
+      </main>
+    );
   }
 
   if (loans.total === 0) {
@@ -106,10 +107,15 @@ type CustomerApplication = {
 };
 
 export function CustomerApplicationsPage() {
-  const [data, setData] = useState<ListResponse | null>(null);
-  useEffect(() => {
-    void api<ListResponse>("/me/applications").then(setData);
-  }, []);
+  const resource = useAsyncResource("applications", (_key, signal) => api<ListResponse>("/me/applications", { signal }));
+  const data = resource.data;
+  if (resource.error && !data) {
+    return (
+      <main className="page">
+        <ResourceGate loading={false} error={resource.error} ready={false} onRetry={resource.retry} loadingLabel="Loading…" errorFallback="Could not load applications" />
+      </main>
+    );
+  }
   const items = (data?.items ?? []) as CustomerApplication[];
   const draft = items.find((item) => item.status === "DRAFT");
   return (

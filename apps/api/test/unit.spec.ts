@@ -265,51 +265,30 @@ describe("customer application readiness", () => {
 });
 
 describe("approval routing", () => {
-  const previousLimit = process.env.STAFF_APPROVE_LIMIT;
-  afterEach(() => {
-    if (previousLimit === undefined) delete process.env.STAFF_APPROVE_LIMIT;
-    else process.env.STAFF_APPROVE_LIMIT = previousLimit;
-  });
-
-  it("sends every amount to a manager when no staff limit is configured", () => {
-    delete process.env.STAFF_APPROVE_LIMIT;
-    for (const requestedAmount of ["0.01", "500.00", "3000.00", "8000.00"]) {
-      expect(
-        classifyApproval({
-          requestedAmount,
-          purpose: "Vehicle repair",
-          purposeDescription: null,
-          assetCount: 1,
-        }).requiresManager,
-      ).toBe(true);
-    }
-  });
-
-  it("lets staff take a small simple file when STAFF_APPROVE_LIMIT is set", () => {
-    process.env.STAFF_APPROVE_LIMIT = "3000.00";
+  it("flags complex files for manager attention (no staff monetary exception)", () => {
     expect(
       classifyApproval({
         requestedAmount: "3000.00",
         purpose: "Vehicle repair",
         purposeDescription: null,
         assetCount: 1,
-      }).requiresManager,
+      }).complex,
     ).toBe(false);
     expect(
       classifyApproval({
-        requestedAmount: "3000.01",
+        requestedAmount: "8000.00",
         purpose: "Vehicle repair",
         purposeDescription: null,
         assetCount: 1,
-      }).requiresManager,
-    ).toBe(true);
+      }).complex,
+    ).toBe(false);
     expect(
       classifyApproval({
         requestedAmount: "500.00",
         purpose: "Other",
         purposeDescription: null,
         assetCount: 1,
-      }).requiresManager,
+      }).complex,
     ).toBe(true);
     expect(
       classifyApproval({
@@ -317,7 +296,7 @@ describe("approval routing", () => {
         purpose: "School fees",
         purposeDescription: null,
         assetCount: 3,
-      }).requiresManager,
+      }).complex,
     ).toBe(true);
   });
 });

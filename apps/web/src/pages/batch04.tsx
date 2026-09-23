@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { Button, Field } from "@toumua/ui";
 import type { CursorListResponse, LoanDetail, LoanSummary } from "@toumua/contracts";
 import { api, errorMessage, fieldError, postIdempotent } from "../api";
+import { aucklandBusinessDate } from "../format";
+import { ResourceGate, useAsyncResource } from "../load-state";
 import { useAuth } from "../auth";
 
 type AssetView = {
@@ -32,6 +34,7 @@ type Readiness = {
 type Review = {
   version: number;
   canApprove: boolean;
+  canDecline: boolean;
   checks: Array<{ id: string; label: string; complete: boolean }>;
   number?: string;
   borrowerName?: string | null;
@@ -39,8 +42,6 @@ type Review = {
   valuationTotal?: string;
   purpose?: string | null;
   proposedTermMonths?: number | null;
-  staffApproveLimit?: string;
-  requiresManager?: boolean;
   managerReasons?: string[];
   assets?: Array<{
     id: string;
@@ -151,31 +152,33 @@ export function StaffLoanDetailPage() {
 
 export function StaffDisbursementPage() {
   const { id = "" } = useParams();
-  const [loan, setLoan] = useState<LoanDetail | null>(null);
-  const [readiness, setReadiness] = useState<Readiness | null>(null);
   const [method, setMethod] = useState("CASH");
-  const [businessDate, setBusinessDate] = useState(new Date().toISOString().slice(0, 10));
-  const [error, setError] = useState<unknown>(null);
+  const [businessDate, setBusinessDate] = useState(() => aucklandBusinessDate());
+  const [submitError, setSubmitError] = useState<unknown>(null);
   const [result, setResult] = useState<string | null>(null);
+  const resource = useAsyncResource(id, async (loanId, signal) => {
+    const [loanData, readinessData] = await Promise.all([
+      api<LoanDetail>(`/loans/${loanId}`, { signal }),
+      api<Readiness>(`/loans/${loanId}/disbursement-readiness`, { signal }),
+    ]);
+    return { loan: loanData, readiness: readinessData };
+  });
+  const loan = resource.data?.loan ?? null;
+  const readiness = resource.data?.readiness ?? null;
   // One key per payment intent: a retry after a lost response must replay the
   // original attempt instead of posting a second disbursement.
   const idempotencyKey = useRef(`web-disburse-${id}-${crypto.randomUUID()}`);
 
   useEffect(() => {
     idempotencyKey.current = `web-disburse-${id}-${crypto.randomUUID()}`;
-    void Promise.all([
-      api<LoanDetail>(`/loans/${id}`),
-      api<Readiness>(`/loans/${id}/disbursement-readiness`),
-    ]).then(([loanData, readinessData]) => {
-      setLoan(loanData);
-      setReadiness(readinessData);
-    }).catch(setError);
+    setSubmitError(null);
+    setResult(null);
   }, [id]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!loan) return;
-    setError(null);
+    if (!loan || !readiness) return;
+    setSubmitError(null);
     try {
       const response = await postIdempotent<{ receiptNumber: string }>(
         `/loans/${id}/disbursements`,
@@ -192,15 +195,26 @@ export function StaffDisbursementPage() {
         api<LoanDetail>(`/loans/${id}`),
         api<Readiness>(`/loans/${id}/disbursement-readiness`),
       ]);
-      setLoan(refreshedLoan);
-      setReadiness(refreshedReadiness);
+      resource.setData({ loan: refreshedLoan, readiness: refreshedReadiness });
     } catch (err) {
-      setError(err);
+      setSubmitError(err);
     }
   }
 
-  if (error && !loan) return <main className="staff-page"><p className="error">{errorMessage(error, "Could not load loan")}</p></main>;
-  if (!loan || !readiness) return <main className="staff-page"><p>Loading…</p></main>;
+  if (!loan || !readiness) {
+    return (
+      <main className="staff-page">
+        <ResourceGate
+          loading={resource.loading}
+          error={resource.error}
+          ready={false}
+          onRetry={resource.retry}
+          loadingLabel="Loading…"
+          errorFallback="Could not load loan"
+        />
+      </main>
+    );
+  }
   return (
     <main className="staff-page">
       <Link to={`/staff/loans/${id}`}>← Loan</Link>
@@ -210,8 +224,8 @@ export function StaffDisbursementPage() {
         <p className="hint">Already disbursed on {loan.disbursedAt.slice(0, 10)}.</p>
       ) : (
         <form className="card stack" onSubmit={(event) => void submit(event)}>
-          <Field label="Business date">
-            <input type="date" value={businessDate} onChange={(e) => setBusinessDate(e.target.value)} required />
+          <Field label="Business date" id="business-date">
+            <input id="business-date" type="date" value={businessDate} onChange={(e) => setBusinessDate(e.target.value)} required />
           </Field>
           <Field label="Method">
             <select value={method} onChange={(e) => setMethod(e.target.value)}>
@@ -221,7 +235,7 @@ export function StaffDisbursementPage() {
               <option value="MOBILE_WALLET">Mobile wallet</option>
             </select>
           </Field>
-          {error ? <p className="error">{errorMessage(error, "Could not disburse")}</p> : null}
+          {submitError ? <p className="error">{errorMessage(submitError, "Could not disburse")}</p> : null}
           {result ? <p className="hint">Receipt {result} issued.</p> : null}
           <Button type="submit" disabled={!readiness.ready}>Confirm disbursement</Button>
         </form>
@@ -232,25 +246,27 @@ export function StaffDisbursementPage() {
 
 export function StaffRepaymentPage() {
   const { id = "" } = useParams();
-  const [loan, setLoan] = useState<LoanDetail | null>(null);
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("CASH");
   const [externalReference, setExternalReference] = useState("");
-  const [businessDate, setBusinessDate] = useState(new Date().toISOString().slice(0, 10));
-  const [error, setError] = useState<unknown>(null);
+  const [businessDate, setBusinessDate] = useState(() => aucklandBusinessDate());
+  const [submitError, setSubmitError] = useState<unknown>(null);
   const [result, setResult] = useState<string | null>(null);
+  const resource = useAsyncResource(id, (loanId, signal) => api<LoanDetail>(`/loans/${loanId}`, { signal }));
+  const loan = resource.data;
   const idempotencyKey = useRef(`web-repay-${id}-${crypto.randomUUID()}`);
   const needsReference = method !== "CASH";
 
   useEffect(() => {
     idempotencyKey.current = `web-repay-${id}-${crypto.randomUUID()}`;
-    void api<LoanDetail>(`/loans/${id}`).then(setLoan).catch(setError);
+    setSubmitError(null);
+    setResult(null);
   }, [id]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!loan) return;
-    setError(null);
+    setSubmitError(null);
     try {
       const response = await postIdempotent<{ receiptNumber: string; balanceAfter: string }>(
         `/loans/${id}/repayments`,
@@ -268,14 +284,26 @@ export function StaffRepaymentPage() {
       // A new version comes back with every posting, so the next repayment
       // needs the refreshed loan rather than the version this page started on.
       idempotencyKey.current = `web-repay-${id}-${crypto.randomUUID()}`;
-      setLoan(await api<LoanDetail>(`/loans/${id}`));
+      resource.setData(await api<LoanDetail>(`/loans/${id}`));
     } catch (err) {
-      setError(err);
+      setSubmitError(err);
     }
   }
 
-  if (error && !loan) return <main className="staff-page"><p className="error">{errorMessage(error, "Could not load loan")}</p></main>;
-  if (!loan) return <main className="staff-page"><p>Loading…</p></main>;
+  if (!loan) {
+    return (
+      <main className="staff-page">
+        <ResourceGate
+          loading={resource.loading}
+          error={resource.error}
+          ready={false}
+          onRetry={resource.retry}
+          loadingLabel="Loading…"
+          errorFallback="Could not load loan"
+        />
+      </main>
+    );
+  }
   const repay = actionFor(loan, "repay");
   return (
     <main className="staff-page">
@@ -284,11 +312,11 @@ export function StaffRepaymentPage() {
       <p className="hint">Outstanding balance: {loan.balance}</p>
       {repay?.allowed ? (
         <form className="card stack" onSubmit={(event) => void submit(event)}>
-          <Field label="Amount" error={fieldError(error, "amount")}>
+          <Field label="Amount" error={fieldError(submitError, "amount")}>
             <input value={amount} onChange={(e) => setAmount(e.target.value)} required />
           </Field>
-          <Field label="Business date">
-            <input type="date" value={businessDate} onChange={(e) => setBusinessDate(e.target.value)} required />
+          <Field label="Business date" id="business-date">
+            <input id="business-date" type="date" value={businessDate} onChange={(e) => setBusinessDate(e.target.value)} required />
           </Field>
           <Field label="Method">
             <select value={method} onChange={(e) => setMethod(e.target.value)}>
@@ -299,11 +327,11 @@ export function StaffRepaymentPage() {
             </select>
           </Field>
           {needsReference ? (
-            <Field label="External reference" error={fieldError(error, "externalReference")}>
+            <Field label="External reference" error={fieldError(submitError, "externalReference")}>
               <input value={externalReference} onChange={(e) => setExternalReference(e.target.value)} required />
             </Field>
           ) : null}
-          {error ? <p className="error">{errorMessage(error, "Could not record repayment")}</p> : null}
+          {submitError ? <p className="error">{errorMessage(submitError, "Could not record repayment")}</p> : null}
           {result ? <p className="hint">{result}</p> : null}
           <Button type="submit">Record repayment</Button>
         </form>
@@ -346,8 +374,8 @@ export function StaffCollateralPage() {
 export function StaffCollateralDetailPage() {
   const { id = "" } = useParams();
   const [asset, setAsset] = useState<AssetView | null>(null);
-  const [receivedOn, setReceivedOn] = useState(new Date().toISOString().slice(0, 10));
-  const [inspectedOn, setInspectedOn] = useState(new Date().toISOString().slice(0, 10));
+  const [receivedOn, setReceivedOn] = useState(() => aucklandBusinessDate());
+  const [inspectedOn, setInspectedOn] = useState(() => aucklandBusinessDate());
   const [inspectionResult, setInspectionResult] = useState("PASS");
   const [inspectionNote, setInspectionNote] = useState("");
   const [location, setLocation] = useState("Vault A");
@@ -643,14 +671,10 @@ export function ApplicationReviewPage() {
       </p>
       {officerView ? (
         <p className="hint">Approval is a manager decision. Submit the file for manager review.</p>
-      ) : review.requiresManager ? (
-        <p className="hint">
-          Manager approval is required{review.staffApproveLimit && review.staffApproveLimit !== "0.00" ? ` (staff limit $${review.staffApproveLimit})` : ""}.
-          {review.managerReasons?.length ? ` ${review.managerReasons.join(" ")}` : ""}
-        </p>
       ) : (
         <p className="hint">
-          Staff can approve this file. Amounts above ${review.staffApproveLimit ?? "0.00"}, three or more assets, or a complex purpose still go to a manager.
+          A manager decides every application.
+          {review.managerReasons?.length ? ` ${review.managerReasons.join(" ")}` : ""}
         </p>
       )}
       <ul>{review.checks.map((check) => <li key={check.id}>{check.complete ? "✓" : "○"} {check.label}</li>)}</ul>
@@ -668,7 +692,7 @@ export function ApplicationReviewPage() {
           {outcome ? <p className="hint">{outcome}</p> : null}
           <div className="hero-actions">
             <Button onClick={() => void decide("approve")} disabled={!review.canApprove}>Approve</Button>
-            <Button variant="secondary" onClick={() => void decide("decline")} disabled={!reason.trim()}>Decline</Button>
+            <Button variant="secondary" onClick={() => void decide("decline")} disabled={!review.canDecline || !reason.trim()}>Decline</Button>
           </div>
         </>
       )}

@@ -11,7 +11,7 @@ import { AuthUser } from "../auth/session";
 import { conflict, forbidden, notFound, validation } from "../common/http";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { assertReviewDecision, isManager } from "./access";
+import { assertDecideApplication, assertReviewDecision, isManager } from "./access";
 import { classifyApproval } from "./approval-policy";
 import { activePolicy, buildSchedule, type Frequency } from "./calculation-policy";
 import { sum, toCents } from "./money";
@@ -44,7 +44,11 @@ export class DecisionsService {
     const checks = this.preconditions(application);
     const routing = this.routingOf(application);
     const ready = checks.every((check) => check.complete);
-    const canApprove = ready && (isManager(user) || !routing.requiresManager);
+    const manager = isManager(user);
+    const submitted = application.status === ApplicationStatus.SUBMITTED;
+    // The brief gives the final approve/decline decision to the manager only.
+    const canApprove = submitted && ready && manager;
+    const canDecline = submitted && manager;
     const assets = application.assets.map((asset) => {
       const valuation = asset.valuations[0];
       const valuationAmount = valuation?.status === "COMPLETED" ? valuation.amount : null;
@@ -68,17 +72,18 @@ export class DecisionsService {
       proposedTermMonths: application.proposedTermMonths,
       assets,
       valuationTotal: sum(assets.map((asset) => asset.valuationAmount ?? "0.00")),
-      staffApproveLimit: routing.limit,
-      requiresManager: routing.requiresManager,
       managerReasons: routing.reasons,
+      requiresManager: true,
       checks,
       canApprove,
-      allowedActions: this.allowedActions(application, checks, user, routing.requiresManager),
+      canDecline,
+      allowedActions: this.allowedActions(application, checks, user),
     };
   }
 
   async decide(user: AuthUser, applicationId: string, input: DecisionInput) {
-    assertReviewDecision(user);
+    // Approve and decline are both manager decisions, whatever the amount.
+    assertDecideApplication(user);
 
     const application = await this.loadForDecision(applicationId);
     if (application.status !== ApplicationStatus.SUBMITTED) {
@@ -93,12 +98,6 @@ export class DecisionsService {
     }
 
     if (input.decision === "approve") {
-      const routing = this.routingOf(application);
-      if (routing.requiresManager && !isManager(user)) {
-        throw forbidden(
-          `This application needs a manager. ${routing.reasons.join("; ")}`,
-        );
-      }
       return this.approve(user, application, input);
     }
     return this.decline(user, application, input);
@@ -343,12 +342,12 @@ export class DecisionsService {
     application: Awaited<ReturnType<DecisionsService["loadForDecision"]>>,
     checks: Array<{ id: string; label: string; complete: boolean }>,
     user: AuthUser,
-    requiresManager: boolean,
   ): AllowedAction[] {
     const submitted = application.status === ApplicationStatus.SUBMITTED;
     const blocking = checks.filter((check) => !check.complete);
-    const staffBlocked = requiresManager && !isManager(user);
-    const approveAllowed = submitted && blocking.length === 0 && !staffBlocked;
+    const manager = isManager(user);
+    const approveAllowed = submitted && blocking.length === 0 && manager;
+    const declineAllowed = submitted && manager;
     return [
       {
         id: "approve",
@@ -361,14 +360,20 @@ export class DecisionsService {
                 ? "Only a submitted application can be approved"
                 : blocking.length > 0
                   ? `Waiting on: ${blocking.map((check) => check.label).join(", ")}`
-                  : "Approval is a manager decision. Submit the file for manager review.",
+                  : "Only a manager can approve an application",
             }),
       },
       {
         id: "decline",
         label: "Decline application",
-        allowed: submitted,
-        ...(submitted ? {} : { reason: "Only a submitted application can be declined" }),
+        allowed: declineAllowed,
+        ...(declineAllowed
+          ? {}
+          : {
+              reason: !submitted
+                ? "Only a submitted application can be declined"
+                : "Only a manager can decline an application",
+            }),
       },
     ];
   }
