@@ -15,6 +15,8 @@
     "build:web": "pnpm --filter @toumua/contracts build && pnpm --filter @toumua/web build",
     "test": "pnpm --filter @toumua/api test && pnpm --filter @toumua/e2e test",
     "test:api": "pnpm --filter @toumua/api test",
+    "test:api:isolated": "node scripts/test-api-isolated.mjs",
+    "test:web:ui": "node --experimental-strip-types scripts/test-web-ui.mjs",
     "test:e2e": "pnpm --filter @toumua/e2e test",
     "db:migrate": "pnpm --filter @toumua/api prisma:migrate",
     "db:migrate:deploy": "pnpm --filter @toumua/api exec prisma migrate deploy",

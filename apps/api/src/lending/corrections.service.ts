@@ -6,6 +6,7 @@ import {
   CorrectionStatus,
   CorrectionView,
   CursorListQuery,
+  LedgerEntryType,
   LoanStatus,
 } from "@toumua/contracts";
 import { AuthUser } from "../auth/session";
@@ -68,6 +69,10 @@ export class CorrectionsService {
       },
     });
     if (!original) throw notFound("Original transaction not found");
+    // Refuse unsupported or already-corrected originals before any state is
+    // touched. A second correction against the same entry would apply its
+    // replacement delta on top of the first.
+    await this.assertOriginalCorrectable(this.prisma, original);
     if (original.correctionRequests.length > 0) {
       throw conflict("This transaction already has a pending correction");
     }
@@ -157,9 +162,14 @@ export class CorrectionsService {
       include: this.include(),
     });
     if (!existing) throw notFound("Correction not found");
+    // A replay of an already-posted correction is a pure read of the stored
+    // result, so it returns before any eligibility guard. Otherwise an approved
+    // request created before the guard existed must still be refused at post
+    // time, before the reversal/replacement writes happen.
     if (existing.status === CorrectionStatus.POSTED && existing.postingKey === idempotencyKey) {
       return this.toView(existing, user);
     }
+    await this.assertOriginalCorrectable(this.prisma, existing.originalLedgerEntry, id);
     if (existing.status !== CorrectionStatus.APPROVED) {
       throw conflict("Only an approved correction can be posted");
     }
@@ -191,6 +201,13 @@ export class CorrectionsService {
       : replacementAmount.replace(/^-/, "");
 
     await this.prisma.$transaction(async (tx) => {
+      // Serialize on the loan row. Two approved corrections for the same
+      // original (or a correction racing a repayment) could otherwise both read
+      // the same stale schedule and each apply their delta, so the loan balance
+      // would be adjusted twice. The lock is held until commit; the fresh guard
+      // and schedule read below then see the other transaction's writes.
+      await tx.$queryRaw`SELECT "id" FROM "Loan" WHERE "id" = ${original.loanId} FOR UPDATE`;
+
       const locked = await tx.correctionRequest.updateMany({
         where: { id, status: CorrectionStatus.APPROVED, postingKey: null },
         data: { postingKey: idempotencyKey },
@@ -206,6 +223,11 @@ export class CorrectionsService {
         }
         throw conflict("This correction was already posted or updated elsewhere");
       }
+
+      // We now own this correction for the rest of the transaction. Refuse to
+      // compound it on an original that a competing correction already posted
+      // while we were waiting for the loan lock; the claim rolls back with it.
+      await this.assertOriginalCorrectable(tx, original, id);
 
       // Corrections are money: the loan balance and settlement status must move
       // with the ledger, otherwise the books and the loan disagree and the
@@ -381,6 +403,59 @@ export class CorrectionsService {
         where: { id: loan.id },
         data: { status: LoanStatus.ACTIVE, settledAt: null },
       });
+    }
+  }
+
+  /**
+   * Only a counter repayment can be corrected. The office has not supplied a
+   * disbursement-adjustment or principal-correction policy, and a sale receipt
+   * is recovered proceeds rather than a cashier entry to amend, so those are
+   * refused explicitly rather than being forced through the repayment formula.
+   * A reversal or replacement produced by an earlier correction is refused too,
+   * so one correction cannot compound on another.
+   *
+   * An original that is already the subject of a POSTED correction is refused
+   * as well: correcting it again would apply the replacement delta a second
+   * time. `excludeCorrectionId` lets the current correction pass when it is
+   * replayed, and any other already-posted correction for the same original
+   * still blocks it.
+   */
+  private async assertOriginalCorrectable(
+    client: Pick<Prisma.TransactionClient, "correctionRequest">,
+    original: { id: string; type: string },
+    excludeCorrectionId: string | null = null,
+  ) {
+    if (original.type !== LedgerEntryType.REPAYMENT) {
+      throw validation(
+        `Only repayment transactions can be corrected. This entry is a ${original.type
+          .replaceAll("_", " ")
+          .toLowerCase()}, and the office has not authorised a policy for disbursement or sale-receipt corrections.`,
+      );
+    }
+    const derived = await client.correctionRequest.findFirst({
+      where: {
+        status: CorrectionStatus.POSTED,
+        OR: [{ reversalEntryId: original.id }, { replacementEntryId: original.id }],
+      },
+      select: { id: true },
+    });
+    if (derived) {
+      throw validation(
+        "A reversal or replacement created by an earlier correction cannot itself be corrected. Record a new repayment correction against the live transaction instead.",
+      );
+    }
+    const alreadyCorrected = await client.correctionRequest.findFirst({
+      where: {
+        status: CorrectionStatus.POSTED,
+        originalLedgerEntryId: original.id,
+        ...(excludeCorrectionId ? { id: { not: excludeCorrectionId } } : {}),
+      },
+      select: { id: true },
+    });
+    if (alreadyCorrected) {
+      throw conflict(
+        "This transaction has already been corrected. A second correction against the same entry would apply the change twice.",
+      );
     }
   }
 

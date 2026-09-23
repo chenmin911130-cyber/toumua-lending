@@ -10,7 +10,7 @@ import type {
   StaffBusinessRole,
 } from "@toumua/contracts";
 import { api, errorMessage, fieldError } from "../api";
-import { aucklandDate, formatDate, roleLabel, statusLabel } from "../format";
+import { aucklandDate, formatDate, isDueOnAucklandToday, roleLabel, statusLabel } from "../format";
 import { useAuth } from "../auth";
 
 type TransactionRow = {
@@ -56,11 +56,7 @@ export function StaffHomePage() {
     .reduce((sum, loan) => sum + Number.parseFloat(loan.balance), 0);
   const dueToday = (loans?.items ?? []).filter((loan) => {
     if (!loan.nextDueDate || loan.status !== "ACTIVE") return false;
-    const due = new Date(loan.nextDueDate);
-    const now = new Date();
-    return due.getFullYear() === now.getFullYear()
-      && due.getMonth() === now.getMonth()
-      && due.getDate() === now.getDate();
+    return isDueOnAucklandToday(loan.nextDueDate);
   }).length;
 
   return (

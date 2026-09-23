@@ -16,10 +16,21 @@ import { PublicController } from "./public/public.controller";
 import { BootstrapService } from "./bootstrap/bootstrap.service";
 import { LendingModule } from "./lending/lending.module";
 
+/**
+ * Tests run against a throwaway cluster whose configuration arrives entirely
+ * through the environment. Module decorators are evaluated at import time, so
+ * this is the earliest place that can stop `@nestjs/config` from opening the
+ * developer's `../../.env` before a test guard has a chance to run. Outside
+ * tests the local `.env` remains the expected configuration source.
+ */
+const isolateFromEnvFile =
+  process.env.TOUMUA_ISOLATED_TEST === "1" || process.env.NODE_ENV === "test";
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      ignoreEnvFile: isolateFromEnvFile,
       envFilePath: ["../../.env", ".env"],
     }),
     PrismaModule,

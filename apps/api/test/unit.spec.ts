@@ -237,30 +237,30 @@ describe("customer application readiness", () => {
 });
 
 describe("approval routing", () => {
-  it("lets staff take a small simple file and sends the rest to a manager", () => {
+  it("flags complex files for manager attention (no staff monetary exception)", () => {
     expect(
       classifyApproval({
         requestedAmount: "3000.00",
         purpose: "Vehicle repair",
         purposeDescription: null,
         assetCount: 1,
-      }).requiresManager,
+      }).complex,
     ).toBe(false);
     expect(
       classifyApproval({
-        requestedAmount: "3000.01",
+        requestedAmount: "8000.00",
         purpose: "Vehicle repair",
         purposeDescription: null,
         assetCount: 1,
-      }).requiresManager,
-    ).toBe(true);
+      }).complex,
+    ).toBe(false);
     expect(
       classifyApproval({
         requestedAmount: "500.00",
         purpose: "Other",
         purposeDescription: null,
         assetCount: 1,
-      }).requiresManager,
+      }).complex,
     ).toBe(true);
     expect(
       classifyApproval({
@@ -268,7 +268,7 @@ describe("approval routing", () => {
         purpose: "School fees",
         purposeDescription: null,
         assetCount: 3,
-      }).requiresManager,
+      }).complex,
     ).toBe(true);
   });
 });

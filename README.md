@@ -28,8 +28,8 @@ pnpm dev
 Demo logins (password `project721` for all). Seed or refresh with `pnpm db:seed-demo`:
 
 - Customer: `sarah.tama@toumua.nz` at `/login`
-- Staff: `staff@toumua.nz` at `/staff/login` — simple files up to $3,000
-- Manager: `manager@toumua.nz` at `/staff/login` — larger or complex files, staff accounts
+- Staff: `staff@toumua.nz` at `/staff/login` — prepares applications and valuations; a manager decides every approve/decline
+- Manager: `manager@toumua.nz` at `/staff/login` — decides applications, defaults, corrections and staff accounts
 - Admin: `admin@toumua.nz` at `/staff/login`
 
 Public registration only creates Customer accounts.
@@ -37,11 +37,31 @@ Public registration only creates Customer accounts.
 ## Test
 
 ```bash
-pnpm test:api
+# API suite: creates a throwaway PostgreSQL cluster in /tmp, migrates it,
+# runs the tests, then stops and deletes only that cluster.
+pnpm test:api:isolated
+
+# A single file or extra reporter also works:
+node scripts/test-api-isolated.mjs test/unit.spec.ts
+
+# Mocked browser UI checks. Starts its own loopback Vite server with envDir
+# disabled, does not read .env, and does not start or proxy to the API.
+node --experimental-strip-types scripts/test-auckland-date.mjs
+pnpm test:web:ui
+
+# UNSAFE / not isolated: `pnpm test:e2e` boots the real API and web against the
+# local .env database. Do not run it as part of the isolated checks above, and
+# do not treat it as a mocked browser suite.
 pnpm test:e2e
 ```
 
-API tests use `toumua_test` and a memory mail adapter. They do not touch Railway.
+API tests are **fail-closed**. `apps/api/test/helpers.ts` no longer reads `.env`
+and refuses to load unless the isolated runner has exported its disposable
+database markers, so a bare `pnpm test:api` stops with an error instead of
+truncating a developer or production database. The runner uses the locally
+installed Homebrew `postgresql@16` binaries (override with `TOUMUA_PG_BIN`) and
+the repository's existing `prisma`/`vitest` binaries; it never installs packages
+and never connects to an existing server. Tests use a memory mail adapter.
 
 ## Railway
 

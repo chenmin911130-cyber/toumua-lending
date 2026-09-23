@@ -8,7 +8,7 @@ import type {
   CursorListResponse,
 } from "@toumua/contracts";
 import { api, errorMessage, fieldError, uploadFile } from "../api";
-import { aucklandDate } from "../format";
+import { aucklandBusinessDate, aucklandDateTimeLocal, aucklandWallTimeToIso } from "../format";
 
 type BorrowerDetail = BorrowerSummary & {
   linkedUser: { id: string; name: string; email: string } | null;
@@ -680,8 +680,8 @@ export function ValuationPage() {
   const [items, setItems] = useState<Array<Record<string, unknown>>>([]);
   const [amount, setAmount] = useState("");
   const [basis, setBasis] = useState("");
-  const [valuationDate, setValuationDate] = useState(aucklandDate());
-  const [participatedAt, setParticipatedAt] = useState(new Date().toISOString().slice(0, 16));
+  const [valuationDate, setValuationDate] = useState(() => aucklandBusinessDate());
+  const [participatedAt, setParticipatedAt] = useState(() => aucklandDateTimeLocal());
   const [borrowerPresent, setBorrowerPresent] = useState(false);
   const [loanOfficerId, setLoanOfficerId] = useState("");
   const [valuationOfficerId, setValuationOfficerId] = useState("");
@@ -712,7 +712,7 @@ export function ValuationPage() {
           borrowerPresent,
           loanOfficerId,
           valuationOfficerId,
-          participatedAt: new Date(participatedAt).toISOString(),
+          participatedAt: aucklandWallTimeToIso(participatedAt),
         }),
       });
       navigate(`/staff/applications/${id}/edit/review`);

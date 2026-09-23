@@ -64,7 +64,7 @@ function assertRole(user: PublicUser, allowed: Set<string>, who: string) {
 
 const REVIEW_ROLES = new Set<string>([BusinessRole.LOAN_OFFICER, BusinessRole.MANAGER]);
 
-/** Officers prepare and may decide simple files; managers take the rest. */
+/** Officers and managers may read the review screen; only a manager decides. */
 export function assertReviewDecision(user: PublicUser) {
   assertRole(user, REVIEW_ROLES, "a loan officer or manager");
 }

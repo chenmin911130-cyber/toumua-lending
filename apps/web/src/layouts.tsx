@@ -144,6 +144,41 @@ export function PublicLayout() {
   );
 }
 
+/**
+ * One notifications route for bookmarks and existing links. Staff and customers
+ * must not share a layout: the first duplicate route used to put staff inside
+ * the customer shell. /staff/notifications is the staff-only path.
+ */
+export function NotificationsShell() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const staffPath = location.pathname.startsWith("/staff/");
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      navigate(staffPath ? "/staff/login" : "/login", {
+        replace: true,
+        state: { from: location.pathname },
+      });
+      return;
+    }
+    if (user.restrictedSession || (!user.isStaff && !user.emailVerified)) {
+      navigate("/verify-email/pending", { replace: true });
+      return;
+    }
+    if (!user.isStaff && staffPath) {
+      navigate("/notifications", { replace: true });
+    }
+  }, [user, loading, navigate, location.pathname, staffPath]);
+
+  if (loading) return <p role="status">Loading session…</p>;
+  if (!user || user.restrictedSession || (!user.isStaff && !user.emailVerified)) return null;
+  if (!user.isStaff && staffPath) return null;
+  return user.isStaff ? <StaffLayout /> : <CustomerLayout />;
+}
+
 export function CustomerLayout() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -162,7 +197,7 @@ export function CustomerLayout() {
 
   if (!user || user.restrictedSession) return null;
   return (
-    <div>
+    <div data-shell="customer">
       <OfflineBanner />
       <header className="customer-header">
         <div className="header-left">
@@ -216,7 +251,7 @@ export function StaffLayout() {
 
   if (!user?.isStaff) return null;
   return (
-    <div className="staff-shell">
+    <div className="staff-shell" data-shell="staff">
       <aside className="staff-sidebar">
         <NavLink to="/staff" className="staff-brand" data-control-id="GLOBAL-01">
           <span className="staff-mark">T</span>
@@ -247,7 +282,7 @@ export function StaffLayout() {
               <NavLink to="/staff/admin/activity">Activity log</NavLink>
             ) : null}
             <NavLink to="/account">Settings</NavLink>
-            <NavLink to="/notifications">Notifications</NavLink>
+            <NavLink to="/staff/notifications">Notifications</NavLink>
             <button
               type="button"
               className="staff-nav-button"

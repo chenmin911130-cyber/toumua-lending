@@ -471,39 +471,194 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
     expect(refused.status).toBe(403);
   });
 
-  it("B04-09 staff can approve a small simple file; larger amounts need a manager", async () => {
+  it("B04-09 only a manager can approve or decline, for small and large files", async () => {
     const staff = await login("loan@example.com", "LoanOfficer12");
-    const { appId } = await createSubmittedApplication(staff, "600.00");
-    const staffReview = await staff.get(`/api/v1/applications/${appId}/review`);
+    const small = await createSubmittedApplication(staff, "600.00");
+
+    // A loan officer keeps review visibility but has no decide authority.
+    const staffReview = await staff.get(`/api/v1/applications/${small.appId}/review`);
     expect(staffReview.status).toBe(200);
-    expect(staffReview.body.requiresManager).toBe(false);
-    expect(staffReview.body.canApprove).toBe(true);
-    const staffApproved = await post(staff, `/api/v1/applications/${appId}/decision`, {
+    expect(staffReview.body.requiresManager).toBe(true);
+    expect(staffReview.body.canApprove).toBe(false);
+    expect(staffReview.body.canDecline).toBe(false);
+    const staffApproveSmall = await post(staff, `/api/v1/applications/${small.appId}/decision`, {
       expectedVersion: staffReview.body.version,
       decision: "approve",
       reviewed: true,
     });
-    expect(staffApproved.status).toBe(201);
+    expect(staffApproveSmall.status).toBe(403);
+    const staffDeclineSmall = await post(staff, `/api/v1/applications/${small.appId}/decision`, {
+      expectedVersion: staffReview.body.version,
+      decision: "decline",
+      reason: "Not my call",
+    });
+    expect(staffDeclineSmall.status).toBe(403);
 
     const large = await createSubmittedApplication(staff, "8000.00");
-    const blocked = await staff.get(`/api/v1/applications/${large.appId}/review`);
-    expect(blocked.body.requiresManager).toBe(true);
-    expect(blocked.body.canApprove).toBe(false);
-    const refused = await post(staff, `/api/v1/applications/${large.appId}/decision`, {
-      expectedVersion: blocked.body.version,
+    const largeReview = await staff.get(`/api/v1/applications/${large.appId}/review`);
+    expect(largeReview.body.canApprove).toBe(false);
+    expect(largeReview.body.canDecline).toBe(false);
+    const staffApproveLarge = await post(staff, `/api/v1/applications/${large.appId}/decision`, {
+      expectedVersion: largeReview.body.version,
       decision: "approve",
       reviewed: true,
     });
-    expect(refused.status).toBe(403);
+    expect(staffApproveLarge.status).toBe(403);
+    const staffDeclineLarge = await post(staff, `/api/v1/applications/${large.appId}/decision`, {
+      expectedVersion: largeReview.body.version,
+      decision: "decline",
+      reason: "Not my call",
+    });
+    expect(staffDeclineLarge.status).toBe(403);
 
+    // The manager may approve one file and decline the other.
     const manager = await login("manager@example.com", "Manager12345");
-    const managerReview = await manager.get(`/api/v1/applications/${large.appId}/review`);
-    expect(managerReview.body.canApprove).toBe(true);
-    const approved = await post(manager, `/api/v1/applications/${large.appId}/decision`, {
-      expectedVersion: managerReview.body.version,
+    const managerSmall = await manager.get(`/api/v1/applications/${small.appId}/review`);
+    expect(managerSmall.body.canApprove).toBe(true);
+    expect(managerSmall.body.canDecline).toBe(true);
+    const approved = await post(manager, `/api/v1/applications/${small.appId}/decision`, {
+      expectedVersion: managerSmall.body.version,
       decision: "approve",
       reviewed: true,
     });
     expect(approved.status).toBe(201);
+
+    const managerLarge = await manager.get(`/api/v1/applications/${large.appId}/review`);
+    expect(managerLarge.body.canApprove).toBe(true);
+    const declined = await post(manager, `/api/v1/applications/${large.appId}/decision`, {
+      expectedVersion: managerLarge.body.version,
+      decision: "decline",
+      reason: "Security does not cover the amount",
+      publicNote: "We could not approve this application.",
+    });
+    expect(declined.status).toBe(201);
+  });
+
+  it("B04-10 a shared key cannot replay another loan's receipt", async () => {
+    const firstLoan = await activeLoan();
+    const secondLoan = await activeLoan();
+    const body = {
+      expectedVersion: (await firstLoan.cashier.get(`/api/v1/loans/${firstLoan.loanId}`)).body.version,
+      amount: "100.00",
+      businessDate: "2026-10-01",
+      method: "CASH",
+    };
+    const first = await postIdempotent(
+      firstLoan.cashier,
+      `/api/v1/loans/${firstLoan.loanId}/repayments`,
+      body,
+      "shared-cross-loan-key",
+    );
+    expect(first.status).toBe(201);
+
+    const secondActive = await secondLoan.cashier.get(`/api/v1/loans/${secondLoan.loanId}`);
+    const cross = await postIdempotent(
+      secondLoan.cashier,
+      `/api/v1/loans/${secondLoan.loanId}/repayments`,
+      { ...body, expectedVersion: secondActive.body.version },
+      "shared-cross-loan-key",
+    );
+    expect(cross.status).toBe(409);
+    expect(cross.body.message).toMatch(/different loan or payment type/i);
+    expect(cross.body.receiptId).toBeUndefined();
+    const entries = await prisma.ledgerEntry.count({
+      where: { loanId: secondLoan.loanId, type: "REPAYMENT" },
+    });
+    expect(entries).toBe(0);
+  });
+
+  it("B04-11 a shared key cannot be reused for a different operation", async () => {
+    const { loanId, cashier } = await activeLoan();
+    const active = await cashier.get(`/api/v1/loans/${loanId}`);
+    // The disbursement already owns this key; a repayment must not inherit it.
+    const cross = await postIdempotent(
+      cashier,
+      `/api/v1/loans/${loanId}/repayments`,
+      {
+        expectedVersion: active.body.version,
+        amount: "100.00",
+        businessDate: "2026-10-01",
+        method: "CASH",
+      },
+      `disburse-${loanId}`,
+    );
+    expect(cross.status).toBe(409);
+    expect(cross.body.message).toMatch(/different loan or payment type/i);
+    const entries = await prisma.ledgerEntry.count({
+      where: { loanId, type: "REPAYMENT" },
+    });
+    expect(entries).toBe(0);
+  });
+
+  it("B04-12 one cashier cannot replay another cashier's receipt", async () => {
+    const { loanId, cashier } = await activeLoan();
+    const passwordHash = await auth.hashPassword("Cashier99999");
+    await prisma.user.create({
+      data: {
+        email: "cashier2@example.com",
+        emailNormalized: "cashier2@example.com",
+        name: "Kara Cashier",
+        passwordHash,
+        role: "CASHIER",
+        status: "ACTIVE",
+        emailVerifiedAt: new Date(),
+      },
+    });
+    const cashier2 = await login("cashier2@example.com", "Cashier99999");
+
+    const active = await cashier.get(`/api/v1/loans/${loanId}`);
+    const body = {
+      expectedVersion: active.body.version,
+      amount: "100.00",
+      businessDate: "2026-10-01",
+      method: "CASH",
+    };
+    const first = await postIdempotent(
+      cashier,
+      `/api/v1/loans/${loanId}/repayments`,
+      body,
+      "shared-cross-actor-key",
+    );
+    expect(first.status).toBe(201);
+
+    const cross = await postIdempotent(
+      cashier2,
+      `/api/v1/loans/${loanId}/repayments`,
+      body,
+      "shared-cross-actor-key",
+    );
+    expect(cross.status).toBe(409);
+    expect(cross.body.message).toMatch(/another user/i);
+    expect(cross.body.receiptId).toBeUndefined();
+    const entries = await prisma.ledgerEntry.count({
+      where: { loanId, type: "REPAYMENT" },
+    });
+    expect(entries).toBe(1);
+  });
+
+  it("B04-13 two simultaneous sends of one key post once and never 500", async () => {
+    const { loanId } = await activeLoan();
+    // Two independent sessions for the same cashier, so the concurrency is in
+    // the database path rather than in a shared cookie jar.
+    const first = await login("cashier@example.com", "Cashier12345");
+    const second = await login("cashier@example.com", "Cashier12345");
+    const active = await first.get(`/api/v1/loans/${loanId}`);
+    const body = {
+      expectedVersion: active.body.version,
+      amount: "100.00",
+      businessDate: "2026-10-01",
+      method: "CASH",
+    };
+    const send = (agent: Agent) =>
+      postIdempotent(agent, `/api/v1/loans/${loanId}/repayments`, body, "concurrent-same-key");
+    const [a, b] = await allowingSocketFlake(() => Promise.all([send(first), send(second)]));
+    const statuses = [a.status, b.status].sort();
+    // Exactly one posts; the other replays the stored receipt or is told to
+    // retry. A 500 here would mean the unique-violation race escaped unhandled.
+    expect(statuses[0]).toBe(201);
+    expect([201, 409]).toContain(statuses[1]);
+    const entries = await prisma.ledgerEntry.findMany({ where: { loanId, type: "REPAYMENT" } });
+    expect(entries).toHaveLength(1);
+    expect(entries[0].amount).toBe("-100.00");
   });
 });

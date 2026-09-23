@@ -48,7 +48,11 @@ export class MoneyService {
     const existingAttempt = await this.prisma.paymentAttempt.findUnique({
       where: { idempotencyKey },
     });
-    const inspection = inspectIdempotencyKey(existingAttempt, body);
+    const inspection = inspectIdempotencyKey(existingAttempt, body, {
+      loanId,
+      type: "DISBURSEMENT",
+      initiatedById: user.id,
+    });
     if (inspection.action === "replay") {
       return this.replayMoneyResult(inspection.attemptId, user.id);
     }
@@ -181,7 +185,11 @@ export class MoneyService {
     const existingAttempt = await this.prisma.paymentAttempt.findUnique({
       where: { idempotencyKey },
     });
-    const inspection = inspectIdempotencyKey(existingAttempt, body);
+    const inspection = inspectIdempotencyKey(existingAttempt, body, {
+      loanId,
+      type: "REPAYMENT",
+      initiatedById: user.id,
+    });
     if (inspection.action === "replay") {
       return this.replayMoneyResult(inspection.attemptId, user.id);
     }
@@ -357,7 +365,11 @@ export class MoneyService {
     const existingAttempt = await this.prisma.paymentAttempt.findUnique({
       where: { idempotencyKey },
     });
-    const inspection = inspectIdempotencyKey(existingAttempt, body);
+    const inspection = inspectIdempotencyKey(existingAttempt, body, {
+      loanId,
+      type: "SALE_RECEIPT",
+      initiatedById: user.id,
+    });
     if (inspection.action === "replay") {
       return this.replayMoneyResult(inspection.attemptId, user.id);
     }

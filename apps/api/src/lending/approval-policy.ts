@@ -1,21 +1,14 @@
-import { compare, fromCents, toCents } from "./money";
-
-/** Staff may approve at or below this amount when the file is also simple. */
-export const DEFAULT_STAFF_APPROVE_LIMIT = "3000.00";
-
-export function staffApproveLimit(): string {
-  const raw = process.env.STAFF_APPROVE_LIMIT?.trim();
-  if (!raw) return DEFAULT_STAFF_APPROVE_LIMIT;
-  try {
-    return fromCents(toCents(raw));
-  } catch {
-    return DEFAULT_STAFF_APPROVE_LIMIT;
-  }
-}
-
+/**
+ * Advisory complexity flags for a manager's review.
+ *
+ * The COMP721 brief states the loan application "will finally be decided by the
+ * manager whether denial or approval based on her business discretion". The
+ * officer prepares the file and the valuation; every approve/decline decision is
+ * the manager's. There is therefore no staff monetary approval threshold, and
+ * this function only highlights files a manager should look at carefully.
+ */
 export type ApprovalRouting = {
-  limit: string;
-  requiresManager: boolean;
+  complex: boolean;
   reasons: string[];
 };
 
@@ -27,11 +20,7 @@ export function classifyApproval(input: {
   purposeDescription: string | null;
   assetCount: number;
 }): ApprovalRouting {
-  const limit = staffApproveLimit();
   const reasons: string[] = [];
-  if (input.requestedAmount && compare(input.requestedAmount, limit) > 0) {
-    reasons.push(`Requested amount is above the staff limit of $${limit}`);
-  }
   if (input.assetCount >= 3) {
     reasons.push("Three or more security assets need a manager to review");
   }
@@ -43,8 +32,7 @@ export function classifyApproval(input: {
     reasons.push("The application notes are long enough to need manager help");
   }
   return {
-    limit,
-    requiresManager: reasons.length > 0,
+    complex: reasons.length > 0,
     reasons,
   };
 }
