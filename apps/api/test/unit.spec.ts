@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { advance, buildSchedule, outstanding, quoteRepayment, quoteSettlement } from "../src/lending/calculation-policy";
 import { classifyApproval } from "../src/lending/approval-policy";
-import { buildReadiness, isReadyForCustomerSubmit, isReadyToSubmit } from "../src/lending/readiness";
+import { buildReadiness, isReadyForCustomerSubmit, isReadyForStaffSubmit, isReadyToSubmit, isValuationCovered } from "../src/lending/readiness";
 import {
   add,
   compare,
@@ -233,6 +233,34 @@ describe("customer application readiness", () => {
     });
     expect(isReadyForCustomerSubmit(items)).toBe(true);
     expect(isReadyToSubmit(items)).toBe(false);
+  });
+
+  it("enforces the coverage rule at decision time but not at submit", () => {
+    const items = buildReadiness({
+      id: "app-2",
+      status: "DRAFT",
+      borrowerId: "bor-1",
+      requestedAmount: "1000.00",
+      purpose: "Business",
+      proposedTermMonths: 12,
+      assets: [
+        { id: "a1", name: "Watch", photoCount: 2, valuationStatus: "COMPLETED", valuationAmount: toCents("400.00") },
+      ],
+      terms: {
+        firstPaymentDate: new Date("2026-10-01"),
+        frequency: "MONTHLY",
+        periods: 12,
+        policyConfigured: true,
+      },
+    });
+    // Submitting a prepared file is allowed: coverage is a decision rule.
+    expect(isReadyForStaffSubmit(items)).toBe(true);
+    // Approval will be refused because 400 < 1000.
+    const covered = items.find((item) => item.id === "assets-covered")!;
+    expect(covered.complete).toBe(false);
+    expect(isValuationCovered("1000.00", "400.00")).toBe(false);
+    expect(isValuationCovered("1000.00", "1000.00")).toBe(true);
+    expect(isValuationCovered("1000.00", "1500.00")).toBe(true);
   });
 });
 

@@ -1,11 +1,14 @@
 import { ChevronRight, CircleCheck, ClipboardList, Search } from "lucide-react";
+import { CUSTOMER_SELF_APPLY } from "../../features";
 
 const STEPS = [
   {
     num: "01",
     icon: ClipboardList,
-    title: "Apply",
-    description: "Apply online with the amount you need and the security you can offer.",
+    title: CUSTOMER_SELF_APPLY ? "Apply" : "Contact the office",
+    description: CUSTOMER_SELF_APPLY
+      ? "Apply online with the amount you need and the security you can offer."
+      : "Contact our office to apply. A loan officer completes the form with you.",
   },
   {
     num: "02",

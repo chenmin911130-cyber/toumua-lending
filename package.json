@@ -13,7 +13,8 @@
     "build": "pnpm --filter @toumua/contracts build && pnpm --filter @toumua/api build && pnpm --filter @toumua/web build && pnpm --filter @toumua/desktop build",
     "build:api": "pnpm db:generate && pnpm --filter @toumua/contracts build && pnpm --filter @toumua/api build",
     "build:web": "pnpm --filter @toumua/contracts build && pnpm --filter @toumua/web build",
-    "test": "pnpm --filter @toumua/api test && pnpm --filter @toumua/e2e test",
+    "typecheck": "pnpm --filter @toumua/api exec tsc -p tsconfig.build.json --noEmit && pnpm --filter @toumua/web exec tsc -p tsconfig.json --noEmit",
+    "test": "pnpm test:api:isolated && pnpm --filter @toumua/web test",
     "test:api": "pnpm --filter @toumua/api test",
     "test:api:isolated": "node scripts/test-api-isolated.mjs",
     "test:web:ui": "node --experimental-strip-types scripts/test-web-ui.mjs",
@@ -21,7 +22,12 @@
     "db:migrate": "pnpm --filter @toumua/api prisma:migrate",
     "db:migrate:deploy": "pnpm --filter @toumua/api exec prisma migrate deploy",
     "db:generate": "pnpm --filter @toumua/api prisma:generate",
-    "db:seed-demo": "pnpm --filter @toumua/api prisma:seed-demo"
+    "db:seed-demo": "pnpm --filter @toumua/api prisma:seed-demo",
+    "seed:demo": "pnpm --filter @toumua/api prisma:seed-demo && pnpm --filter @toumua/api prisma:seed-demo-data"
+  },
+  "devDependencies": {
+    "cross-env": "7.0.3",
+    "shx": "0.3.4"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

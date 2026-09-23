@@ -75,7 +75,11 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
    * asserted: an unasserted failure here used to surface much later as a
    * confusing "application was not submitted" conflict.
    */
-  async function createSubmittedApplication(staff: Agent, requestedAmount = "600.00") {
+  async function createSubmittedApplication(
+    staff: Agent,
+    requestedAmount = "600.00",
+    valuationAmount = requestedAmount,
+  ) {
     const borrower = await post(staff, "/api/v1/borrowers", {
       name: "Alex Borrower",
       phone: "+64 21 555 0303",
@@ -128,7 +132,7 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
       `/api/v1/valuations/${valuations.body.items[0].id}/complete`,
       {
         expectedVersion: 1,
-        amount: "400.00",
+        amount: valuationAmount,
         valuationDate: "2026-09-18",
         basis: "Comparable sales",
         borrowerPresent: true,
@@ -478,9 +482,10 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
     // A loan officer keeps review visibility but has no decide authority.
     const staffReview = await staff.get(`/api/v1/applications/${small.appId}/review`);
     expect(staffReview.status).toBe(200);
-    expect(staffReview.body.requiresManager).toBe(true);
     expect(staffReview.body.canApprove).toBe(false);
     expect(staffReview.body.canDecline).toBe(false);
+    expect(staffReview.body.valuationTotal).toBe("600.00");
+    expect(staffReview.body.assets[0].valuationAmount).toBe("600.00");
     const staffApproveSmall = await post(staff, `/api/v1/applications/${small.appId}/decision`, {
       expectedVersion: staffReview.body.version,
       decision: "approve",
@@ -660,5 +665,45 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
     const entries = await prisma.ledgerEntry.findMany({ where: { loanId, type: "REPAYMENT" } });
     expect(entries).toHaveLength(1);
     expect(entries[0].amount).toBe("-100.00");
+  });
+
+  it("B04-10 a disbursement amount cannot be corrected; the method can", async () => {
+    const { cashier } = await activeLoan();
+    const transactions = await cashier.get("/api/v1/transactions");
+    const disbursement = transactions.body.items.find(
+      (item: { type: string }) => item.type === "DISBURSEMENT",
+    );
+    expect(disbursement).toBeTruthy();
+    const changed = await post(cashier, "/api/v1/corrections", {
+      originalLedgerEntryId: disbursement.id,
+      reason: "Wrong amount",
+      proposedValues: { amount: "1.00" },
+    });
+    expect(changed.status).toBe(422);
+    const methodOnly = await post(cashier, "/api/v1/corrections", {
+      originalLedgerEntryId: disbursement.id,
+      reason: "Wrong method",
+      proposedValues: { method: "BANK_TRANSFER", externalReference: "XFER-1" },
+    });
+    expect(methodOnly.status).toBe(201);
+  });
+
+  it("B04-11 approval is refused when security valuation does not cover the loan", async () => {
+    const staff = await login("loan@example.com", "LoanOfficer12");
+    const { appId } = await createSubmittedApplication(staff, "1000.00", "400.00");
+    const manager = await login("manager@example.com", "Manager12345");
+    const review = await manager.get(`/api/v1/applications/${appId}/review`);
+    expect(review.status).toBe(200);
+    const covered = review.body.checks.find(
+      (check: { id: string }) => check.id === "assets-covered",
+    );
+    expect(covered.complete).toBe(false);
+    expect(review.body.canApprove).toBe(false);
+    const refused = await post(manager, `/api/v1/applications/${appId}/decision`, {
+      expectedVersion: review.body.version,
+      decision: "approve",
+      reviewed: true,
+    });
+    expect(refused.status).toBe(422);
   });
 });

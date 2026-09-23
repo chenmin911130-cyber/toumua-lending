@@ -4,9 +4,9 @@ import {
   CONTACT_ADDRESS,
   CONTACT_EMAIL,
   CONTACT_PHONE,
-  DEMO_NOTICE,
-  LEGAL_ENTITY,
-  SITE_NAME,
+  DISCLAIMER,
+  OPERATED_BY,
+  TAGLINE,
 } from "../../site";
 
 const FOOTER_LINKS = {
@@ -18,7 +18,7 @@ const FOOTER_LINKS = {
   company: [
     { label: "About", to: "/about" },
     { label: "Contact", to: "/help" },
-    { label: "FAQ", to: "/#faq" },
+    { label: "FAQ", to: "/help" },
   ],
   legal: [
     { label: "Privacy", to: "/privacy" },
@@ -35,7 +35,7 @@ export function Footer() {
         <div>
           <MarketingLogo />
           <p className="mt-4 max-w-[280px] text-[14px] leading-relaxed text-text-secondary">
-            {SITE_NAME} is the teaching workspace for {LEGAL_ENTITY}.
+            {TAGLINE}
           </p>
           <p className="mt-3 text-[14px] leading-relaxed text-text-secondary">
             {CONTACT_ADDRESS}
@@ -111,10 +111,9 @@ export function Footer() {
       </div>
 
       <div className="marketing-wrap mt-12 space-y-2 border-t border-border pt-6">
-        <p className="text-[13px] text-text-muted">
-          © {new Date().getFullYear()} {LEGAL_ENTITY}. Product name: {SITE_NAME}.
-        </p>
-        <p className="max-w-[720px] text-[13px] leading-relaxed text-text-muted">{DEMO_NOTICE}</p>
+        <p className="text-[13px] text-text-muted">© 2026 Toumu’a Lending.</p>
+        <p className="text-[13px] text-text-muted">{OPERATED_BY}</p>
+        <p className="max-w-[720px] text-[13px] leading-relaxed text-text-muted">{DISCLAIMER}</p>
       </div>
     </footer>
   );

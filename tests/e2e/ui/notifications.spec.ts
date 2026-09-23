@@ -68,6 +68,7 @@ test("loading and restricted sessions do not fetch notifications or loop", async
   await expect(page).toHaveURL(/\/notifications$/);
   release();
   await expect(page.locator("[data-shell=staff]")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Notifications" })).toBeVisible();
 
   const afterStaff = notificationCalls;
   expect(afterStaff).toBeGreaterThan(0);

@@ -28,6 +28,7 @@ import {
 } from "./pages/loans";
 import { NotFoundPage } from "./pages/not-found";
 import { CustomerApplicationsPage, CustomerHomePage } from "./pages/customer";
+import { CUSTOMER_SELF_APPLY } from "./features";
 import { CustomerApplyPage } from "./pages/customer-apply";
 import {
   CustomerLoanDetailPage,
@@ -96,7 +97,7 @@ export function App() {
       <Route element={<CustomerLayout />}>
         <Route path="/customer" element={<CustomerHomePage />} />
         <Route path="/customer/applications" element={<CustomerApplicationsPage />} />
-        <Route path="/customer/apply" element={<CustomerApplyPage />} />
+        {CUSTOMER_SELF_APPLY ? <Route path="/customer/apply" element={<CustomerApplyPage />} /> : null}
         <Route path="/customer/applications/:id" element={<CustomerApplicationDetailPage />} />
         <Route path="/customer/loans" element={<CustomerLoansListPage />} />
         <Route path="/customer/loans/:loanId" element={<CustomerLoanDetailPage />} />

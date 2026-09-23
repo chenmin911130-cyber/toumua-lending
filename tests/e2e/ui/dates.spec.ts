@@ -3,30 +3,16 @@ import { expect, loanFixture, mockApi, mockJson, mockUser, staffUser, test } fro
 test("business date inputs and due-today use Pacific/Auckland", async ({ page }) => {
   const today = process.env.WEB_UI_EXPECTED_DATE;
   expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-  const yesterday = shiftDate(today!, -1);
-  await mockUser(page, staffUser);
+  await mockUser(page, { ...staffUser, role: "MANAGER" });
   await mockJson(page, "/api/v1/loans/loan-1/disbursement-readiness", 200, {
     ready: false,
     items: [{ id: "stored", label: "Assets stored", complete: false, detail: "Waiting" }],
   });
   await mockJson(page, "/api/v1/loans/loan-1", 200, loanFixture());
-  await mockApi(page, (url) => url.pathname === "/api/v1/loans", 200, {
-    items: [
-      {
-        ...loanFixture("due"),
-        number: "L-DUE",
-        status: "ACTIVE",
-        nextDueDate: `${today}T00:00:00.000Z`,
-      },
-      {
-        ...loanFixture("old"),
-        number: "L-OLD",
-        status: "ACTIVE",
-        nextDueDate: `${yesterday}T00:00:00.000Z`,
-      },
-    ],
-    total: 2,
-    nextCursor: null,
+  await mockJson(page, "/api/v1/reports/business-status", 200, {
+    money: { outstandingPrincipal: "1000.00" },
+    dueToday: 1,
+    applications: { submitted: 0 },
   });
   await mockApi(page, (url) => url.pathname === "/api/v1/applications", 200, { items: [], total: 0, nextCursor: null });
   await mockApi(page, (url) => url.pathname === "/api/v1/transactions", 200, { items: [], total: 0, nextCursor: null });

@@ -22,9 +22,10 @@ import {
   attachReadiness,
   buildReadiness,
   isReadyForCustomerSubmit,
-  isReadyToSubmit,
+  isReadyForStaffSubmit,
 } from "./readiness";
 import { buildTermsPreview, termsPolicyConfigured } from "./calculation-policy";
+import { toCents } from "./money";
 import { UploadsService } from "./uploads.service";
 
 @Injectable()
@@ -331,7 +332,7 @@ export class ApplicationsService {
     }
     const readiness = buildReadiness(await this.loadRaw(id));
     const ready = user.isStaff
-      ? isReadyToSubmit(readiness)
+      ? isReadyForStaffSubmit(readiness)
       : isReadyForCustomerSubmit(readiness);
     if (!ready) {
       throw validation("Complete all required steps before submitting");
@@ -563,6 +564,10 @@ export class ApplicationsService {
         name: asset.name,
         photoCount: asset.photos.length,
         valuationStatus: asset.valuations[0]?.status ?? null,
+        valuationAmount:
+          asset.valuations[0]?.status === ValuationStatus.COMPLETED
+            ? toCents(asset.valuations[0].amount ?? "0")
+            : 0,
       })),
       terms: row.terms
         ? {
@@ -603,6 +608,10 @@ export class ApplicationsService {
         name: asset.name,
         photoCount: asset.photos.length,
         valuationStatus: asset.valuations[0]?.status ?? null,
+        valuationAmount:
+          asset.valuations[0]?.status === ValuationStatus.COMPLETED
+            ? toCents(asset.valuations[0].amount ?? "0")
+            : 0,
       })),
       terms: row.terms
         ? {

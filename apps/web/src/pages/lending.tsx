@@ -8,6 +8,7 @@ import type {
   CursorListResponse,
 } from "@toumua/contracts";
 import { api, errorMessage, fieldError, uploadFile } from "../api";
+import { CUSTOMER_SELF_APPLY } from "../features";
 import { aucklandBusinessDate, aucklandDateTimeLocal, aucklandWallTimeToIso } from "../format";
 
 type BorrowerDetail = BorrowerSummary & {
@@ -490,8 +491,16 @@ export function ApplicationWizardPage() {
   }
 
   async function uploadPhoto(assetId: string, file: File) {
-    await uploadFile(`/applications/${id}/assets/${assetId}/photos`, file);
-    await reload();
+    if (file.size > 8 * 1024 * 1024) {
+      setError(new Error("Photo must be under 8 MB"));
+      return;
+    }
+    try {
+      await uploadFile(`/applications/${id}/assets/${assetId}/photos`, file);
+      await reload();
+    } catch (err) {
+      setError(err);
+    }
   }
 
   async function saveTerms(event: FormEvent) {
@@ -646,8 +655,8 @@ export function ApplicationWizardPage() {
           <Field label="Periods"><input value={periods} onChange={(event) => setPeriods(event.target.value)} type="number" min={1} required /></Field>
           <p className="hint">
             {app.terms?.policyConfigured
-              ? "Demo repayment schedule. Replace these rates when the office supplies the official formula."
-              : "Calculation policy is switched off. Approvals stay blocked until a demo or official policy is enabled."}
+              ? "Repayment schedule preview. Confirm rates with the office formula."
+              : "Calculation policy is switched off. Approvals stay blocked until an official policy is enabled."}
           </p>
           <div className="hero-actions">
             <Button type="submit">Save terms</Button>
@@ -750,7 +759,7 @@ export function CustomerApplicationDetailPage() {
 
   useEffect(() => {
     void api<Record<string, unknown>>(`/me/applications/${id}`).then((data) => {
-      if (data.status === "DRAFT") {
+      if (data.status === "DRAFT" && CUSTOMER_SELF_APPLY) {
         navigate("/customer/apply", { replace: true });
         return;
       }

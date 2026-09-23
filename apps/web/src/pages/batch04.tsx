@@ -5,6 +5,7 @@ import type { CursorListResponse, LoanDetail, LoanSummary } from "@toumua/contra
 import { api, errorMessage, fieldError, postIdempotent } from "../api";
 import { aucklandBusinessDate } from "../format";
 import { ResourceGate, useAsyncResource } from "../load-state";
+import { useAuth } from "../auth";
 
 type AssetView = {
   id: string;
@@ -38,9 +39,9 @@ type Review = {
   number?: string;
   borrowerName?: string | null;
   requestedAmount?: string | null;
+  valuationTotal?: string;
   purpose?: string | null;
   proposedTermMonths?: number | null;
-  requiresManager?: boolean;
   managerReasons?: string[];
   assets?: Array<{
     id: string;
@@ -48,6 +49,7 @@ type Review = {
     description: string;
     photoCount: number;
     valuationStatus: string | null;
+    valuationAmount?: string | null;
   }>;
 };
 
@@ -603,6 +605,7 @@ export function StaffReceiptPage() {
 
 export function ApplicationReviewPage() {
   const { id = "" } = useParams();
+  const { user } = useAuth();
   const [review, setReview] = useState<Review | null>(null);
   const [reason, setReason] = useState("");
   const [publicNote, setPublicNote] = useState("");
@@ -640,13 +643,15 @@ export function ApplicationReviewPage() {
   if (error && !review) return <main className="staff-page"><p className="error">{errorMessage(error, "Could not load review")}</p></main>;
   if (!review) return <main className="staff-page"><p>Loading review…</p></main>;
   const decided = review.checks.find((check) => check.id === "no-loan")?.complete === false;
+  const officerView = user?.role !== "MANAGER";
   return (
     <main className="staff-page">
       <Link to="/staff/applications">← Applications</Link>
       <h1>Manager review</h1>
       <p className="hint">
         {review.number ?? ""}{review.borrowerName ? ` · ${review.borrowerName}` : ""}
-        {review.requestedAmount ? ` · $${review.requestedAmount}` : ""}
+        {review.requestedAmount ? ` · Requested $${review.requestedAmount}` : ""}
+        {review.valuationTotal ? ` · Security valued $${review.valuationTotal}` : ""}
         {review.purpose ? ` · ${review.purpose}` : ""}
         {review.proposedTermMonths ? ` · ${review.proposedTermMonths} months` : ""}
       </p>
@@ -654,7 +659,7 @@ export function ApplicationReviewPage() {
         <ul>
           {review.assets.map((asset) => (
             <li key={asset.id}>
-              {asset.name} · {asset.photoCount} photo(s) · valuation {asset.valuationStatus ?? "requested"}
+              {asset.name} · {asset.photoCount} photo(s) · valuation {asset.valuationAmount ? `$${asset.valuationAmount}` : asset.valuationStatus ?? "requested"}
             </li>
           ))}
         </ul>
@@ -664,14 +669,18 @@ export function ApplicationReviewPage() {
         {" · "}
         <Link to={`/staff/applications/${id}/edit/terms`}>Repayment terms</Link>
       </p>
-      <p className="hint">
-        A manager decides every application.
-        {review.managerReasons?.length ? ` ${review.managerReasons.join(" ")}` : ""}
-      </p>
+      {officerView ? (
+        <p className="hint">Approval is a manager decision. Submit the file for manager review.</p>
+      ) : (
+        <p className="hint">
+          A manager decides every application.
+          {review.managerReasons?.length ? ` ${review.managerReasons.join(" ")}` : ""}
+        </p>
+      )}
       <ul>{review.checks.map((check) => <li key={check.id}>{check.complete ? "✓" : "○"} {check.label}</li>)}</ul>
       {decided ? (
         <p className="hint">This application already has a decision.</p>
-      ) : (
+      ) : officerView ? null : (
         <>
           <Field label="Reason (required to decline)">
             <input value={reason} onChange={(e) => setReason(e.target.value)} />

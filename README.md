@@ -27,12 +27,22 @@ pnpm dev
 
 Demo logins (password `project721` for all). Seed or refresh with `pnpm db:seed-demo`:
 
-- Customer: `sarah.tama@toumua.nz` at `/login`
+- Customer: `sarah.tama@toumua.nz` at `/login` — views own applications, loans and receipts
 - Staff: `staff@toumua.nz` at `/staff/login` — prepares applications and valuations; a manager decides every approve/decline
 - Manager: `manager@toumua.nz` at `/staff/login` — decides applications, defaults, corrections and staff accounts
-- Admin: `admin@toumua.nz` at `/staff/login`
+- Admin: `admin@toumua.nz` at `/staff/login` — staff invitations and the audit log only
+- Owner: `owner@toumua.nz` at `/staff/login` — read-only business status and ledger
+- Accountant: `accountant@toumua.nz` at `/staff/login` — read-only business status and ledger
+- Cashier: `cashier@toumua.nz` at `/staff/login` — disbursements, repayments, and sale proceeds
+- Valuation officer: `valuation@toumua.nz` at `/staff/login` — valuations, storage, return, and sale
 
 Public registration only creates Customer accounts.
+
+```bash
+pnpm seed:demo    # accounts + sample applications/loans, safe to re-run
+```
+
+After seeding, each login should show work: Sarah has an active loan and receipts; James is waiting for a manager decision; Mere is waiting for a valuation; Ana is still a draft; David has a payment due today; Sione is overdue; Lisa is settled; Toma is in default; Rachel was declined; Peter is approved and waiting for the cashier to disburse. Owner, manager and accountant see business status. Cashier sees transactions.
 
 ## Test
 

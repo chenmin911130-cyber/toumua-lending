@@ -17,6 +17,19 @@ import { PrismaService } from "../prisma/prisma.service";
 import { assertApproveCorrection, assertReadLedger, assertRequestCorrection } from "./access";
 import { compare, fromCents, isPositive, toCents } from "./money";
 
+function assertDisbursementAmountUnchanged(
+  original: { type: string; amount: string },
+  proposed: Record<string, unknown>,
+) {
+  if (original.type !== "DISBURSEMENT") return;
+  if (typeof proposed.amount !== "string") return;
+  if (compare(proposed.amount, original.amount.replace(/^-/, "")) !== 0) {
+    throw validation(
+      "Disbursement amounts cannot be corrected. Reverse and re-disburse with manager approval.",
+    );
+  }
+}
+
 @Injectable()
 export class CorrectionsService {
   constructor(
@@ -72,7 +85,12 @@ export class CorrectionsService {
     // Refuse unsupported or already-corrected originals before any state is
     // touched. A second correction against the same entry would apply its
     // replacement delta on top of the first.
-    await this.assertOriginalCorrectable(this.prisma, original);
+    await this.assertOriginalCorrectable(
+      this.prisma,
+      original,
+      null,
+      input.proposedValues as Record<string, unknown>,
+    );
     if (original.correctionRequests.length > 0) {
       throw conflict("This transaction already has a pending correction");
     }
@@ -90,6 +108,7 @@ export class CorrectionsService {
         amount: ["Enter an amount greater than zero"],
       });
     }
+    assertDisbursementAmountUnchanged(original, input.proposedValues as Record<string, unknown>);
     const row = await this.prisma.correctionRequest.create({
       data: {
         originalLedgerEntryId: original.id,
@@ -121,6 +140,12 @@ export class CorrectionsService {
     }
     if (row.version !== input.expectedVersion) {
       throw conflict("This correction was updated elsewhere. Reload and try again.");
+    }
+    if (input.decision === "approve") {
+      assertDisbursementAmountUnchanged(
+        row.originalLedgerEntry,
+        row.proposedValues as Record<string, unknown>,
+      );
     }
     // Claim the decision with a conditional write. A pre-read check is not
     // enough: two simultaneous decisions both read REQUESTED and both write, so
@@ -169,7 +194,12 @@ export class CorrectionsService {
     if (existing.status === CorrectionStatus.POSTED && existing.postingKey === idempotencyKey) {
       return this.toView(existing, user);
     }
-    await this.assertOriginalCorrectable(this.prisma, existing.originalLedgerEntry, id);
+    await this.assertOriginalCorrectable(
+      this.prisma,
+      existing.originalLedgerEntry,
+      id,
+      existing.proposedValues as Record<string, unknown>,
+    );
     if (existing.status !== CorrectionStatus.APPROVED) {
       throw conflict("Only an approved correction can be posted");
     }
@@ -179,6 +209,7 @@ export class CorrectionsService {
 
     const original = existing.originalLedgerEntry;
     const proposed = existing.proposedValues as Record<string, unknown>;
+    assertDisbursementAmountUnchanged(original, proposed);
     const replacementAmount = typeof proposed.amount === "string" ? proposed.amount : null;
     if (!replacementAmount) {
       throw validation("Proposed amount is required to post a correction", {
@@ -227,7 +258,7 @@ export class CorrectionsService {
       // We now own this correction for the rest of the transaction. Refuse to
       // compound it on an original that a competing correction already posted
       // while we were waiting for the loan lock; the claim rolls back with it.
-      await this.assertOriginalCorrectable(tx, original, id);
+      await this.assertOriginalCorrectable(tx, original, id, proposed);
 
       // Corrections are money: the loan balance and settlement status must move
       // with the ledger, otherwise the books and the loan disagree and the
@@ -422,10 +453,17 @@ export class CorrectionsService {
    */
   private async assertOriginalCorrectable(
     client: Pick<Prisma.TransactionClient, "correctionRequest">,
-    original: { id: string; type: string },
+    original: { id: string; type: string; amount: string },
     excludeCorrectionId: string | null = null,
+    proposed: Record<string, unknown> = {},
   ) {
-    if (original.type !== LedgerEntryType.REPAYMENT) {
+    if (original.type === LedgerEntryType.DISBURSEMENT) {
+      if (typeof proposed.amount === "string") {
+        throw validation(
+          `Only repayment transactions can be corrected. This entry is a disbursement, and the office has not authorised a policy for disbursement or sale-receipt corrections.`,
+        );
+      }
+    } else if (original.type !== LedgerEntryType.REPAYMENT) {
       throw validation(
         `Only repayment transactions can be corrected. This entry is a ${original.type
           .replaceAll("_", " ")

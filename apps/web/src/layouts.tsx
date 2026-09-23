@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Logo } from "@toumua/ui";
 import { api } from "./api";
 import { useAuth } from "./auth";
@@ -176,10 +176,18 @@ export function NotificationsShell() {
   if (loading) return <p role="status">Loading session…</p>;
   if (!user || user.restrictedSession || (!user.isStaff && !user.emailVerified)) return null;
   if (!user.isStaff && staffPath) return null;
-  return user.isStaff ? <StaffLayout /> : <CustomerLayout />;
+  return user.isStaff ? (
+    <StaffLayout>
+      <Outlet />
+    </StaffLayout>
+  ) : (
+    <CustomerLayout>
+      <Outlet />
+    </CustomerLayout>
+  );
 }
 
-export function CustomerLayout() {
+export function CustomerLayout({ children }: { children?: ReactNode }) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -212,7 +220,7 @@ export function CustomerLayout() {
         </div>
         <AccountMenu />
       </header>
-      <Outlet />
+      {children ?? <Outlet />}
     </div>
   );
 }
@@ -233,7 +241,7 @@ const STAFF_NAV = [
   { to: "/staff/transactions", label: "Transactions" },
 ];
 
-export function StaffLayout() {
+export function StaffLayout({ children }: { children?: ReactNode }) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const signOut = useSignOut(true);
@@ -302,7 +310,7 @@ export function StaffLayout() {
           <Logo to="/staff" />
           <AccountMenu staff />
         </header>
-        <Outlet />
+        {children ?? <Outlet />}
       </div>
     </div>
   );

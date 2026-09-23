@@ -6,7 +6,7 @@ import { MarketingLogo } from "./MarketingLogo";
 
 const NAV_LINKS = [
   { label: "About", href: "/about" },
-  { label: "FAQ", href: "/#faq" },
+  { label: "FAQ", href: "/help" },
   { label: "Contact", href: "/help" },
 ] as const;
 
@@ -107,7 +107,7 @@ export function Navbar() {
               Log in
             </Link>
             <Link
-              to="/register"
+              to="/login"
               className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-5 text-[15px] font-semibold text-white no-underline transition-all hover:-translate-y-px hover:bg-primary-hover"
             >
               Get started
@@ -204,7 +204,7 @@ export function Navbar() {
                   Log in
                 </Link>
                 <Link
-                  to="/register"
+                  to="/login"
                   className="flex h-11 w-full items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-white no-underline"
                   onClick={() => setMenuOpen(false)}
                 >

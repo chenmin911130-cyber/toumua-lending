@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, ShieldCheck, Users, Zap } from "lucide-react";
 import { FeatureItem } from "./FeatureItem";
+import { CUSTOMER_SELF_APPLY } from "../../features";
 import { LoanCalculator } from "./LoanCalculator";
 
 export function Hero() {
@@ -45,14 +46,12 @@ export function Hero() {
               Built around you.
             </h1>
             <p className="mt-5 max-w-[580px] text-[17px] leading-[1.65] text-text-secondary">
-              At Toumu&apos;a Lending we record a secured loan for a small Auckland office — so
-              you can see the process clearly. This site is a school demonstration, not a live
-              credit offer.
+              Secured loans for personal, vehicle and business needs.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
-                to="/register"
+                to="/login"
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-primary px-6 text-[15px] font-semibold text-white no-underline transition-all hover:-translate-y-px hover:bg-primary-hover"
                 data-control-id="C01-03"
               >
@@ -68,7 +67,7 @@ export function Hero() {
             </div>
 
             <div className="mt-10 grid gap-5 sm:grid-cols-3">
-              <FeatureItem icon={Zap} title="Clear process" description="Apply, review, decide" />
+              <FeatureItem icon={Zap} title="Clear process" description={CUSTOMER_SELF_APPLY ? "Apply, review, decide" : "Contact the office to apply"} />
               <FeatureItem
                 icon={ShieldCheck}
                 title="Fees on the offer"

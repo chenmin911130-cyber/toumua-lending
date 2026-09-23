@@ -8,7 +8,8 @@ import {
 } from "@toumua/contracts";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { AuthUser } from "../auth/session";
-import { forbidden } from "../common/http";
+import { customerSelfApplyEnabled } from "../common/feature-flags";
+import { forbidden, notFound } from "../common/http";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { ApplicationsService } from "../lending/applications.service";
 import { LoansService } from "../lending/loans.service";
@@ -51,6 +52,7 @@ export class CustomerController {
     @Body(new ZodValidationPipe(saveBorrowerSchema)) body: unknown,
   ) {
     this.assertCustomer(user);
+    this.assertSelfApply();
     return this.applicationsService.createForCustomer(user, body as never);
   }
 
@@ -67,6 +69,7 @@ export class CustomerController {
     @Body(new ZodValidationPipe(patchApplicationSchema)) body: unknown,
   ) {
     this.assertCustomer(user);
+    this.assertSelfApply();
     return this.applicationsService.patch(user, id, body as never);
   }
 
@@ -77,6 +80,7 @@ export class CustomerController {
     @Body(new ZodValidationPipe(saveAssetSchema)) body: unknown,
   ) {
     this.assertCustomer(user);
+    this.assertSelfApply();
     return this.applicationsService.addAsset(user, id, body as never);
   }
 
@@ -88,6 +92,7 @@ export class CustomerController {
     @Body(new ZodValidationPipe(saveAssetSchema)) body: unknown,
   ) {
     this.assertCustomer(user);
+    this.assertSelfApply();
     return this.applicationsService.updateAsset(user, id, assetId, body as never);
   }
 
@@ -98,6 +103,7 @@ export class CustomerController {
     @Param("assetId") assetId: string,
   ) {
     this.assertCustomer(user);
+    this.assertSelfApply();
     return this.applicationsService.deleteAsset(user, id, assetId);
   }
 
@@ -108,6 +114,7 @@ export class CustomerController {
     @Body(new ZodValidationPipe(submitSchema)) body: unknown,
   ) {
     this.assertCustomer(user);
+    this.assertSelfApply();
     return this.applicationsService.submit(
       user,
       id,
@@ -125,6 +132,10 @@ export class CustomerController {
   receipt(@CurrentUser() user: AuthUser, @Param("id") id: string) {
     this.assertCustomer(user);
     return this.moneyService.getReceiptForCustomer(user.id, id);
+  }
+
+  private assertSelfApply() {
+    if (!customerSelfApplyEnabled()) throw notFound();
   }
 
   private assertCustomer(user: AuthUser) {

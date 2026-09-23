@@ -198,7 +198,7 @@ describe("LENDING batch 03", () => {
     });
     await post(valAgent, `/api/v1/valuations/${valuationId}/complete`, {
       expectedVersion: 1,
-      amount: "500.00",
+      amount: "1000.00",
       valuationDate: "2026-09-17",
       basis: "Comparable sales",
       borrowerPresent: true,
@@ -266,6 +266,36 @@ describe("LENDING batch 03", () => {
     const after = await agent.get(`/api/v1/applications/${appId}`);
     expect(after.body.version).toBe(goodDate.body.version);
   });
+
+  it("customer self-apply is not available unless the feature flag is on", async () => {
+    delete process.env.FEATURE_CUSTOMER_SELF_APPLY;
+    const guest = await agentWithCsrf(app);
+    const registered = await registerCustomer(guest, "self-apply-off@example.com");
+    expect(registered.status).toBe(201);
+    const verifyToken = auth.extractTokenFromMail(
+      (await auth.latestMail("self-apply-off@example.com"))?.textBody,
+    );
+    await post(guest, "/api/v1/auth/email/verify", { token: verifyToken });
+    await post(guest, "/api/v1/auth/login", {
+      email: "self-apply-off@example.com",
+      password: "customer-pass-12",
+    });
+    const created = await post(guest, "/api/v1/me/applications", {
+      name: "Ava Customer",
+      phone: "+64 21 555 0888",
+      address: "10 High Street, Auckland",
+      email: "self-apply-off@example.com",
+    });
+    expect(created.status).toBe(404);
+  });
+
+  describe("when customer self-apply is enabled", () => {
+    beforeAll(() => {
+      process.env.FEATURE_CUSTOMER_SELF_APPLY = "1";
+    });
+    afterAll(() => {
+      delete process.env.FEATURE_CUSTOMER_SELF_APPLY;
+    });
 
   it("APP-03 customer can apply with collateral so staff can review", async () => {
     const guest = await agentWithCsrf(app);
@@ -345,6 +375,7 @@ describe("LENDING batch 03", () => {
       });
     expect(terms.status).toBe(200);
     expect(terms.body.terms.policyConfigured).toBe(true);
+  });
   });
 
   it("AUTHZ-01 a cashier cannot read the borrower book", async () => {

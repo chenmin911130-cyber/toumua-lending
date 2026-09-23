@@ -256,12 +256,12 @@ export function LoanCalculator({ boundsRef }: Props) {
             </div>
           </dl>
           <p className="mt-2 text-[13px] leading-relaxed text-text-muted">
-            Demo placeholder pending the client&apos;s official formula. {estimate.weeks} weekly
-            payments. Not a credit quote.
+            Estimate only. Final terms are confirmed by our office. {estimate.weeks} weekly
+            payments.
           </p>
 
           <Link
-            to="/register"
+            to="/login"
             className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-full bg-primary text-[14px] font-semibold text-white no-underline transition-all hover:-translate-y-px hover:bg-primary-hover"
           >
             Get started

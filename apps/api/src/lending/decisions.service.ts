@@ -4,6 +4,7 @@ import {
   DecisionInput,
   LoanStatus,
   PaymentAttemptStatus,
+  ValuationStatus,
   type AllowedAction,
 } from "@toumua/contracts";
 import { AuthUser } from "../auth/session";
@@ -13,9 +14,10 @@ import { PrismaService } from "../prisma/prisma.service";
 import { assertDecideApplication, assertReviewDecision, isManager } from "./access";
 import { classifyApproval } from "./approval-policy";
 import { activePolicy, buildSchedule, type Frequency } from "./calculation-policy";
+import { sum, toCents } from "./money";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NumbersService } from "./numbers.service";
-import { buildReadiness, isReadyToSubmit } from "./readiness";
+import { buildReadiness } from "./readiness";
 
 /**
  * The manager decision. Approval freezes the reviewed snapshot into a loan and
@@ -47,6 +49,18 @@ export class DecisionsService {
     // The brief gives the final approve/decline decision to the manager only.
     const canApprove = submitted && ready && manager;
     const canDecline = submitted && manager;
+    const assets = application.assets.map((asset) => {
+      const valuation = asset.valuations[0];
+      const valuationAmount = valuation?.status === "COMPLETED" ? valuation.amount : null;
+      return {
+        id: asset.id,
+        name: asset.name,
+        description: asset.description,
+        photoCount: asset.photos.length,
+        valuationStatus: valuation?.status ?? null,
+        valuationAmount,
+      };
+    });
     return {
       id: application.id,
       number: application.number,
@@ -56,13 +70,8 @@ export class DecisionsService {
       requestedAmount: application.requestedAmount,
       purpose: application.purpose,
       proposedTermMonths: application.proposedTermMonths,
-      assets: application.assets.map((asset) => ({
-        id: asset.id,
-        name: asset.name,
-        description: asset.description,
-        photoCount: asset.photos.length,
-        valuationStatus: asset.valuations[0]?.status ?? null,
-      })),
+      assets,
+      valuationTotal: sum(assets.map((asset) => asset.valuationAmount ?? "0.00")),
       managerReasons: routing.reasons,
       requiresManager: true,
       checks,
@@ -283,6 +292,10 @@ export class DecisionsService {
         name: asset.name,
         photoCount: asset.photos.length,
         valuationStatus: asset.valuations[0]?.status ?? null,
+        valuationAmount:
+          asset.valuations[0]?.status === ValuationStatus.COMPLETED
+            ? toCents(asset.valuations[0].amount ?? "0")
+            : 0,
       })),
       terms: application.terms
         ? {

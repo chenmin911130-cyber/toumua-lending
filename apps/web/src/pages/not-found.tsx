@@ -8,7 +8,7 @@ export function NotFoundPage() {
       <DocumentHead
         title="Page not found"
         path="/404"
-        description="That page is not part of the Toumu’a Lending demonstration."
+        description="That page is not on Toumu’a Lending."
       />
       <section className="marketing-wrap py-24 text-center">
         <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-primary">404</p>
@@ -16,7 +16,7 @@ export function NotFoundPage() {
           This page is not here.
         </h1>
         <p className="mx-auto mt-5 max-w-[460px] text-[17px] leading-relaxed text-text-secondary">
-          The address may be mistyped, or the page is not part of this school demonstration.
+          The address may be mistyped, or the page is no longer available.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link

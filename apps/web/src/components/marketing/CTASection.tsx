@@ -12,7 +12,7 @@ export function CTASection() {
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
-            to="/register"
+            to="/login"
             className="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-[15px] font-semibold text-primary no-underline transition-all hover:-translate-y-px"
           >
             Get started

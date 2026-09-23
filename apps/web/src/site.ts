@@ -3,17 +3,19 @@ export const SITE_URL = String(
 ).replace(/\/$/, "");
 
 export const SITE_NAME = "Toumu’a Lending";
-export const LEGAL_ENTITY = "Toumu’a Money Transfer Ltd";
+export const LEGAL_ENTITY = "Toumu’a Lending Ltd";
 export const CONTACT_PHONE = "021 150 1502";
 export const CONTACT_EMAIL = "office@toumua.nz";
 export const CONTACT_ADDRESS = "Auckland, New Zealand";
 export const CONTACT_HOURS = "Monday–Friday, 9:00am–5:00pm NZST";
 
-export const DEFAULT_DESCRIPTION =
-  "A COMP721 school demonstration of a New Zealand lending office workspace. Apply, review collateral, and track a secured loan. This is not an offer of credit.";
+export const TAGLINE = "Secured loans for personal, vehicle and business needs.";
 
-export const DEMO_NOTICE =
-  "This website is a COMP721 teaching demonstration for Toumu’a Money Transfer Ltd. It is not a licensed consumer-credit product and does not take online payments.";
+export const DEFAULT_DESCRIPTION = TAGLINE;
+
+export const OPERATED_BY = `Operated by ${LEGAL_ENTITY}`;
+
+export const DISCLAIMER = "Loans are arranged with our office. Terms apply.";
 
 export const MARKETING_PATHS = new Set([
   "/",

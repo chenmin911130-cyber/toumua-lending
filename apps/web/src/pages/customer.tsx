@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import type { LoanSummary } from "@toumua/contracts";
 import { api } from "../api";
 import { useAuth } from "../auth";
+import { CUSTOMER_SELF_APPLY } from "../features";
 import { firstName, formatDate, statusLabel } from "../format";
 import { ResourceGate, useAsyncResource } from "../load-state";
 
@@ -36,14 +37,20 @@ export function CustomerHomePage() {
           <div className="center-icon" aria-hidden>☰</div>
           <h2 className="serif" style={{ fontSize: 32, color: "var(--navy)" }}>No loan is linked to your account yet.</h2>
           <p className="empty-copy">
-            Apply online with the amount you need and the security you can offer. Staff will review it and a manager will decide.
+            {CUSTOMER_SELF_APPLY
+              ? "Apply online with the amount you need and the security you can offer. Staff will review it and a manager will decide."
+              : "A loan officer completes the application with you in the office. You can view it here once it is linked."}
           </p>
           <div className="hero-actions" style={{ justifyContent: "center" }}>
-            <Link className="btn btn-primary" to="/customer/apply" data-control-id="C10-01">Apply for a loan</Link>
+            {CUSTOMER_SELF_APPLY ? (
+              <Link className="btn btn-primary" to="/customer/apply" data-control-id="C10-01">Apply for a loan</Link>
+            ) : (
+              <Link className="btn btn-primary" to="/help">Contact our office to apply</Link>
+            )}
             <Link className="btn btn-secondary" to="/customer/applications" data-control-id="C10-02">View application progress</Link>
           </div>
           <div className="guide" style={{ marginTop: 36 }}>
-            <span>Apply online</span>
+            <span>{CUSTOMER_SELF_APPLY ? "Apply online" : "Contact the office"}</span>
             <span>Staff review</span>
             <span>View your loan here</span>
           </div>
@@ -83,7 +90,7 @@ export function CustomerHomePage() {
       <p style={{ marginTop: 24 }}>
         <Link to="/customer/loans" data-control-id="C09-01">View all loans</Link>
         {" · "}
-        <Link to="/customer/apply">Apply for a loan</Link>
+        {CUSTOMER_SELF_APPLY ? <Link to="/customer/apply">Apply for a loan</Link> : <Link to="/help">Contact our office to apply</Link>}
         {" · "}
         <Link to="/customer/applications">Application progress</Link>
       </p>
@@ -115,9 +122,13 @@ export function CustomerApplicationsPage() {
     <main className="page">
       <div className="section-head">
         <h1 className="serif" style={{ fontSize: 40 }}>Application</h1>
-        <Link className="btn btn-primary" to="/customer/apply" data-control-id="C04-02">
-          {draft ? "Continue draft" : "Apply for a loan"}
-        </Link>
+        {CUSTOMER_SELF_APPLY ? (
+          <Link className="btn btn-primary" to="/customer/apply" data-control-id="C04-02">
+            {draft ? "Continue draft" : "Apply for a loan"}
+          </Link>
+        ) : (
+          <Link className="btn btn-primary" to="/help">Contact our office to apply</Link>
+        )}
       </div>
       <div className="center-state" style={{ marginTop: 48 }}>
         {!data ? (
@@ -126,15 +137,23 @@ export function CustomerApplicationsPage() {
           <>
             <div className="center-icon" aria-hidden>☰</div>
             <h2>No application yet</h2>
-            <p className="empty-copy">Start an application with the amount you need and the items you can offer as security. Staff will review it from there.</p>
-            <Link className="btn btn-primary" to="/customer/apply" data-control-id="C04-02">Apply for a loan</Link>
+            <p className="empty-copy">
+              {CUSTOMER_SELF_APPLY
+                ? "Start an application with the amount you need and the items you can offer as security. Staff will review it from there."
+                : "Applications are completed with a loan officer. Contact the office to start one."}
+            </p>
+            {CUSTOMER_SELF_APPLY ? (
+              <Link className="btn btn-primary" to="/customer/apply" data-control-id="C04-02">Apply for a loan</Link>
+            ) : (
+              <Link className="btn btn-primary" to="/help">Contact our office to apply</Link>
+            )}
           </>
         ) : (
           <section className="stack" style={{ width: "100%", maxWidth: 720 }}>
             {items.map((item) => (
               <Link
                 key={item.id}
-                to={item.status === "DRAFT" ? "/customer/apply" : `/customer/applications/${item.id}`}
+                to={CUSTOMER_SELF_APPLY && item.status === "DRAFT" ? "/customer/apply" : `/customer/applications/${item.id}`}
                 className="card"
                 data-control-id="C04-01"
               >

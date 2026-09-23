@@ -1,4 +1,4 @@
-import { Permission, normalizeEmail } from "@toumua/contracts";
+import { BusinessRole, Permission, normalizeEmail } from "@toumua/contracts";
 import { Prisma, PrismaClient } from "../generated/prisma";
 
 export const DEMO_PASSWORD = "project721";
@@ -104,7 +104,7 @@ async function upsertUser(
     email: string;
     name: string;
     passwordHash: string;
-    role: "CUSTOMER" | "LOAN_OFFICER" | "MANAGER" | null;
+    role: BusinessRole | null;
     permissions?: string[];
   },
 ) {
@@ -193,6 +193,31 @@ export async function seedDemoAccounts(
     name: "Morgan Manager",
     passwordHash,
     role: "MANAGER",
+  });
+
+  await upsertUser(prisma, {
+    email: demoEmail("owner"),
+    name: "Alice Owner",
+    passwordHash,
+    role: BusinessRole.OWNER,
+  });
+  await upsertUser(prisma, {
+    email: demoEmail("accountant"),
+    name: "Ken Accountant",
+    passwordHash,
+    role: BusinessRole.ACCOUNTANT,
+  });
+  await upsertUser(prisma, {
+    email: demoEmail("cashier"),
+    name: "Tui Cashier",
+    passwordHash,
+    role: BusinessRole.CASHIER,
+  });
+  await upsertUser(prisma, {
+    email: demoEmail("valuation"),
+    name: "Sam Valuer",
+    passwordHash,
+    role: BusinessRole.VALUATION_OFFICER,
   });
 
   for (const customer of DEMO_CUSTOMERS) {
