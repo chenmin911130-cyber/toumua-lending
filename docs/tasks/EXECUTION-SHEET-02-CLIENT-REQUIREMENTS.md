@@ -595,5 +595,5 @@ BLOCKED 必须附上失败命令、错误输出的前 20 行，以及已尝试�
 ## 执行回报
 
 R-Phase 0 · DONE · commit 6e54412 · Reverted auth/resetDb test workarounds; local Docker Postgres in sheet; STAFF_APPROVE_LIMIT profile default in .env.example; vitest 30s (64/0/0 local, no retry/lock).
-R-Phase 2 · DONE · commit 8724bf3 (API) + web rework commit on branch · Owner staff API/guard/tests; web staff-accounts nav for OWNER, CARD option, README casing.
+R-Phase 2 · DONE · commit 8724bf3 (API), 4c84468 (web/README/report line) · Owner staff API/guard/tests; OWNER staff-accounts nav, CARD option, README casing.
 Branch: `agent/client-requirements` (no PR). Final `pnpm test:api`: 64 passed, 0 failed, 0 skipped (~50s local Docker). Final `pnpm --filter @toumua/web test`: 4 passed, 0 failed, 0 skipped.
