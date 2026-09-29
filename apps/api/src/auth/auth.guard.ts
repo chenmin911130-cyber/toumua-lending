@@ -3,6 +3,7 @@ import { Reflector } from "@nestjs/core";
 import { Permission } from "@toumua/contracts";
 import { Request } from "express";
 import { forbidden, unauthorized } from "../common/http";
+import { canManageStaffAccounts } from "../lending/access";
 
 export const IS_PUBLIC = "isPublic";
 export const Public = () => SetMetadata(IS_PUBLIC, true);
@@ -52,9 +53,9 @@ export class AuthGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
     if (permission) {
-      const managerCanAdminister =
-        permission === Permission.MANAGE_STAFF && req.authUser.role === "MANAGER";
-      if (!managerCanAdminister && !req.authUser.permissions.includes(permission)) {
+      const roleCanManageStaff =
+        permission === Permission.MANAGE_STAFF && canManageStaffAccounts(req.authUser);
+      if (!roleCanManageStaff && !req.authUser.permissions.includes(permission)) {
         throw forbidden();
       }
     }

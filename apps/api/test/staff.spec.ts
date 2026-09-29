@@ -8,9 +8,11 @@ import {
   registerCustomer,
   resetDb,
   seedAdmin,
+  seedCashier,
   seedManager,
   startApp,
 } from "./helpers";
+import { BusinessRole } from "@toumua/contracts";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { AuthService } from "../src/auth/auth.service";
 
@@ -205,5 +207,42 @@ describe("STAFF", () => {
     const list = await manager.get("/api/v1/staff");
     expect(list.status).toBe(200);
     expect(list.body.total).toBeGreaterThan(0);
+  });
+
+  it("STAFF-05 an owner can list staff and send invitations; a cashier cannot", async () => {
+    const passwordHash = await auth.hashPassword("Ownerpass1234");
+    await prisma.user.create({
+      data: {
+        email: "owner@example.com",
+        emailNormalized: "owner@example.com",
+        name: "Owen Owner",
+        passwordHash,
+        role: BusinessRole.OWNER,
+        status: "ACTIVE",
+        emailVerifiedAt: new Date(),
+      },
+    });
+    await seedCashier(prisma, auth);
+
+    const owner = await agentWithCsrf(app);
+    await post(owner, "/api/v1/auth/login", {
+      email: "owner@example.com",
+      password: "Ownerpass1234",
+    });
+    const list = await owner.get("/api/v1/staff");
+    expect(list.status).toBe(200);
+    const invited = await post(owner, "/api/v1/staff", {
+      name: "New Loan Officer",
+      email: "newofficer@example.com",
+      role: "LOAN_OFFICER",
+    });
+    expect(invited.status).toBe(201);
+
+    const cashier = await agentWithCsrf(app);
+    await post(cashier, "/api/v1/auth/login", {
+      email: "cashier@example.com",
+      password: "Cashier12345",
+    });
+    expect((await cashier.get("/api/v1/staff")).status).toBe(403);
   });
 });

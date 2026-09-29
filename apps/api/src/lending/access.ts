@@ -74,7 +74,11 @@ export function isManager(user: PublicUser) {
 }
 
 export function canManageStaffAccounts(user: PublicUser) {
-  return isManager(user) || user.permissions.includes(Permission.MANAGE_STAFF);
+  return (
+    isManager(user) ||
+    user.role === BusinessRole.OWNER ||
+    user.permissions.includes(Permission.MANAGE_STAFF)
+  );
 }
 
 /** Declaring default on an active loan is a manager decision. */
