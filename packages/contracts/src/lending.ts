@@ -235,6 +235,7 @@ export const PaymentMethod = {
   BANK_TRANSFER: "BANK_TRANSFER",
   CHEQUE: "CHEQUE",
   MOBILE_WALLET: "MOBILE_WALLET",
+  CARD: "CARD",
 } as const;
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
 
@@ -246,6 +247,7 @@ export const METHOD_REQUIRES_REFERENCE: Record<PaymentMethod, boolean> = {
   BANK_TRANSFER: true,
   CHEQUE: true,
   MOBILE_WALLET: true,
+  CARD: true,
 };
 
 /** Business dates are calendar dates, never instants. */
@@ -269,6 +271,7 @@ const paymentMethodField = z.enum([
   PaymentMethod.BANK_TRANSFER,
   PaymentMethod.CHEQUE,
   PaymentMethod.MOBILE_WALLET,
+  PaymentMethod.CARD,
 ]);
 
 /** Rejects a method that requires an external reference when none was given. */

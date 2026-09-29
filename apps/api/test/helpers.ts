@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 config({ path: resolve(__dirname, "../../../.env") });
+// Profile tests assume manager-only approval unless a spec sets STAFF_APPROVE_LIMIT.
+delete process.env.STAFF_APPROVE_LIMIT;
 import { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { createApp } from "../src/create-app";
@@ -15,6 +17,12 @@ process.env.NODE_ENV = "test";
 process.env.DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
   "postgresql://minchen@127.0.0.1:5432/toumua_test";
+const testDbName = new URL(process.env.DATABASE_URL).pathname.replace(/^\//, "");
+if (!testDbName.endsWith("_test")) {
+  throw new Error(
+    `Refusing to run tests against database "${testDbName}". TEST_DATABASE_URL must point to a *_test database.`,
+  );
+}
 process.env.MAIL_DRIVER = "memory";
 process.env.PUBLIC_WEB_URL = "http://127.0.0.1:5173";
 process.env.BOOTSTRAP_ADMIN_EMAIL = "admin@example.com";
@@ -36,9 +44,7 @@ export async function startApp() {
   return { app, prisma, auth };
 }
 
-export async function resetDb(prisma: PrismaService) {
-  // CASCADE truncate keeps test resets reliable as the schema grows.
-  await prisma.$executeRawUnsafe(`
+const TRUNCATE_SQL = `
     TRUNCATE TABLE
       "CorrectionRequest",
       "Receipt",
@@ -66,7 +72,34 @@ export async function resetDb(prisma: PrismaService) {
       "Invitation",
       "User"
     RESTART IDENTITY CASCADE
-  `);
+  `;
+
+function isTransientDbResetError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("deadlock detected") ||
+    message.includes("Connection terminated") ||
+    message.includes("40P01")
+  );
+}
+
+export async function resetDb(prisma: PrismaService) {
+  // CASCADE truncate keeps test resets reliable as the schema grows.
+  const maxAttempts = 5;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(87221001)`);
+        await tx.$executeRawUnsafe(TRUNCATE_SQL);
+      });
+      return;
+    } catch (error) {
+      if (!isTransientDbResetError(error) || attempt === maxAttempts) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+    }
+  }
 }
 
 export async function seedAdmin(prisma: PrismaService, auth: AuthService) {

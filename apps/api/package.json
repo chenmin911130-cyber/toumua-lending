@@ -9,7 +9,7 @@
     "start": "node dist/main.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:migrate:test": "DATABASE_URL=${TEST_DATABASE_URL} prisma migrate deploy",
+    "prisma:migrate:test": "node scripts/migrate-test.cjs",
     "prisma:seed-demo": "tsx --env-file=../../.env prisma/seed-demo.ts",
     "prisma:seed-demo-data": "tsx --env-file=../../.env prisma/seed-demo-data.ts",
     "test": "cross-env NODE_ENV=test vitest run"
