@@ -406,30 +406,16 @@ export class AuthService {
     if (!session || session.revokedAt || session.expiresAt.getTime() < Date.now()) {
       return null;
     }
-    if (!session.user) {
-      return null;
-    }
     if (
       session.user.status === "INACTIVE" ||
       session.user.status === "INVITATION_REVOKED"
     ) {
       return null;
     }
-    try {
-      await this.prisma.session.update({
-        where: { id: session.id },
-        data: { lastSeenAt: new Date() },
-      });
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        "code" in error &&
-        (error as { code?: string }).code === "P2025"
-      ) {
-        return null;
-      }
-      throw error;
-    }
+    await this.prisma.session.update({
+      where: { id: session.id },
+      data: { lastSeenAt: new Date() },
+    });
     return {
       session,
       user: toPublicUser(session.user, session.restricted),

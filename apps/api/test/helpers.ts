@@ -4,8 +4,6 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 config({ path: resolve(__dirname, "../../../.env") });
-// Profile tests assume manager-only approval unless a spec sets STAFF_APPROVE_LIMIT.
-delete process.env.STAFF_APPROVE_LIMIT;
 import { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { createApp } from "../src/create-app";
@@ -44,7 +42,9 @@ export async function startApp() {
   return { app, prisma, auth };
 }
 
-const TRUNCATE_SQL = `
+export async function resetDb(prisma: PrismaService) {
+  // CASCADE truncate keeps test resets reliable as the schema grows.
+  await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
       "CorrectionRequest",
       "Receipt",
@@ -72,34 +72,7 @@ const TRUNCATE_SQL = `
       "Invitation",
       "User"
     RESTART IDENTITY CASCADE
-  `;
-
-function isTransientDbResetError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  return (
-    message.includes("deadlock detected") ||
-    message.includes("Connection terminated") ||
-    message.includes("40P01")
-  );
-}
-
-export async function resetDb(prisma: PrismaService) {
-  // CASCADE truncate keeps test resets reliable as the schema grows.
-  const maxAttempts = 5;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      await prisma.$transaction(async (tx) => {
-        await tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(87221001)`);
-        await tx.$executeRawUnsafe(TRUNCATE_SQL);
-      });
-      return;
-    } catch (error) {
-      if (!isTransientDbResetError(error) || attempt === maxAttempts) {
-        throw error;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
-    }
-  }
+  `);
 }
 
 export async function seedAdmin(prisma: PrismaService, auth: AuthService) {

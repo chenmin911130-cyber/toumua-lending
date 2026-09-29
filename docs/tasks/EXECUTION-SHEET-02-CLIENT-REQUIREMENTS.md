@@ -37,9 +37,9 @@
 3. **不要**碰 `design/`、`docs/tasks/*.pdf`，也不要改已有的 `apps/api/prisma/migrations/*`。每个需要改表的 Phase **新增一个**迁移，且只能是 additive（新表、带默认值的新列、新枚举值）。迁移名：`2026093000000N_<snake_name>`。
 4. **不要**改 demo 密码 `project721`、`*@toumua.nz` 邮箱、已有账号的角色、品牌文案（`SITE_NAME`、`LEGAL_ENTITY`、`Logo.tsx`）。
 5. 金额一律用字符串，配合 `apps/api/src/lending/money.ts` 的 cents 工具；前端禁止用 `Number()` / `parseFloat` 处理金额。
-6. **数据库只能用 Railway 上的独立测试实例 `Postgres-gaaW`**（外网入口 `autorack.proxy.rlwy.net:50505`，库名 `toumua_dev` / `toumua_test`）。连接串已经写在仓库根目录的 `.env` 里，不要打印、不要提交、不要写进任何文件或日志。
-   - **绝对禁止**连接线上服务 `Postgres`（api 服务正在用的那个库），也不要用 Railway CLI 或 MCP 读取它的变量。测试会 `TRUNCATE` 全部表，连错一次，线上演示数据就全没了。
-   - 不改 Railway 上 `web` / `api` / `Postgres` 任何服务的配置和变量，也不要触发部署。
+6. **开发与测试只能用本机 Docker Postgres**（`docker compose up -d postgres`；主机端口 **5433** 由本地未提交的 `docker-compose.override.yml` 映射，容器名通常为 `toumu-postgres-1`；库名 `toumua_dev` / `toumua_test`）。连接串写在仓库根目录的 `.env` 里，不要打印、不要提交、不要写进任何文件或日志。
+   - **禁止**用 Railway（或任何远程库）做 `prisma migrate`、跑 API 测试或日常开发。测试会 `TRUNCATE` 全部表。
+   - 不要提交 `docker-compose.override.yml`。
    - `prisma migrate deploy` 只允许针对 `toumua_test` 执行；`prisma migrate dev` 只允许针对 `toumua_dev` 执行。
 7. 开 PR 后**不要**等待或轮询 GitHub Actions。
 8. 不引入真实的第三方付费服务（Twilio、Stripe、DocuSign、Akahu 等）作为必需依赖。只允许写一个 driver 接口，并留好可接入的位置。
@@ -63,28 +63,30 @@
 
 所有 Phase 按编号**串行**执行，在同一个分支上一个接一个做，不要并行。
 
-### 0.4 环境（Windows 11 + PowerShell，不需要 Docker）
+### 0.4 环境（Windows 11 + PowerShell + 本机 Docker Postgres）
 
-`.env` 已经配好，`DATABASE_URL` 指向 Railway 测试实例的 `toumua_dev`，`TEST_DATABASE_URL` 指向 `toumua_test`。
+先启动数据库：`docker compose up -d postgres`（端口 5433 依赖本地 `docker-compose.override.yml`，勿提交该文件）。
+
+`.env` 已指向 `127.0.0.1:5433` 上的 `toumua_dev`（`DATABASE_URL`）与 `toumua_test`（`TEST_DATABASE_URL`）。**不要用 Railway 做开发或测试。**
 
 ```powershell
 pnpm install
 pnpm --filter @toumua/api prisma:generate
 pnpm --filter @toumua/api prisma:migrate          # 作用于 toumua_dev
-pnpm --filter @toumua/api prisma:migrate:test     # 作用于 toumua_test（Phase 0 会把这个脚本改成 Windows 可用）
+pnpm --filter @toumua/api prisma:migrate:test     # 作用于 toumua_test（Windows 用 scripts/migrate-test.cjs）
 ```
 
-走外网连库，往返延迟约 140 ms，完整的 `pnpm test:api` 一轮约 11 分钟。不要为了提速去改测试逻辑，改用下面的节奏：
+本机库下完整 `pnpm test:api` 约 **1 分钟**。不要为了提速去改测试逻辑，改用下面的节奏：
 
 - 开发过程中只跑相关的 spec 文件，例如 `cd apps/api; pnpm exec cross-env NODE_ENV=test vitest run test/custody.spec.ts`。
 - 每个 Phase 提交前，完整跑**一次** `pnpm test:api`。
-- **同一时间只能有一个测试进程连测试库。** 两组测试同时跑会互相 TRUNCATE，造成大量假失败（401、`No record was found for an update`、`User_emailNormalized_key` 唯一键冲突）。看到这类错误，先确认没有别的测试进程在跑，再重跑，不要去改代码。
+- **同一时间只能有一个测试进程连测试库。** 两组测试同时跑会互相 TRUNCATE，造成大量假失败（401、`No record was found for an update`、`User_emailNormalized_key` 唯一键冲突）。看到这类错误，先确认没有别的测试进程在跑（PowerShell：`Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'Toumu.*vitest' }`），再重跑，不要去改代码。
 
 ### 0.5 验证命令（每个 Phase 必跑）
 
 ```powershell
 pnpm --filter @toumua/contracts build
-pnpm typecheck
+pnpm --filter @toumua/api exec tsc --noEmit
 pnpm test:api
 pnpm --filter @toumua/web test
 pnpm --filter @toumua/web build
