@@ -74,7 +74,11 @@ pnpm --filter @toumua/api prisma:migrate          # 作用于 toumua_dev
 pnpm --filter @toumua/api prisma:migrate:test     # 作用于 toumua_test（Phase 0 会把这个脚本改成 Windows 可用）
 ```
 
-走外网连库，每条 SQL 都有几十毫秒延迟。`pnpm test:api` 比本地慢是正常的，不要为了提速去改测试逻辑。
+走外网连库，往返延迟约 140 ms，完整的 `pnpm test:api` 一轮约 11 分钟。不要为了提速去改测试逻辑，改用下面的节奏：
+
+- 开发过程中只跑相关的 spec 文件，例如 `cd apps/api; pnpm exec cross-env NODE_ENV=test vitest run test/custody.spec.ts`。
+- 每个 Phase 提交前，完整跑**一次** `pnpm test:api`。
+- **同一时间只能有一个测试进程连测试库。** 两组测试同时跑会互相 TRUNCATE，造成大量假失败（401、`No record was found for an update`、`User_emailNormalized_key` 唯一键冲突）。看到这类错误，先确认没有别的测试进程在跑，再重跑，不要去改代码。
 
 ### 0.5 验证命令（每个 Phase 必跑）
 
@@ -587,3 +591,7 @@ BLOCKED 必须附上失败命令、错误输出的前 20 行，以及已尝试�
 最后给出：分支名、PR 链接、`pnpm test:api` 与 `pnpm --filter @toumua/web test` 的最终结果（通过数和失败数），以及 Phase 8 演示剧本的 6 张截图路径。
 
 ## 执行回报
+
+R-Phase 0 · DONE · commit 6c2a329 · Railway test DB guard, Windows migrate-test script, transactional truncate retries, and full API suite green (64/0/0).
+R-Phase 2 · DONE · commit 8724bf3 · Owner can manage staff via canManageStaffAccounts + AuthGuard; STAFF-05 and README owner row updated.
+Branch: `agent/client-requirements` (no PR opened per assignment). Final `pnpm test:api`: 64 passed, 0 failed, 0 skipped. Final `pnpm --filter @toumua/web test`: 4 passed, 0 failed, 0 skipped.
