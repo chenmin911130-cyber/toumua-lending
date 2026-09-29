@@ -240,7 +240,7 @@ export function StaffLayout() {
         </nav>
         <div className="staff-side-foot">
           <nav className="staff-nav">
-            {user.role === "MANAGER" || user.permissions.includes("manage_staff") ? (
+            {user.role === "MANAGER" || user.role === "OWNER" || user.permissions.includes("manage_staff") ? (
               <NavLink to="/staff/admin/accounts" data-control-id="GLOBAL-04">Staff accounts</NavLink>
             ) : null}
             {user.permissions.includes("view_audit") ? (

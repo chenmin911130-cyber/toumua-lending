@@ -219,6 +219,7 @@ export function StaffDisbursementPage() {
               <option value="BANK_TRANSFER">Bank transfer</option>
               <option value="CHEQUE">Cheque</option>
               <option value="MOBILE_WALLET">Mobile wallet</option>
+              <option value="CARD">Card</option>
             </select>
           </Field>
           {error ? <p className="error">{errorMessage(error, "Could not disburse")}</p> : null}
@@ -296,6 +297,7 @@ export function StaffRepaymentPage() {
               <option value="BANK_TRANSFER">Bank transfer</option>
               <option value="CHEQUE">Cheque</option>
               <option value="MOBILE_WALLET">Mobile wallet</option>
+              <option value="CARD">Card</option>
             </select>
           </Field>
           {needsReference ? (

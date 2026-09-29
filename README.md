@@ -31,7 +31,7 @@ Demo logins (password `project721` for all). Seed or refresh with `pnpm db:seed-
 - Staff: `staff@toumua.nz` at `/staff/login` — prepares applications with the borrower; cannot approve
 - Manager: `manager@toumua.nz` at `/staff/login` — approves or declines applications
 - Admin: `admin@toumua.nz` at `/staff/login` — staff invitations and the audit log only
-- Owner: `owner@toumua.nz` at `/staff/login` — Read-only business status and reports; manages staff accounts; cannot approve loans.
+- Owner: `owner@toumua.nz` at `/staff/login` — read-only business status and reports; manages staff accounts; cannot approve loans
 - Accountant: `accountant@toumua.nz` at `/staff/login` — read-only business status and ledger
 - Cashier: `cashier@toumua.nz` at `/staff/login` — disbursements, repayments, and sale proceeds
 - Valuation officer: `valuation@toumua.nz` at `/staff/login` — valuations, storage, return, and sale
