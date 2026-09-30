@@ -37,10 +37,11 @@
 3. **不要**碰 `design/`、`docs/tasks/*.pdf`，也不要改已有的 `apps/api/prisma/migrations/*`。每个需要改表的 Phase **新增一个**迁移，且只能是 additive（新表、带默认值的新列、新枚举值）。迁移名：`2026093000000N_<snake_name>`。
 4. **不要**改 demo 密码 `project721`、`*@toumua.nz` 邮箱、已有账号的角色、品牌文案（`SITE_NAME`、`LEGAL_ENTITY`、`Logo.tsx`）。
 5. 金额一律用字符串，配合 `apps/api/src/lending/money.ts` 的 cents 工具；前端禁止用 `Number()` / `parseFloat` 处理金额。
-6. **开发与测试只能用本机 Docker Postgres**（`docker compose up -d postgres`；主机端口 **5433** 由本地未提交的 `docker-compose.override.yml` 映射，容器名通常为 `toumu-postgres-1`；库名 `toumua_dev` / `toumua_test`）。连接串写在仓库根目录的 `.env` 里，不要打印、不要提交、不要写进任何文件或日志。
-   - **禁止**用 Railway（或任何远程库）做 `prisma migrate`、跑 API 测试或日常开发。测试会 `TRUNCATE` 全部表。
+6. **API 测试只能用隔离运行器** `pnpm test:api:isolated`（即 `node scripts/test-api-isolated.mjs`，已合入 main）。它每次在系统临时目录新建一个一次性 PostgreSQL 16 集群、应用迁移、跑测试、再删掉，不读 `.env`、不碰任何已有数据库。Windows 上用的是 `%USERPROFILE%\tools\pgsql16\bin`（EDB 免安装包，已解压好），可用 `TOUMUA_PG_BIN` 覆盖。`apps/api/test/isolation.ts` 会拒绝在其他数据库上运行，**不要绕过或修改这个守卫**，也不要再用 `pnpm test:api` / `toumua_test`。
+   - **开发和 seed 用本机 Docker Postgres**（`docker compose up -d postgres`；主机端口 **5433** 由本地未提交的 `docker-compose.override.yml` 映射，容器名 `toumu-postgres-1`；库名 `toumua_dev`）。连接串写在仓库根目录的 `.env` 里，不要打印、不要提交、不要写进任何文件或日志。
+   - **禁止**用 Railway（或任何远程库）做 `prisma migrate`、跑 API 测试或日常开发。
    - 不要提交 `docker-compose.override.yml`。
-   - `prisma migrate deploy` 只允许针对 `toumua_test` 执行；`prisma migrate dev` 只允许针对 `toumua_dev` 执行。
+   - `prisma migrate dev` 只允许针对 `toumua_dev` 执行。
 7. 开 PR 后**不要**等待或轮询 GitHub Actions。
 8. 不引入真实的第三方付费服务（Twilio、Stripe、DocuSign、Akahu 等）作为必需依赖。只允许写一个 driver 接口，并留好可接入的位置。
 9. 新增 npm 依赖上限：`@nestjs/schedule` 一个。签名板在前端用原生 `<canvas>` 实现，不引库；合同用 HTML 打印，不引 PDF 库。
@@ -67,27 +68,27 @@
 
 先启动数据库：`docker compose up -d postgres`（端口 5433 依赖本地 `docker-compose.override.yml`，勿提交该文件）。
 
-`.env` 已指向 `127.0.0.1:5433` 上的 `toumua_dev`（`DATABASE_URL`）与 `toumua_test`（`TEST_DATABASE_URL`）。**不要用 Railway 做开发或测试。**
+`.env` 的 `DATABASE_URL` 指向 `127.0.0.1:5433` 上的 `toumua_dev`，只用于开发和 seed。**不要用 Railway 做开发或测试。**
 
 ```powershell
 pnpm install
 pnpm --filter @toumua/api prisma:generate
+pnpm --filter @toumua/contracts build             # 改了 contracts 后必须重建，否则 api 类型检查会用旧的 dist
 pnpm --filter @toumua/api prisma:migrate          # 作用于 toumua_dev
-pnpm --filter @toumua/api prisma:migrate:test     # 作用于 toumua_test（Windows 用 scripts/migrate-test.cjs）
 ```
 
-本机库下完整 `pnpm test:api` 约 **1 分钟**。不要为了提速去改测试逻辑，改用下面的节奏：
+完整 `pnpm test:api:isolated` 约 **1.5 分钟**。开发中只跑相关 spec：`node scripts/test-api-isolated.mjs test/custody.spec.ts`（参数原样传给 vitest）。每个 Phase 提交前完整跑一次。
 
-- 开发过程中只跑相关的 spec 文件，例如 `cd apps/api; pnpm exec cross-env NODE_ENV=test vitest run test/custody.spec.ts`。
-- 每个 Phase 提交前，完整跑**一次** `pnpm test:api`。
-- **同一时间只能有一个测试进程连测试库。** 两组测试同时跑会互相 TRUNCATE，造成大量假失败（401、`No record was found for an update`、`User_emailNormalized_key` 唯一键冲突）。看到这类错误，先确认没有别的测试进程在跑（PowerShell：`Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'Toumu.*vitest' }`），再重跑，不要去改代码。
+- 每次运行都用自己的一次性集群，不会互相 TRUNCATE，但仍请一次只跑一个，避免机器过载。
+- 在 Windows 上，`isolation.spec.ts` 里有 3 个用例用的是 POSIX 路径夹具，会被跳过。这是预期行为，全量结果应为 **0 failed、3 skipped**。
+- 切换分支、stash 后如果出现“列不存在”或 contracts 类型错误，先 `prisma:generate` 并重建 contracts，不要去改代码。
 
 ### 0.5 验证命令（每个 Phase 必跑）
 
 ```powershell
 pnpm --filter @toumua/contracts build
-pnpm --filter @toumua/api exec tsc --noEmit
-pnpm test:api
+pnpm typecheck
+pnpm test:api:isolated
 pnpm --filter @toumua/web test
 pnpm --filter @toumua/web build
 ```
