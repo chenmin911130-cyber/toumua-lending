@@ -6,9 +6,11 @@ import type {
   ApplicationSummary,
   BorrowerSummary,
   CursorListResponse,
+  DocumentSummary,
 } from "@toumua/contracts";
-import { api, errorMessage, fieldError, uploadFile } from "../api";
+import { api, downloadFile, errorMessage, fieldError, uploadFile } from "../api";
 import { CUSTOMER_SELF_APPLY } from "../features";
+import { useAuth } from "../auth";
 import { aucklandBusinessDate, aucklandDateTimeLocal, aucklandWallTimeToIso } from "../format";
 
 type BorrowerDetail = BorrowerSummary & {
@@ -39,8 +41,10 @@ export function BorrowersPage() {
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [smsOptIn, setSmsOptIn] = useState(true);
+  const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [error, setError] = useState<unknown>(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   async function reload(search = query) {
     const params = new URLSearchParams();
@@ -74,6 +78,9 @@ export function BorrowersPage() {
     setSmsOptIn(row.smsOptIn);
     setError(null);
     void api<BorrowerDetail>(`/borrowers/${row.id}`).then(setDetail);
+    void api<{ items: DocumentSummary[] }>(`/borrowers/${row.id}/documents`)
+      .then((response) => setDocuments(response.items))
+      .catch(() => setDocuments([]));
   }
 
   async function save(event: FormEvent) {
@@ -166,6 +173,45 @@ export function BorrowersPage() {
             />
             Send SMS repayment reminders
           </label>
+          {drawer && drawer !== "new" ? (
+            <section>
+              <h3>Documents</h3>
+              <ul>
+                {documents.map((document) => (
+                  <li key={document.id}>
+                    {document.filename} · {document.sha256.slice(0, 12)}
+                    <Button type="button" variant="secondary" onClick={() => void downloadFile(`/documents/${document.id}/file`, document.filename)}>
+                      Download
+                    </Button>
+                    {user?.role === "MANAGER" ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          void api(`/documents/${document.id}`, { method: "DELETE" }).then(() =>
+                            setDocuments((current) => current.filter((row) => row.id !== document.id)),
+                          );
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              <input
+                type="file"
+                accept="application/pdf,image/png,image/jpeg"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  void uploadFile<DocumentSummary>(`/borrowers/${drawer.id}/documents`, file).then((saved) =>
+                    setDocuments((current) => [saved, ...current]),
+                  );
+                }}
+              />
+            </section>
+          ) : null}
           {error ? <p className="error">{errorMessage(error, "Could not save borrower")}</p> : null}
           <div className="hero-actions">
             <Button type="submit" data-control-id="S02-05">{drawer === "new" ? "Save borrower" : "Save changes"}</Button>

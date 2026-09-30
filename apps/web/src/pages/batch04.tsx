@@ -151,6 +151,15 @@ export function StaffLoanDetailPage() {
           <Link className="btn btn-secondary" to={`/staff/loans/${id}/sale-receipt`}>Sale proceeds</Link>
         ) : null}
       </div>
+      {loan.contract ? (
+        <p className="hint">
+          Contract {loan.contract.number} v{loan.contract.version} · {loan.contract.status}
+          {loan.contract.signerMethod ? ` · ${loan.contract.signerMethod}` : ""}
+          {loan.contract.signedAt ? ` · ${loan.contract.signedAt.slice(0, 16).replace("T", " ")}` : ""}
+          {" · "}
+          <Link to={`/staff/contracts/${loan.contract.id}`}>View contract</Link>
+        </p>
+      ) : null}
       <table className="data-table">
         <thead><tr><th>#</th><th>Due</th><th>Amount</th><th>Paid</th><th>Status</th></tr></thead>
         <tbody>

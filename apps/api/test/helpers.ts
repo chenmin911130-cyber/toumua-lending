@@ -99,6 +99,8 @@ export async function resetDb(prisma: PrismaService) {
     TRUNCATE TABLE
       "RepaymentReminder",
       "SmsMessage",
+      "LoanContract",
+      "Document",
       "CorrectionRequest",
       "Receipt",
       "LedgerEntry",
@@ -261,6 +263,29 @@ export async function postIdempotent(
     .set("x-csrf-token", token)
     .set("idempotency-key", idempotencyKey)
     .send(body ?? {});
+}
+
+const TEST_SIGNATURE_PNG = `data:image/png;base64,${Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]).toString("base64")}`;
+
+/** Signs the current issued contract in branch so existing disbursement fixtures stay honest. */
+export async function signContractInBranch(agent: Agent, loanId: string) {
+  const loan = await agent.get(`/api/v1/loans/${loanId}`);
+  const contractId = loan.body.contract?.id as string | undefined;
+  const borrowerName = loan.body.borrowerName as string;
+  if (!contractId) throw new Error(`Loan ${loanId} has no contract to sign`);
+  const contract = await agent.get(`/api/v1/contracts/${contractId}`);
+  const signed = await post(agent, `/api/v1/contracts/${contractId}/sign-in-branch`, {
+    typedName: borrowerName,
+    signaturePng: TEST_SIGNATURE_PNG,
+    borrowerPresent: true,
+    contentSha256: contract.body.contentSha256,
+  });
+  if (signed.status !== 200) {
+    throw new Error(`In-branch signature failed (${signed.status}): ${JSON.stringify(signed.body)}`);
+  }
+  return signed;
 }
 
 export async function patch(agent: Agent, url: string, body?: unknown) {

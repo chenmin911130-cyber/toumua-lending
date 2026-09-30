@@ -16,6 +16,7 @@ import { classifyApproval } from "./approval-policy";
 import { activePolicy, buildSchedule, type Frequency } from "./calculation-policy";
 import { sum, toCents } from "./money";
 import { NotificationsService } from "../notifications/notifications.service";
+import { ContractsService } from "../contracts/contracts.service";
 import { NumbersService } from "./numbers.service";
 import { buildReadiness } from "./readiness";
 
@@ -31,6 +32,7 @@ export class DecisionsService {
     @Inject(NumbersService) private readonly numbers: NumbersService,
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(NotificationsService) private readonly notifications: NotificationsService,
+    @Inject(ContractsService) private readonly contracts: ContractsService,
   ) {}
 
   /**
@@ -189,6 +191,8 @@ export class DecisionsService {
         },
         tx,
       );
+
+      await this.contracts.issue(tx, loan.id, user);
 
       return loan;
     });

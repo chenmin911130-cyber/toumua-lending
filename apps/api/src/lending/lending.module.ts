@@ -24,9 +24,10 @@ import { UploadsService } from "./uploads.service";
 import { ValuationsController } from "./valuations.controller";
 import { ValuationsService } from "./valuations.service";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { ContractsModule } from "../contracts/contracts.module";
 
 @Module({
-  imports: [NotificationsModule],
+  imports: [NotificationsModule, ContractsModule],
   controllers: [
     BorrowersController,
     ApplicationsController,

@@ -20,6 +20,10 @@ export class NumbersService {
     return this.next("loan", "LN", client);
   }
 
+  nextContractNumber(client?: Client) {
+    return this.next("contract", "C", client, 4);
+  }
+
   nextReceiptNumber(client?: Client) {
     return this.next("receipt", "RC", client);
   }
@@ -32,7 +36,7 @@ export class NumbersService {
    * concurrent request into a 500. One upsert with an atomic increment avoids
    * that and works both standalone and inside a caller's transaction.
    */
-  private async next(key: string, prefix: string, client: Client = this.prisma): Promise<string> {
+  private async next(key: string, prefix: string, client: Client = this.prisma, width = 5): Promise<string> {
     const rows = await client.$queryRaw<Array<{ value: number }>>(Prisma.sql`
       INSERT INTO "SequenceCounter" ("key", "value")
       VALUES (${key}, 1)
@@ -43,6 +47,6 @@ export class NumbersService {
     if (typeof value !== "number") {
       throw new Error(`Could not allocate a number for sequence ${key}`);
     }
-    return `${prefix}-${String(value).padStart(5, "0")}`;
+    return `${prefix}-${String(value).padStart(width, "0")}`;
   }
 }

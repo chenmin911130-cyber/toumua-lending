@@ -580,6 +580,7 @@ export type CustomerLoanDetail = {
     phoneMasked: string | null;
     daysBefore: number;
   };
+  contract: LoanContractSummary | null;
 };
 
 export type LoanDetail = LoanSummary & {
@@ -590,6 +591,7 @@ export type LoanDetail = LoanSummary & {
   defaultReason?: string | null;
   overdueAmount: string;
   schedule: ScheduleEntryView[];
+  contract: LoanContractSummary | null;
   allowedActions: AllowedAction[];
 };
 
@@ -660,12 +662,66 @@ export type ReadinessCheck = {
   id: string;
   label: string;
   complete: boolean;
+  /** Same value as `complete`. The contract gate is specified with this name. */
+  ok?: boolean;
   detail?: string;
 };
 
 export type DisbursementReadiness = {
   ready: boolean;
   items: ReadinessCheck[];
+};
+
+export type LoanContractSummary = {
+  id: string;
+  loanId: string;
+  number: string;
+  version: number;
+  status: "ISSUED" | "SIGNED" | "VOID";
+  issuedAt: string;
+  signedAt: string | null;
+  signerName: string | null;
+  signerMethod: string | null;
+  contentSha256: string;
+  signedDocId: string | null;
+};
+
+export const signContractSchema = z.object({
+  typedName: z.string().trim().min(1, "Type your full name").max(160),
+  signaturePng: z.string().min(1).max(280_000),
+  consent: z.literal(true, {
+    errorMap: () => ({ message: "Confirm that you have read and agree to the contract" }),
+  }),
+  contentSha256: z.string().regex(/^[a-f0-9]{64}$/i, "Contract fingerprint is missing"),
+});
+
+export type SignContractInput = z.infer<typeof signContractSchema>;
+
+export const signInBranchSchema = z.object({
+  typedName: z.string().trim().min(1, "Type the borrower's full name").max(160),
+  signaturePng: z.string().min(1).max(280_000),
+  borrowerPresent: z.literal(true, {
+    errorMap: () => ({ message: "Confirm the borrower is present" }),
+  }),
+  contentSha256: z.string().regex(/^[a-f0-9]{64}$/i, "Contract fingerprint is missing"),
+});
+
+export type SignInBranchInput = z.infer<typeof signInBranchSchema>;
+
+export const reissueContractSchema = z.object({
+  reason: z.string().trim().min(1, "A reason is required").max(500),
+});
+
+export type ReissueContractInput = z.infer<typeof reissueContractSchema>;
+
+export type DocumentSummary = {
+  id: string;
+  kind: "LOAN_CONTRACT_SIGNED" | "SIGNATURE_IMAGE" | "BORROWER_ID" | "OTHER";
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  sha256: string;
+  createdAt: string;
 };
 
 export type ReceiptView = {

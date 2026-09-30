@@ -69,6 +69,7 @@ import {
 } from "./pages/lending";
 import { StaffStoragePage } from "./pages/storage";
 import { StaffRemindersPage } from "./pages/reminders";
+import { CustomerContractPage, StaffContractPage } from "./pages/contracts";
 import { ActivityLogPage, StaffAccountsPage, StaffHomePage } from "./pages/staff";
 
 export function App() {
@@ -103,6 +104,7 @@ export function App() {
         <Route path="/customer/applications/:id" element={<CustomerApplicationDetailPage />} />
         <Route path="/customer/loans" element={<CustomerLoansListPage />} />
         <Route path="/customer/loans/:loanId" element={<CustomerLoanDetailPage />} />
+        <Route path="/customer/contracts/:id" element={<CustomerContractPage />} />
         <Route path="/customer/loans/:loanId/repayments" element={<CustomerRepaymentsPage />} />
         <Route path="/customer/loans/:loanId/security/:assetId?" element={<CustomerSecurityPage />} />
         <Route path="/customer/receipts/:id" element={<CustomerReceiptPage />} />
@@ -131,6 +133,7 @@ export function App() {
         <Route path="/staff/loans" element={<StaffLoansPage />} />
         <Route path="/staff/reminders" element={<StaffRemindersPage />} />
         <Route path="/staff/loans/:id" element={<StaffLoanDetailPage />} />
+        <Route path="/staff/contracts/:id" element={<StaffContractPage />} />
         <Route path="/staff/loans/:id/disbursement" element={<StaffDisbursementPage />} />
         <Route path="/staff/loans/:id/repayment" element={<StaffRepaymentPage />} />
         <Route path="/staff/loans/:id/default" element={<StaffDefaultPage />} />

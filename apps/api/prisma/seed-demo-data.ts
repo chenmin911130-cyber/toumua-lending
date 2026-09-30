@@ -11,7 +11,7 @@ import { LoansService } from "../src/lending/loans.service";
 import { MoneyService } from "../src/lending/money.service";
 import { UploadsService } from "../src/lending/uploads.service";
 import { ValuationsService } from "../src/lending/valuations.service";
-import { addCalendarDays, aucklandDay } from "../src/common/dates";
+import { ContractsService } from "../src/contracts/contracts.service";
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -66,6 +66,7 @@ async function main() {
   const money = app.get(MoneyService);
   const loans = app.get(LoansService);
   const corrections = app.get(CorrectionsService);
+  const contracts = app.get(ContractsService);
 
   const users = await prisma.user.findMany({ include: { permissions: true } });
   const byEmail = new Map(users.map((user) => [user.email, user]));
@@ -146,7 +147,44 @@ async function main() {
     });
   }
 
-  async function storeAndDisburse(loanId: string, assetId: string, locationCode: string) {
+  const signaturePng = `data:image/png;base64,${PNG.toString("base64")}`;
+
+  async function signForDisbursement(loanId: string, method: "PORTAL" | "IN_BRANCH") {
+    const row = await prisma.loanContract.findFirstOrThrow({
+      where: { loanId, status: "ISSUED" },
+      include: { loan: { include: { borrower: true } } },
+    });
+    const body = {
+      typedName: row.loan.borrower.name,
+      signaturePng,
+      contentSha256: row.contentSha256,
+    };
+    if (method === "PORTAL") {
+      const customer = byEmail.get("sarah.tama@toumua.nz");
+      if (!customer) throw new Error("Missing Sarah portal account");
+      await contracts.signPortal(
+        actor(customer),
+        row.id,
+        { ...body, consent: true },
+        { ip: "127.0.0.1", userAgent: "demo-seed" },
+      );
+      return;
+    }
+    await contracts.signInBranch(
+      staff,
+      row.id,
+      { ...body, borrowerPresent: true },
+      { ip: "127.0.0.1", userAgent: "demo-seed" },
+    );
+  }
+
+  async function storeAndDisburse(
+    loanId: string,
+    assetId: string,
+    locationCode: string,
+    method: "PORTAL" | "IN_BRANCH" = "IN_BRANCH",
+  ) {
+    await signForDisbursement(loanId, method);
     const storageLocationId = locations.get(locationCode);
     if (!storageLocationId) throw new Error(`Missing storage location ${locationCode}`);
     const loan = await prisma.loan.findUniqueOrThrow({ where: { id: loanId } });
@@ -174,7 +212,7 @@ async function main() {
   const sarahDecision = await approve(sarah.id);
   const sarahLoanId = (sarahDecision as { loanId?: string }).loanId;
   if (!sarahLoanId) throw new Error("Sarah loan was not created");
-  await storeAndDisburse(sarahLoanId, sarah.assetId, "SAFE-A-01");
+  await storeAndDisburse(sarahLoanId, sarah.assetId, "SAFE-A-01", "PORTAL");
   const sarahLoan = await loans.get(cashier, sarahLoanId);
   const first = sarahLoan.schedule?.[0];
   const second = sarahLoan.schedule?.[1];

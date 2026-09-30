@@ -158,3 +158,13 @@ const SMS_OUTBOX_ROLES = new Set<string>([
 export function assertReadSmsOutbox(user: PublicUser) {
   assertRole(user, SMS_OUTBOX_ROLES, "a manager, owner or cashier");
 }
+
+/** Replacing an unsigned contract after the terms change is a manager action. */
+export function assertReissueContract(user: PublicUser) {
+  assertRole(user, DECISION_ROLES, "a manager");
+}
+
+/** Soft-deleting a stored document is a manager action. */
+export function assertDeleteDocument(user: PublicUser) {
+  assertRole(user, DECISION_ROLES, "a manager");
+}

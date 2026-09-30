@@ -151,16 +151,19 @@ export class LoansService {
     const loan = await this.loadLoan(loanId);
     const assets = loan.application.assets;
     const stored = assets.filter((asset) => asset.status === AssetStatus.STORED);
+    const signed = loan.contracts[0]?.status === "SIGNED";
     const items = [
       {
         id: "status",
         label: "Loan awaiting disbursement",
         complete: loan.status === LoanStatus.APPROVED_UNFUNDED,
+        ok: loan.status === LoanStatus.APPROVED_UNFUNDED,
       },
       {
         id: "assets",
         label: "All security assets stored",
         complete: assets.length > 0 && stored.length === assets.length,
+        ok: assets.length > 0 && stored.length === assets.length,
         detail:
           assets.length === 0
             ? "No assets on this application"
@@ -170,6 +173,13 @@ export class LoansService {
         id: "not-disbursed",
         label: "No disbursement recorded",
         complete: loan.disbursedAt === null,
+        ok: loan.disbursedAt === null,
+      },
+      {
+        id: "contract_signed",
+        label: "Loan contract signed",
+        complete: signed,
+        ok: signed,
       },
     ];
     return { ready: items.every((item) => item.complete), items };
@@ -183,7 +193,7 @@ export class LoansService {
     const items = await this.prisma.loan.findMany({
       where: {
         borrowerId: link.borrowerId,
-        status: { in: [LoanStatus.ACTIVE, LoanStatus.SETTLED, LoanStatus.DEFAULTED] },
+        status: { in: [LoanStatus.APPROVED_UNFUNDED, LoanStatus.ACTIVE, LoanStatus.SETTLED, LoanStatus.DEFAULTED] },
       },
       orderBy: { updatedAt: "desc" },
       include: {
@@ -208,7 +218,7 @@ export class LoansService {
       where: {
         id,
         borrowerId: link.borrowerId,
-        status: { in: [LoanStatus.ACTIVE, LoanStatus.SETTLED, LoanStatus.DEFAULTED] },
+        status: { in: [LoanStatus.APPROVED_UNFUNDED, LoanStatus.ACTIVE, LoanStatus.SETTLED, LoanStatus.DEFAULTED] },
       },
       include: this.customerLoanInclude(),
     });
@@ -240,6 +250,7 @@ export class LoansService {
         },
       },
       schedule: { orderBy: { number: "asc" as const } },
+      contracts: { orderBy: { version: "desc" as const }, take: 1 },
     };
   }
 
@@ -249,6 +260,7 @@ export class LoansService {
       application: { select: { number: true, assets: true } },
       schedule: { orderBy: { number: "asc" as const } },
       attempts: { select: { id: true, status: true } },
+      contracts: { orderBy: { version: "desc" as const }, take: 1 },
     };
   }
 
@@ -348,6 +360,19 @@ export class LoansService {
         paidAmount: string;
         status: string;
       }>;
+      contracts?: Array<{
+        id: string;
+        loanId: string;
+        number: string;
+        version: number;
+        status: string;
+        issuedAt: Date;
+        signedAt: Date | null;
+        signerName: string | null;
+        signerMethod: string | null;
+        contentSha256: string;
+        signedDocId: string | null;
+      }>;
     },
     receipts: Array<{
       id: string;
@@ -416,6 +441,7 @@ export class LoansService {
           createdAt: receipt.createdAt.toISOString(),
         };
       }),
+      contract: contractSummary(loan.contracts?.[0]),
     };
   }
 
@@ -427,10 +453,12 @@ export class LoansService {
     const overdueAmount = schedule
       .filter((entry) => entry.overdue)
       .reduce((acc, entry) => subtract(acc, `-${entry.outstanding}`), "0.00");
+    const signed = loan.contracts[0]?.status === "SIGNED";
     const canDisburse =
       loan.status === LoanStatus.APPROVED_UNFUNDED &&
       loan.application.assets.every((asset) => asset.status === AssetStatus.STORED) &&
-      loan.application.assets.length > 0;
+      loan.application.assets.length > 0 &&
+      signed;
     const canRepay =
       loan.status === LoanStatus.ACTIVE && summary.balance !== "0.00";
     const canDefault = loan.status === LoanStatus.ACTIVE;
@@ -445,6 +473,7 @@ export class LoansService {
       defaultReason: loan.defaultReason,
       overdueAmount,
       schedule,
+      contract: contractSummary(loan.contracts?.[0]),
       allowedActions: [
         {
           id: "disburse",
@@ -498,4 +527,33 @@ export class LoansService {
       overdue,
     };
   }
+}
+
+function contractSummary(row: {
+  id: string;
+  loanId: string;
+  number: string;
+  version: number;
+  status: string;
+  issuedAt: Date;
+  signedAt: Date | null;
+  signerName: string | null;
+  signerMethod: string | null;
+  contentSha256: string;
+  signedDocId: string | null;
+} | undefined) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    loanId: row.loanId,
+    number: row.number,
+    version: row.version,
+    status: row.status as "ISSUED" | "SIGNED" | "VOID",
+    issuedAt: row.issuedAt.toISOString(),
+    signedAt: row.signedAt?.toISOString() ?? null,
+    signerName: row.signerName,
+    signerMethod: row.signerMethod,
+    contentSha256: row.contentSha256,
+    signedDocId: row.signedDocId,
+  };
 }

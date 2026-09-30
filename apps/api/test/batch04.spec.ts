@@ -11,6 +11,7 @@ import {
   seedLoanOfficer,
   seedManager,
   seedValuationOfficer,
+  signContractInBranch,
   startApp,
 } from "./helpers";
 import { PrismaService } from "../src/prisma/prisma.service";
@@ -179,11 +180,12 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
     expect(intake.body.status).toBe("STORED");
 
     const cashier = await login("cashier@example.com", "Cashier12345");
-    const forDisburse = await cashier.get(`/api/v1/loans/${loanId}`);
+    await signContractInBranch(staff, loanId);
+    const afterSign = await cashier.get(`/api/v1/loans/${loanId}`);
     const disbursed = await postIdempotent(
       cashier,
       `/api/v1/loans/${loanId}/disbursements`,
-      { expectedVersion: forDisburse.body.version, businessDate: "2026-09-18", method: "CASH" },
+      { expectedVersion: afterSign.body.version, businessDate: "2026-09-18", method: "CASH" },
       `disburse-${loanId}`,
     );
     expect(disbursed.status).toBe(201);
@@ -219,6 +221,7 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
     expect(intake.status).toBe(201);
     expect(intake.body.status).toBe("STORED");
 
+    await signContractInBranch(staff, loanId);
     const readiness = await staff.get(`/api/v1/loans/${loanId}/disbursement-readiness`);
     expect(readiness.body.ready).toBe(true);
 

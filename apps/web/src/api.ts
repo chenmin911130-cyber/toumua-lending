@@ -119,6 +119,23 @@ export async function uploadFile<T>(path: string, file: File): Promise<T> {
   return data;
 }
 
+export async function downloadFile(path: string, filename: string) {
+  const response = await fetch(`/api/v1${path}`, { credentials: "include" });
+  if (!response.ok) {
+    throw new ApiError(
+      { code: "ERROR", message: "Could not download the document", requestId: "" },
+      response.status,
+    );
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export type ContactResponse = {
   phone: string | null;
   email: string | null;

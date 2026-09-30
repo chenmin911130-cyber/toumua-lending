@@ -76,6 +76,11 @@ export function CustomerLoanDetailPage() {
         <p className="error">Overdue amount: ${loan.overdueAmount}</p>
       ) : null}
       {loan.defaultReason ? <p className="hint">Default note: {loan.defaultReason}</p> : null}
+      {loan.contract?.status === "ISSUED" ? (
+        <p>
+          <Link to={`/customer/contracts/${loan.contract.id}`}>Your loan contract is ready to sign</Link>
+        </p>
+      ) : null}
       {loan.reminders.enabled && loan.reminders.phoneMasked ? (
         <p>
           Reminders: SMS to {loan.reminders.phoneMasked}, {loan.reminders.daysBefore} days before each due date

@@ -11,6 +11,7 @@ import {
   seedLoanOfficer,
   seedManager,
   seedValuationOfficer,
+  signContractInBranch,
   startApp,
 } from "./helpers";
 import { PrismaService } from "../src/prisma/prisma.service";
@@ -148,6 +149,7 @@ describe("BATCH 05 default, return, sale, corrections", () => {
       location: "Vault A",
     });
     const cashier = await login("cashier@example.com", "Cashier12345");
+    await signContractInBranch(staff, loanId);
     const forDisburse = await cashier.get(`/api/v1/loans/${loanId}`);
     await postIdempotent(
       cashier,
