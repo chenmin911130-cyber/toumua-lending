@@ -13,6 +13,7 @@ import { UploadsService } from "../src/lending/uploads.service";
 import { ValuationsService } from "../src/lending/valuations.service";
 import { ContractsService } from "../src/contracts/contracts.service";
 import { ArrangementsService } from "../src/arrangements/arrangements.service";
+import { RemindersService } from "../src/reminders/reminders.service";
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -285,7 +286,17 @@ async function main() {
   // today−21 → the first two weekly installments are already past due.
   await valueAndSubmit(sione.id, "2800.00", -21);
   const sioneDecision = await approve(sione.id);
-  if (sioneDecision.loanId) await storeAndDisburse(sioneDecision.loanId, sione.assetId, "CAB-B-01");
+  if (sioneDecision.loanId) {
+    await storeAndDisburse(sioneDecision.loanId, sione.assetId, "CAB-B-01");
+    const relocated = await prisma.loan.findUniqueOrThrow({ where: { id: sioneDecision.loanId } });
+    const offsiteId = locations.get("OFF-01");
+    if (!offsiteId) throw new Error("Missing storage location OFF-01");
+    await custody.updateCustody(valuer, sione.assetId, {
+      expectedVersion: relocated.version,
+      storageLocationId: offsiteId,
+      reason: "Moved to the partner off-site store",
+    });
+  }
 
   const lisa = await openFile("lisa.wong@toumua.nz", "1200.00", "Personal");
   await valueAndSubmit(lisa.id, "2000.00", -40);
@@ -334,6 +345,8 @@ async function main() {
   const peter = await openFile("peter.ioane@toumua.nz", "1100.00", "Personal");
   await valueAndSubmit(peter.id, "2500.00");
   await approve(peter.id);
+
+  await app.get(RemindersService).runDue();
 
   console.log("Demo applications seeded");
   await app.close();

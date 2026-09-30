@@ -30,6 +30,22 @@ const HELP_FAQS = [
       ? "Sign in to apply or to check the progress of an application you have already submitted."
       : "Sign in to check the progress of an application a loan officer has already recorded for you.",
   },
+  {
+    q: "How do repayment reminders work?",
+    a: "A text goes out three days before a repayment, on the due date, and when a repayment is overdue. The office keeps that text in the reminder outbox, and the same reminder appears when you sign in.",
+  },
+  {
+    q: "How do I sign my contract online?",
+    a: "After a manager approves the loan, the contract is frozen. Sign it in your account before the cashier can release the funds. Signing records your name, the time, and the signature.",
+  },
+  {
+    q: "Can I pay automatically?",
+    a: "Yes, if you agree. Staff record a bank account you consent to, and that arrangement collects each repayment once. This office system does not call a bank.",
+  },
+  {
+    q: "Do returning borrowers get a discount?",
+    a: "A borrower with 1 or 2 settled loans is a Returning customer and the next approval takes 2.00% p.a. off. A borrower with 3 or more settled loans is a Loyal customer and the next approval takes 4.00% p.a. off. The discount is saved on that loan at approval. Demo rates, subject to confirmation.",
+  },
 ] as const;
 
 const STEPS = [

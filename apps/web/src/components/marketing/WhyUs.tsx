@@ -19,6 +19,26 @@ export function WhyUs() {
             We believe finance should be simple, fair and human. Our team is here to support your
             goals, not just process your application.
           </p>
+          <ul className="mt-8 max-w-[520px] space-y-5">
+            <li>
+              <p className="text-[16px] font-semibold text-text">Text reminders before every repayment</p>
+              <p className="mt-1 text-[15px] leading-relaxed text-text-secondary">
+                A short text before the due date, on the day, and if a payment is late.
+              </p>
+            </li>
+            <li>
+              <p className="text-[16px] font-semibold text-text">Sign your loan contract online</p>
+              <p className="mt-1 text-[15px] leading-relaxed text-text-secondary">
+                The approved terms stay fixed. You sign before the funds are released.
+              </p>
+            </li>
+            <li>
+              <p className="text-[16px] font-semibold text-text">Set up automatic repayments</p>
+              <p className="mt-1 text-[15px] leading-relaxed text-text-secondary">
+                With your consent, each repayment can be collected for you.
+              </p>
+            </li>
+          </ul>
           <Link
             to="/about"
             className="mt-8 inline-flex h-11 items-center gap-1 rounded-full border border-border bg-white px-5 text-[15px] font-semibold text-text no-underline transition-all hover:-translate-y-px"
