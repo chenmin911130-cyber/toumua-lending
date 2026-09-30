@@ -68,6 +68,7 @@ import {
   ValuationPage,
 } from "./pages/lending";
 import { StaffStoragePage } from "./pages/storage";
+import { StaffRemindersPage } from "./pages/reminders";
 import { ActivityLogPage, StaffAccountsPage, StaffHomePage } from "./pages/staff";
 
 export function App() {
@@ -128,6 +129,7 @@ export function App() {
         <Route path="/staff/collateral/:id/return" element={<StaffReturnPage />} />
         <Route path="/staff/collateral/:id/sale" element={<StaffSalePage />} />
         <Route path="/staff/loans" element={<StaffLoansPage />} />
+        <Route path="/staff/reminders" element={<StaffRemindersPage />} />
         <Route path="/staff/loans/:id" element={<StaffLoanDetailPage />} />
         <Route path="/staff/loans/:id/disbursement" element={<StaffDisbursementPage />} />
         <Route path="/staff/loans/:id/repayment" element={<StaffRepaymentPage />} />

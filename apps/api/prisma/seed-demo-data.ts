@@ -11,6 +11,7 @@ import { LoansService } from "../src/lending/loans.service";
 import { MoneyService } from "../src/lending/money.service";
 import { UploadsService } from "../src/lending/uploads.service";
 import { ValuationsService } from "../src/lending/valuations.service";
+import { addCalendarDays, aucklandDay } from "../src/common/dates";
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -23,9 +24,39 @@ const DEMO_LOCATIONS = [
 ];
 
 function day(offset: number) {
-  const date = new Date();
-  date.setUTCDate(date.getUTCDate() + offset);
-  return date.toISOString().slice(0, 10);
+  return addCalendarDays(aucklandDay(), offset);
+}
+
+/**
+ * Existing demo databases return before loans are rebuilt. Pending installments
+ * for the reminder walkthrough are moved onto Auckland days without inserting
+ * rows, so running the seed again leaves the same schedule.
+ */
+async function alignReminderDates(prisma: PrismaService) {
+  const plans: Array<{ email: string; offsets: number[] }> = [
+    { email: "david.chen@toumua.nz", offsets: [0, 10, 17, 24] },
+    { email: "sione.tapu@toumua.nz", offsets: [-28, -21, -14, -7] },
+    { email: "sarah.tama@toumua.nz", offsets: [0, 10, 17, 24] },
+  ];
+  const today = aucklandDay();
+  for (const plan of plans) {
+    const borrower = await prisma.borrower.findFirst({ where: { email: plan.email } });
+    if (!borrower) continue;
+    const loans = await prisma.loan.findMany({
+      where: { borrowerId: borrower.id, status: "ACTIVE" },
+      include: { schedule: { where: { status: "PENDING" }, orderBy: { number: "asc" } } },
+    });
+    for (const loan of loans) {
+      for (let index = 0; index < loan.schedule.length; index += 1) {
+        const offset =
+          plan.offsets[index] ?? plan.offsets[plan.offsets.length - 1]! + 7 * (index - plan.offsets.length + 1);
+        const dueDate = new Date(`${addCalendarDays(today, offset)}T00:00:00.000Z`);
+        const entry = loan.schedule[index]!;
+        if (entry.dueDate.getTime() === dueDate.getTime()) continue;
+        await prisma.scheduleEntry.update({ where: { id: entry.id }, data: { dueDate } });
+      }
+    }
+  }
 }
 
 function actor(user: { id: string; name: string; email: string; role: string | null; status: string; emailVerifiedAt: Date | null; permissions?: { permission: string }[] }): AuthUser {
@@ -54,6 +85,7 @@ async function main() {
 
   const existing = await prisma.application.count({ where: { number: { startsWith: "DEMO-" } } });
   if (existing > 0) {
+    await alignReminderDates(prisma);
     console.log("Demo data already present");
     await app.close();
     return;
@@ -168,7 +200,7 @@ async function main() {
   }
 
   const sarah = await openFile("sarah.tama@toumua.nz", "2400.00", "Home repairs");
-  await valueAndSubmit(sarah.id, "4000.00");
+  await valueAndSubmit(sarah.id, "4000.00", -21);
   const sarahDecision = await approve(sarah.id);
   const sarahLoanId = (sarahDecision as { loanId?: string }).loanId;
   if (!sarahLoanId) throw new Error("Sarah loan was not created");
@@ -279,6 +311,7 @@ async function main() {
   await valueAndSubmit(peter.id, "2500.00");
   await approve(peter.id);
 
+  await alignReminderDates(prisma);
   console.log("Demo applications seeded");
   await app.close();
 }

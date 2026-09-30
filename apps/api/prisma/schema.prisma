@@ -282,6 +282,7 @@ model Borrower {
   phone       String
   address     String
   notes       String?
+  smsOptIn    Boolean  @default(true)
   createdById String?
   createdBy   User?    @relation("BorrowerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
@@ -290,6 +291,7 @@ model Borrower {
   applications Application[]
   accountLinks BorrowerAccountLink[]
   loans        Loan[]
+  smsMessages  SmsMessage[]
 
   @@index([name])
   @@index([phone])
@@ -391,6 +393,7 @@ model Loan {
   receipts Receipt[]
   attempts PaymentAttempt[]
   custody  CustodyEvent[]
+  smsMessages SmsMessage[]
 
   @@index([status, updatedAt])
   @@index([borrowerId])
@@ -408,6 +411,8 @@ model ScheduleEntry {
   status     ScheduleEntryStatus @default(PENDING)
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
+
+  reminders RepaymentReminder[]
 
   @@unique([loanId, number])
   @@index([loanId, dueDate])
@@ -612,4 +617,50 @@ model Valuation {
   @@unique([assetId])
   @@index([applicationId])
   @@index([status])
+}
+
+enum SmsStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum ReminderKind {
+  DUE_SOON
+  DUE_TODAY
+  OVERDUE
+}
+
+model SmsMessage {
+  id          String    @id @default(cuid())
+  toPhone     String
+  body        String
+  status      SmsStatus @default(QUEUED)
+  driver      String
+  providerRef String?
+  error       String?
+  borrowerId  String?
+  borrower    Borrower? @relation(fields: [borrowerId], references: [id], onDelete: SetNull)
+  loanId      String?
+  loan        Loan?     @relation(fields: [loanId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+
+  reminder RepaymentReminder?
+
+  @@index([createdAt])
+  @@index([borrowerId])
+}
+
+/// One row of each kind per installment. The unique key is the idempotency lock.
+model RepaymentReminder {
+  id              String         @id @default(cuid())
+  scheduleEntryId String
+  scheduleEntry   ScheduleEntry @relation(fields: [scheduleEntryId], references: [id], onDelete: Cascade)
+  kind            ReminderKind
+  smsMessageId    String?        @unique
+  smsMessage      SmsMessage?    @relation(fields: [smsMessageId], references: [id], onDelete: SetNull)
+  createdAt       DateTime       @default(now())
+
+  @@unique([scheduleEntryId, kind])
 }

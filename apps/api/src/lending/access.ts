@@ -140,3 +140,21 @@ export function assertReadLedger(user: PublicUser) {
   if (user.role && LEDGER_READ_ROLES.has(user.role)) return;
   throw forbidden();
 }
+
+const RUN_REMINDER_ROLES = new Set<string>([BusinessRole.MANAGER]);
+
+/** Starting the reminder job by hand is a manager action. The morning cron has no actor. */
+export function assertRunReminders(user: PublicUser) {
+  assertRole(user, RUN_REMINDER_ROLES, "a manager");
+}
+
+const SMS_OUTBOX_ROLES = new Set<string>([
+  BusinessRole.MANAGER,
+  BusinessRole.OWNER,
+  BusinessRole.CASHIER,
+]);
+
+/** Outbox rows include a masked phone only. Raw numbers stay on the borrower record. */
+export function assertReadSmsOutbox(user: PublicUser) {
+  assertRole(user, SMS_OUTBOX_ROLES, "a manager, owner or cashier");
+}

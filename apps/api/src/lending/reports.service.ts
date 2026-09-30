@@ -1,21 +1,13 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "../generated/prisma";
 import { PrismaService } from "../prisma/prisma.service";
+import { aucklandDay } from "../common/dates";
 import { fromCents, toCents } from "./money";
 
 function moneyText(raw: string | null | undefined): string {
   const trimmed = (raw ?? "0").trim();
   if (!trimmed || trimmed === "0") return "0.00";
   return fromCents(toCents(trimmed));
-}
-
-function aucklandDay(date = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Pacific/Auckland",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
 }
 
 @Injectable()

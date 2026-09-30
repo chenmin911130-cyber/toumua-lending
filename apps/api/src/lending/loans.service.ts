@@ -25,6 +25,8 @@ import {
 } from "./calculation-policy";
 import { NotificationsService } from "../notifications/notifications.service";
 import { subtract, sum } from "./money";
+import { reminderDaysBefore } from "../common/dates";
+import { maskSmsPhone } from "../sms/phone";
 
 @Injectable()
 export class LoansService {
@@ -220,7 +222,7 @@ export class LoansService {
 
   private customerLoanInclude() {
     return {
-      borrower: { select: { name: true } },
+      borrower: { select: { name: true, phone: true, smsOptIn: true } },
       application: {
         select: {
           number: true,
@@ -323,7 +325,7 @@ export class LoansService {
       settledAt: Date | null;
       defaultedAt: Date | null;
       defaultReason?: string | null;
-      borrower?: { name: string } | null;
+      borrower?: { name: string; phone: string; smsOptIn: boolean } | null;
       application?: {
         number: string;
         assets: Array<{
@@ -398,6 +400,11 @@ export class LoansService {
       nextDueDate: summary.nextDueDate,
       schedule,
       assets,
+      reminders: {
+        enabled: loan.borrower?.smsOptIn ?? false,
+        phoneMasked: loan.borrower?.phone ? maskSmsPhone(loan.borrower.phone) : null,
+        daysBefore: reminderDaysBefore(),
+      },
       receipts: receipts.map((receipt) => {
         const summaryJson = (receipt.summary ?? {}) as Record<string, unknown>;
         return {

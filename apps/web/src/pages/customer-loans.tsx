@@ -76,6 +76,11 @@ export function CustomerLoanDetailPage() {
         <p className="error">Overdue amount: ${loan.overdueAmount}</p>
       ) : null}
       {loan.defaultReason ? <p className="hint">Default note: {loan.defaultReason}</p> : null}
+      {loan.reminders.enabled && loan.reminders.phoneMasked ? (
+        <p>
+          Reminders: SMS to {loan.reminders.phoneMasked}, {loan.reminders.daysBefore} days before each due date
+        </p>
+      ) : null}
       <div className="hero-actions" style={{ marginTop: 24 }}>
         <Link className="btn btn-primary" to={`/customer/loans/${loanId}/repayments`} data-control-id="C03-02">
           View repayment schedule

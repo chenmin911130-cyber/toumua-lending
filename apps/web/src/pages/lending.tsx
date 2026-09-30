@@ -38,6 +38,7 @@ export function BorrowersPage() {
   const [address, setAddress] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
+  const [smsOptIn, setSmsOptIn] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const navigate = useNavigate();
 
@@ -59,6 +60,7 @@ export function BorrowersPage() {
     setAddress("");
     setEmail("");
     setNotes("");
+    setSmsOptIn(true);
     setError(null);
   }
 
@@ -69,6 +71,7 @@ export function BorrowersPage() {
     setAddress(row.address);
     setEmail(row.email ?? "");
     setNotes(row.notes ?? "");
+    setSmsOptIn(row.smsOptIn);
     setError(null);
     void api<BorrowerDetail>(`/borrowers/${row.id}`).then(setDetail);
   }
@@ -79,7 +82,7 @@ export function BorrowersPage() {
     const drawerId = drawer === "new" ? null : drawer.id;
     setError(null);
     try {
-      const body = { name, phone, address, email, notes };
+      const body = { name, phone, address, email, notes, smsOptIn };
       const saved = drawerId
         ? await api<BorrowerDetail>(`/borrowers/${drawerId}`, {
             method: "PATCH",
@@ -155,6 +158,14 @@ export function BorrowersPage() {
           <Field label="Notes">
             <textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
           </Field>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={smsOptIn}
+              onChange={(event) => setSmsOptIn(event.target.checked)}
+            />
+            Send SMS repayment reminders
+          </label>
           {error ? <p className="error">{errorMessage(error, "Could not save borrower")}</p> : null}
           <div className="hero-actions">
             <Button type="submit" data-control-id="S02-05">{drawer === "new" ? "Save borrower" : "Save changes"}</Button>

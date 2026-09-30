@@ -14,7 +14,10 @@ import { SearchController } from "./search/search.controller";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { PublicController } from "./public/public.controller";
 import { BootstrapService } from "./bootstrap/bootstrap.service";
+import { ScheduleModule } from "@nestjs/schedule";
 import { LendingModule } from "./lending/lending.module";
+import { RemindersModule } from "./reminders/reminders.module";
+import { SmsModule } from "./sms/sms.module";
 
 /**
  * Tests run against a throwaway cluster whose configuration arrives entirely
@@ -33,11 +36,14 @@ const isolateFromEnvFile =
       ignoreEnvFile: isolateFromEnvFile,
       envFilePath: ["../../.env", ".env"],
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     StaffModule,
     LendingModule,
     NotificationsModule,
+    SmsModule,
+    RemindersModule,
   ],
   controllers: [
     AuditController,

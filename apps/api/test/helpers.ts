@@ -97,6 +97,8 @@ export async function resetDb(prisma: PrismaService) {
   // CASCADE truncate keeps test resets reliable as the schema grows.
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
+      "RepaymentReminder",
+      "SmsMessage",
       "CorrectionRequest",
       "Receipt",
       "LedgerEntry",

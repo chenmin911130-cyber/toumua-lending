@@ -41,7 +41,27 @@ export const saveBorrowerSchema = z.object({
   phone: z.string().trim().min(1, "Phone is required").max(40),
   address: z.string().trim().min(1, "Address is required").max(500),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  smsOptIn: z.boolean().optional(),
 });
+
+export const runRemindersSchema = z.object({
+  asOf: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a date as YYYY-MM-DD")
+    .optional(),
+});
+
+export type RunRemindersInput = z.infer<typeof runRemindersSchema>;
+
+export type SmsOutboxItem = {
+  id: string;
+  createdAt: string;
+  phoneMasked: string;
+  borrowerName: string | null;
+  body: string;
+  status: "QUEUED" | "SENT" | "FAILED" | "SKIPPED";
+  loanId: string | null;
+};
 
 export type SaveBorrowerInput = z.infer<typeof saveBorrowerSchema>;
 
@@ -128,6 +148,7 @@ export type BorrowerSummary = {
   phone: string;
   address: string;
   notes: string | null;
+  smsOptIn: boolean;
   createdAt: string;
   updatedAt: string;
   linkedUserId?: string | null;
@@ -554,6 +575,11 @@ export type CustomerLoanDetail = {
   schedule: ScheduleEntryView[];
   assets: CustomerAssetView[];
   receipts: CustomerReceiptSummary[];
+  reminders: {
+    enabled: boolean;
+    phoneMasked: string | null;
+    daysBefore: number;
+  };
 };
 
 export type LoanDetail = LoanSummary & {

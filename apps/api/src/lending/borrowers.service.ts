@@ -100,6 +100,7 @@ export class BorrowersService {
         phone: input.phone.trim(),
         address: input.address.trim(),
         notes: input.notes?.trim() || null,
+        smsOptIn: input.smsOptIn ?? true,
         createdById: user.id,
       },
     });
@@ -126,6 +127,7 @@ export class BorrowersService {
         phone: input.phone.trim(),
         address: input.address.trim(),
         notes: input.notes?.trim() || null,
+        ...(input.smsOptIn === undefined ? {} : { smsOptIn: input.smsOptIn }),
       },
     });
     await this.audit.write({
@@ -242,6 +244,7 @@ export class BorrowersService {
       phone: string;
       address: string;
       notes: string | null;
+      smsOptIn: boolean;
       createdAt: Date;
       updatedAt: Date;
       accountLinks?: { userId: string }[];
@@ -256,6 +259,7 @@ export class BorrowersService {
       phone: row.phone,
       address: row.address,
       notes: row.notes,
+      smsOptIn: row.smsOptIn,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
       linkedUserId: row.accountLinks?.[0]?.userId ?? null,

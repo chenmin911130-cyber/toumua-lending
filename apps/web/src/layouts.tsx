@@ -280,6 +280,12 @@ export function StaffLayout({ children }: { children?: ReactNode }) {
             ) {
               links.push({ to: "/staff/storage", label: "Storage" });
             }
+            if (
+              item.to === "/staff/loans" &&
+              (user.role === "MANAGER" || user.role === "OWNER" || user.role === "CASHIER")
+            ) {
+              links.push({ to: "/staff/reminders", label: "Reminders" });
+            }
             return links;
           }).map((item) => (
             <NavLink
