@@ -5,6 +5,7 @@ import { mailUnavailable } from "../common/http";
 
 /** True when a message can leave this process. Loopback SMTP and a missing host cannot. */
 export function mailIsDeliverable(): boolean {
+  if (process.env.DEMO_IN_APP_EMAIL_VERIFY === "1") return false;
   const driver = process.env.MAIL_DRIVER ?? "smtp";
   if (driver === "memory") return true;
   if (driver !== "smtp") return false;
