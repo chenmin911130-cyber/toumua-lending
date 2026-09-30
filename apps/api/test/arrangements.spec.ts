@@ -17,6 +17,7 @@ import {
 import { PrismaService } from "../src/prisma/prisma.service";
 import { AuthService } from "../src/auth/auth.service";
 import { CollectionsService } from "../src/arrangements/collections.service";
+import { addCalendarDays, aucklandDay, reminderDaysBefore } from "../src/common/dates";
 
 const PNG_HEADER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const ACCOUNT = "12-3456-1234567-012";
@@ -405,7 +406,17 @@ describe("repayment arrangements and collections", () => {
     const requested = await post(staff, `/api/v1/loans/${loanId}/arrangements`, requestBody);
     await post(cashier, `/api/v1/arrangements/${requested.body.id}/activate`);
     const manager = await login("manager@example.com", "Manager12345");
-    const run = await post(manager, "/api/v1/reminders/run", { asOf: "2026-10-29" });
+    const today = aucklandDay();
+    const due = addCalendarDays(today, reminderDaysBefore());
+    const entry = await prisma.scheduleEntry.findFirstOrThrow({
+      where: { loanId },
+      orderBy: { number: "asc" },
+    });
+    await prisma.scheduleEntry.update({
+      where: { id: entry.id },
+      data: { dueDate: new Date(`${due}T00:00:00.000Z`) },
+    });
+    const run = await post(manager, "/api/v1/reminders/run", { asOf: today });
     expect(run.status).toBe(200);
     const reminder = await prisma.repaymentReminder.findFirstOrThrow({
       where: { kind: "DUE_SOON" },
