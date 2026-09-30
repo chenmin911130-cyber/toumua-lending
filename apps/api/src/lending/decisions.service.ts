@@ -13,7 +13,7 @@ import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { assertDecideApplication, assertReviewDecision, isManager } from "./access";
 import { classifyApproval } from "./approval-policy";
-import { activePolicy, buildSchedule, type Frequency } from "./calculation-policy";
+import { activePolicy, buildSchedule, DEMO_POLICY, demoAnnualRateBps, type Frequency } from "./calculation-policy";
 import { sum, toCents } from "./money";
 import { NotificationsService } from "../notifications/notifications.service";
 import { ContractsService } from "../contracts/contracts.service";
@@ -169,6 +169,7 @@ export class DecisionsService {
           interestMethod: terms.interestMethod ?? null,
           policy,
           policyConfigured: true,
+          annualRateBps: policy === DEMO_POLICY ? demoAnnualRateBps() : 0,
           schedule: {
             create: schedule.map((entry) => ({
               number: entry.number,

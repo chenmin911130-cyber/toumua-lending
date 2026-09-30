@@ -723,6 +723,7 @@ export type SignInBranchInput = z.infer<typeof signInBranchSchema>;
 
 export const reissueContractSchema = z.object({
   reason: z.string().trim().min(1, "A reason is required").max(500),
+  contractId: z.string().min(1).optional(),
 });
 
 export type ReissueContractInput = z.infer<typeof reissueContractSchema>;

@@ -64,8 +64,8 @@ export class ContractsController {
   reissue(
     @CurrentUser() user: AuthUser,
     @Param("loanId") loanId: string,
-    @Body(new ZodValidationPipe(reissueContractSchema)) body: { reason: string },
+    @Body(new ZodValidationPipe(reissueContractSchema)) body: { reason: string; contractId?: string },
   ) {
-    return this.contracts.reissue(user, loanId, body.reason);
+    return this.contracts.reissue(user, loanId, body.reason, body.contractId);
   }
 }

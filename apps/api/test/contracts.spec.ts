@@ -2,7 +2,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { INestApplication } from "@nestjs/common";
-import { escapeHtml, renderContract } from "../src/contracts/contract-template";
+import { escapeHtml, renderContract, sha256Text } from "../src/contracts/contract-template";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { AuthService } from "../src/auth/auth.service";
 import {
@@ -163,6 +163,14 @@ describe("digital contracts and documents", () => {
       expect(contract.bodyHtml).toContain(dueLabel(entry.dueDate));
     }
     expect(contract.contentSha256).toHaveLength(64);
+    expect(contract.bodyHtml).toContain("0.00%");
+    expect(sha256Text(contract.bodyHtml)).toBe(contract.contentSha256);
+    const loan = await prisma.loan.findUniqueOrThrow({ where: { id: loanId } });
+    await prisma.borrower.update({ where: { id: loan.borrowerId }, data: { name: "Changed Name" } });
+    await prisma.loan.update({ where: { id: loanId }, data: { principal: "1.00" } });
+    const frozen = await prisma.loanContract.findFirstOrThrow({ where: { loanId } });
+    expect(frozen.bodyHtml).toBe(contract.bodyHtml);
+    expect(frozen.contentSha256).toBe(contract.contentSha256);
   });
 
   it("escapes borrower text before it is placed in the contract", () => {
@@ -459,5 +467,57 @@ describe("digital contracts and documents", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.version).toBe(1);
     expect(rows[0]?.status).toBe("ISSUED");
+  });
+
+  it("signs the name frozen at issue after the borrower is renamed", async () => {
+    const { loanId, borrowerId, staff } = await approveLoan();
+    const contract = await prisma.loanContract.findFirstOrThrow({ where: { loanId } });
+    await prisma.borrower.update({ where: { id: borrowerId }, data: { name: "Renamed Person" } });
+    const renamed = await post(staff, `/api/v1/contracts/${contract.id}/sign-in-branch`, {
+      typedName: "Renamed Person",
+      signaturePng: SIGNATURE,
+      borrowerPresent: true,
+      contentSha256: contract.contentSha256,
+    });
+    expect(renamed.status).toBe(422);
+    const original = await post(staff, `/api/v1/contracts/${contract.id}/sign-in-branch`, {
+      typedName: "Alex Borrower",
+      signaturePng: SIGNATURE,
+      borrowerPresent: true,
+      contentSha256: contract.contentSha256,
+    });
+    expect(original.status).toBe(200);
+  });
+
+  it("refuses in-branch signing by a cashier or valuation officer", async () => {
+    const { loanId } = await approveLoan();
+    const contract = await prisma.loanContract.findFirstOrThrow({ where: { loanId } });
+    const body = {
+      typedName: "Alex Borrower",
+      signaturePng: SIGNATURE,
+      borrowerPresent: true,
+      contentSha256: contract.contentSha256,
+    };
+    const cashier = await login("cashier@example.com", "Cashier12345");
+    const valuer = await login("val@example.com", "Valuation12");
+    expect((await post(cashier, `/api/v1/contracts/${contract.id}/sign-in-branch`, body)).status).toBe(403);
+    expect((await post(valuer, `/api/v1/contracts/${contract.id}/sign-in-branch`, body)).status).toBe(403);
+  });
+
+  it("refuses to sign a void contract", async () => {
+    const { loanId, manager, staff } = await approveLoan();
+    const first = await prisma.loanContract.findFirstOrThrow({ where: { loanId } });
+    const reissued = await post(manager, `/api/v1/loans/${loanId}/contract/reissue`, {
+      reason: "Reprint before signing",
+      contractId: first.id,
+    });
+    expect(reissued.status).toBe(200);
+    const signed = await post(staff, `/api/v1/contracts/${first.id}/sign-in-branch`, {
+      typedName: "Alex Borrower",
+      signaturePng: SIGNATURE,
+      borrowerPresent: true,
+      contentSha256: first.contentSha256,
+    });
+    expect(signed.status).toBe(409);
   });
 });

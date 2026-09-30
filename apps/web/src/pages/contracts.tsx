@@ -238,7 +238,7 @@ export function StaffContractPage() {
     try {
       const next = await api<LoanContractSummary>(`/loans/${contract.loanId}/contract/reissue`, {
         method: "POST",
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({ reason, contractId: contract.id }),
       });
       window.location.assign(`/staff/contracts/${next.id}`);
     } catch (caught) {

@@ -7,7 +7,7 @@ import { conflict, notFound, validation } from "../common/http";
 import { PrismaService } from "../prisma/prisma.service";
 import { DocumentsService, sniffDocument } from "../documents/documents.service";
 import { assertManageLending, assertReissueContract, assertReadLedger } from "../lending/access";
-import { demoAnnualRateBps } from "../lending/calculation-policy";
+import { activePolicy, DEMO_POLICY, demoAnnualRateBps } from "../lending/calculation-policy";
 import { NumbersService } from "../lending/numbers.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { renderContract, renderSignedContract, sha256Text } from "./contract-template";
@@ -52,14 +52,15 @@ export class ContractsService {
     });
     const number = await this.numbers.nextContractNumber(tx);
     const issuedAt = new Date();
+    const borrowerName = loan.borrower.name;
     const bodyHtml = renderContract({
       number,
       issuedAt,
-      borrowerName: loan.borrower.name,
+      borrowerName,
       borrowerNumber: loan.borrower.number,
       borrowerAddress: loan.borrower.address,
       principal: loan.principal,
-      annualRateBps: demoAnnualRateBps(),
+      annualRateBps: loan.annualRateBps ?? (activePolicy() === DEMO_POLICY ? demoAnnualRateBps() : 0),
       frequency: loan.frequency,
       periods: loan.periods,
       schedule: loan.schedule.map((entry) => ({
@@ -82,6 +83,7 @@ export class ContractsService {
         status: "ISSUED",
         bodyHtml,
         contentSha256,
+        borrowerName,
         issuedAt,
       },
     });
@@ -180,17 +182,12 @@ export class ContractsService {
     });
   }
 
-  async reissue(user: AuthUser, loanId: string, reason: string) {
+  async reissue(user: AuthUser, loanId: string, reason: string, contractId?: string) {
     assertReissueContract(user);
-    const seen = await this.prisma.loanContract.findFirst({
-      where: { loanId },
-      orderBy: { version: "desc" },
-      select: { id: true },
-    });
     try {
       const created = await this.prisma.$transaction(async (tx) => {
-        // Serialise first-time issue. The unique (loanId, version) index is the backstop.
-        await tx.$queryRaw`SELECT id FROM "Loan" WHERE id = ${loanId} FOR UPDATE`;
+        // NO KEY UPDATE serialises two issues without blocking the key share a signature's document insert takes on the loan.
+        await tx.$queryRaw`SELECT id FROM "Loan" WHERE id = ${loanId} FOR NO KEY UPDATE`;
         const loan = await tx.loan.findUnique({ where: { id: loanId }, select: { id: true, status: true } });
         if (!loan) throw notFound("Loan not found");
         if (loan.status !== "APPROVED_UNFUNDED") {
@@ -201,9 +198,10 @@ export class ContractsService {
           orderBy: { version: "desc" },
         });
         if (!current) {
+          if (contractId) throw conflict("A contract was already issued");
           return this.issue(tx, loanId, user, 1, reason);
         }
-        if (!seen || seen.id !== current.id) {
+        if (!contractId || contractId !== current.id) {
           throw conflict("A contract was already issued");
         }
         await tx.$queryRaw`SELECT id FROM "LoanContract" WHERE id = ${current.id} FOR UPDATE`;
@@ -264,7 +262,8 @@ export class ContractsService {
       if (contract.contentSha256.toLowerCase() !== input.contentSha256.toLowerCase()) {
         throw conflict("This contract has changed. Reload and review it again.");
       }
-      if (input.typedName.trim().toLowerCase() !== contract.loan.borrower.name.trim().toLowerCase()) {
+      const expectedName = contract.borrowerName ?? contract.loan.borrower.name;
+      if (input.typedName.trim().toLowerCase() !== expectedName.trim().toLowerCase()) {
         throw validation("Type your full name as shown on the contract", {
           typedName: ["Type your full name as shown on the contract"],
         });

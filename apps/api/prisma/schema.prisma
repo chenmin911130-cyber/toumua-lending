@@ -380,6 +380,8 @@ model Loan {
   interestMethod    String?
   policy            String
   policyConfigured  Boolean    @default(false)
+  /// Basis points frozen at approval. Null on rows approved before this column existed.
+  annualRateBps     Int?
   version           Int        @default(1)
   disbursedAt       DateTime?
   disbursedById     String?
@@ -721,6 +723,8 @@ model LoanContract {
   status          ContractStatus @default(ISSUED)
   bodyHtml        String
   contentSha256   String
+  /// Name printed on the contract. Null falls back to the current borrower name.
+  borrowerName    String?
   issuedAt        DateTime       @default(now())
   signedAt        DateTime?
   signerName      String?
