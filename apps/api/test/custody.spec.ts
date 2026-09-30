@@ -45,18 +45,6 @@ describe("storage locations, custody history, and borrower on assets", () => {
    * supertest's in-process server occasionally resets a socket when two
    * requests really are in flight at once. Retry only that transport artefact.
    */
-  async function allowingSocketFlake<T>(run: () => Promise<T>): Promise<T> {
-    for (let attempt = 0; ; attempt += 1) {
-      try {
-        return await run();
-      } catch (error) {
-        const code = (error as { code?: string }).code;
-        const retryable = code === "ECONNRESET" || code === "ECONNREFUSED" || code === "EPIPE";
-        if (!retryable || attempt >= 3) throw error;
-      }
-    }
-  }
-
   async function login(email: string, password: string): Promise<Agent> {
     const agent = await agentWithCsrf(app);
     const response = await post(agent, "/api/v1/auth/login", { email, password });
@@ -357,7 +345,7 @@ describe("storage locations, custody history, and borrower on assets", () => {
         inspectionResult: "PASS",
         storageLocationId: safe.id,
       });
-    const [a, b] = await allowingSocketFlake(() => Promise.all([intake(first), intake(second)]));
+    const [a, b] = await Promise.all([intake(first), intake(second)]);
     expect([a.status, b.status].sort()).toEqual([201, 409]);
     expect([a, b].find((response) => response.status === 409)?.body.message).toBe("This location is full");
     const locations = await manager.get("/api/v1/storage-locations");

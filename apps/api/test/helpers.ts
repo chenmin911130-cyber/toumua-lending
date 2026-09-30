@@ -53,7 +53,9 @@ export async function startApp() {
   await assertServerOwnsCluster(target);
   const { createApp } = await import("../src/create-app");
   const app = await createApp();
-  await app.init();
+  // Listen once: supertest otherwise opens and closes a listener per request,
+  // and concurrent requests reset each other's sockets when the first closes it.
+  await app.listen(0, "127.0.0.1");
   const prisma = app.get(PrismaService);
   const auth = app.get(AuthService);
   return { app, prisma, auth };

@@ -59,18 +59,6 @@ describe("BATCH 05 default, return, sale, corrections", () => {
    * socket when two requests really are in flight at once. That is a transport
    * artefact, not the behaviour under test, so retry only on socket errors.
    */
-  async function allowingSocketFlake<T>(run: () => Promise<T>): Promise<T> {
-    for (let attempt = 0; ; attempt += 1) {
-      try {
-        return await run();
-      } catch (error) {
-        const code = (error as { code?: string }).code;
-        const retryable = code === "ECONNRESET" || code === "ECONNREFUSED" || code === "EPIPE";
-        if (!retryable || attempt >= 3) throw error;
-      }
-    }
-  }
-
   async function createSubmittedApplication(staff: Agent) {
     const requestedAmount = "600.00";
     const valuationAmount = requestedAmount;
@@ -469,9 +457,7 @@ describe("BATCH 05 default, return, sale, corrections", () => {
         decision,
         ...(decision === "reject" ? { reason: "Not justified" } : {}),
       });
-    const [approve, reject] = await allowingSocketFlake(() =>
-      Promise.all([decide("approve"), decide("reject")]),
-    );
+    const [approve, reject] = await Promise.all([decide("approve"), decide("reject")]);
     expect([approve.status, reject.status].sort()).toEqual([201, 409]);
     const row = await prisma.correctionRequest.findUniqueOrThrow({
       where: { id: requested.body.id },
@@ -913,12 +899,10 @@ describe("BATCH 05 default, return, sale, corrections", () => {
     // shared cookie jar. The loan row lock must let exactly one allocate.
     const first = await login("cashier@example.com", "Cashier12345");
     const second = await login("cashier@example.com", "Cashier12345");
-    const [a, b] = await allowingSocketFlake(() =>
-      Promise.all([
-        postIdempotent(first, `/api/v1/corrections/${requested.body.id}/post`, {}, "concurrent-correct-a"),
-        postIdempotent(second, `/api/v1/corrections/${legacy.id}/post`, {}, "concurrent-correct-b"),
-      ]),
-    );
+    const [a, b] = await Promise.all([
+      postIdempotent(first, `/api/v1/corrections/${requested.body.id}/post`, {}, "concurrent-correct-a"),
+      postIdempotent(second, `/api/v1/corrections/${legacy.id}/post`, {}, "concurrent-correct-b"),
+    ]);
     expect([a.status, b.status].sort()).toEqual([201, 409]);
     expect(
       await prisma.correctionRequest.count({

@@ -59,18 +59,6 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
    * requests really are in flight at once. Retry only that transport artefact,
    * so the assertions stay about the money behaviour.
    */
-  async function allowingSocketFlake<T>(run: () => Promise<T>): Promise<T> {
-    for (let attempt = 0; ; attempt += 1) {
-      try {
-        return await run();
-      } catch (error) {
-        const code = (error as { code?: string }).code;
-        const retryable = code === "ECONNRESET" || code === "ECONNREFUSED" || code === "EPIPE";
-        if (!retryable || attempt >= 3) throw error;
-      }
-    }
-  }
-
   /**
    * Drives an application from empty draft to SUBMITTED. Every step is
    * asserted: an unasserted failure here used to surface much later as a
@@ -342,9 +330,7 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
         { expectedVersion: version, amount: "100.00", businessDate: "2026-10-01", method: "CASH" },
         key,
       );
-    const [first, second] = await allowingSocketFlake(() =>
-      Promise.all([post100("conc-key-1"), post100("conc-key-2")]),
-    );
+    const [first, second] = await Promise.all([post100("conc-key-1"), post100("conc-key-2")]);
 
     // Exactly one caller may claim the version. The loser must be told to
     // reload, because two payments reaching the ledger while only one reduces
@@ -659,7 +645,7 @@ describe("BATCH 04 approval, intake, disbursement, repayment", () => {
     };
     const send = (agent: Agent) =>
       postIdempotent(agent, `/api/v1/loans/${loanId}/repayments`, body, "concurrent-same-key");
-    const [a, b] = await allowingSocketFlake(() => Promise.all([send(first), send(second)]));
+    const [a, b] = await Promise.all([send(first), send(second)]);
     const statuses = [a.status, b.status].sort();
     // Exactly one posts; the other replays the stored receipt or is told to
     // retry. A 500 here would mean the unique-violation race escaped unhandled.

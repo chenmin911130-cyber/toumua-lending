@@ -72,18 +72,6 @@ describe("digital contracts and documents", () => {
     return (await agent.get("/api/v1/auth/csrf")).body.token as string;
   }
 
-  async function allowingSocketFlake<T>(run: () => Promise<T>): Promise<T> {
-    for (let attempt = 0; ; attempt += 1) {
-      try {
-        return await run();
-      } catch (error) {
-        const code = (error as { code?: string }).code;
-        const retryable = code === "ECONNRESET" || code === "ECONNREFUSED" || code === "EPIPE";
-        if (!retryable || attempt >= 3) throw error;
-      }
-    }
-  }
-
   async function createSubmittedApplication(staff: Agent) {
     const borrower = await post(staff, "/api/v1/borrowers", {
       name: "Alex Borrower",
@@ -393,12 +381,10 @@ describe("digital contracts and documents", () => {
       borrowerPresent: true,
       contentSha256: contract.contentSha256,
     };
-    const [first, second] = await allowingSocketFlake(() =>
-      Promise.all([
-        post(staff, `/api/v1/contracts/${contract.id}/sign-in-branch`, body),
-        post(other, `/api/v1/contracts/${contract.id}/sign-in-branch`, body),
-      ]),
-    );
+    const [first, second] = await Promise.all([
+      post(staff, `/api/v1/contracts/${contract.id}/sign-in-branch`, body),
+      post(other, `/api/v1/contracts/${contract.id}/sign-in-branch`, body),
+    ]);
     const statuses = [first.status, second.status].sort();
     expect(statuses).toEqual([200, 409]);
     const rows = await prisma.loanContract.findMany({ where: { loanId } });
@@ -457,12 +443,10 @@ describe("digital contracts and documents", () => {
     await prisma.loanContract.deleteMany({ where: { loanId } });
     const other = await login("manager@example.com", "Manager12345");
     const body = { reason: "Loan approved before contracts existed" };
-    const [first, second] = await allowingSocketFlake(() =>
-      Promise.all([
-        post(manager, `/api/v1/loans/${loanId}/contract/reissue`, body),
-        post(other, `/api/v1/loans/${loanId}/contract/reissue`, body),
-      ]),
-    );
+    const [first, second] = await Promise.all([
+      post(manager, `/api/v1/loans/${loanId}/contract/reissue`, body),
+      post(other, `/api/v1/loans/${loanId}/contract/reissue`, body),
+    ]);
     expect([first.status, second.status].sort()).toEqual([200, 409]);
     const rows = await prisma.loanContract.findMany({ where: { loanId } });
     expect(rows).toHaveLength(1);
