@@ -5,6 +5,7 @@ import { toPublicUser } from "../auth/session";
 import type { AuthUser } from "../auth/session";
 import { aucklandDay } from "../common/dates";
 import { conflict, notFound, validation } from "../common/http";
+import { Prisma } from "../generated/prisma";
 import { PrismaService } from "../prisma/prisma.service";
 import { assertPostMoney, assertReadCollections } from "../lending/access";
 import { MoneyService } from "../lending/money.service";
@@ -76,59 +77,81 @@ export class CollectionsService {
       });
     }
     const key = collectionKey(arrangement.id, entry.id, date);
+    const collectionDate = new Date(`${date}T00:00:00.000Z`);
+    const claimKey = {
+      arrangementId: arrangement.id,
+      scheduleEntryId: entry.id,
+      collectionDate,
+    };
+    await this.claimAttempt(claimKey, key);
     const bank = await this.driver.collect({ amount, reference: key });
     if (!bank.ok) {
-      await this.prisma.collectionAttempt.upsert({
-        where: {
-          arrangementId_scheduleEntryId_collectionDate: {
-            arrangementId: arrangement.id,
-            scheduleEntryId: entry.id,
-            collectionDate: new Date(`${date}T00:00:00.000Z`),
-          },
-        },
-        update: { outcome: "FAILED", failureReason: bank.reason, idempotencyKey: key },
-        create: {
-          arrangementId: arrangement.id,
-          scheduleEntryId: entry.id,
-          collectionDate: new Date(`${date}T00:00:00.000Z`),
-          idempotencyKey: key,
-          outcome: "FAILED",
-          failureReason: bank.reason,
-        },
+      await this.prisma.collectionAttempt.update({
+        where: { arrangementId_scheduleEntryId_collectionDate: claimKey },
+        data: { outcome: "FAILED", failureReason: bank.reason },
       });
       throw conflict(bank.reason);
     }
     const current = await this.prisma.loan.findUniqueOrThrow({ where: { id: entry.loanId } });
-    const posted = await this.money.repay(
-      user,
-      entry.loanId,
-      {
-        amount,
-        method: "AUTOMATIC_PAYMENT",
-        businessDate: date,
-        externalReference: input.externalReference?.trim() || bank.externalReference,
-        expectedVersion: current.version,
-      },
-      key,
-    );
-    await this.prisma.collectionAttempt.upsert({
-      where: {
-        arrangementId_scheduleEntryId_collectionDate: {
-          arrangementId: arrangement.id,
-          scheduleEntryId: entry.id,
-          collectionDate: new Date(`${date}T00:00:00.000Z`),
+    let posted: Awaited<ReturnType<MoneyService["repay"]>>;
+    try {
+      posted = await this.money.repay(
+        user,
+        entry.loanId,
+        {
+          amount,
+          method: "AUTOMATIC_PAYMENT",
+          businessDate: date,
+          externalReference: input.externalReference?.trim() || bank.externalReference,
+          expectedVersion: current.version,
         },
-      },
-      update: { outcome: "COLLECTED", failureReason: null, idempotencyKey: key },
-      create: {
-        arrangementId: arrangement.id,
-        scheduleEntryId: entry.id,
-        collectionDate: new Date(`${date}T00:00:00.000Z`),
-        idempotencyKey: key,
-        outcome: "COLLECTED",
-      },
+        key,
+      );
+    } catch (error) {
+      // The bank already took the money. FAILED would invite another charge.
+      await this.prisma.collectionAttempt.update({
+        where: { arrangementId_scheduleEntryId_collectionDate: claimKey },
+        data: {
+          outcome: "NEEDS_REVIEW",
+          failureReason: error instanceof Error ? error.message : "Posting failed after the bank accepted the collection",
+        },
+      });
+      throw error;
+    }
+    await this.prisma.collectionAttempt.update({
+      where: { arrangementId_scheduleEntryId_collectionDate: claimKey },
+      data: { outcome: "COLLECTED", failureReason: null },
     });
     return posted;
+  }
+
+  /**
+   * The unique row is the claim. The loser must not call the bank.
+   * A previous decline can be retried; a charge already in flight cannot.
+   */
+  private async claimAttempt(
+    key: { arrangementId: string; scheduleEntryId: string; collectionDate: Date },
+    idempotencyKey: string,
+  ) {
+    try {
+      await this.prisma.collectionAttempt.create({
+        data: { ...key, idempotencyKey, outcome: "PENDING" },
+      });
+      return;
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") throw error;
+    }
+    const existing = await this.prisma.collectionAttempt.findUnique({
+      where: { arrangementId_scheduleEntryId_collectionDate: key },
+    });
+    if (!existing || existing.outcome !== "FAILED") {
+      throw conflict("This collection was already claimed");
+    }
+    const claimed = await this.prisma.collectionAttempt.updateMany({
+      where: { id: existing.id, outcome: "FAILED" },
+      data: { outcome: "PENDING", failureReason: null, idempotencyKey },
+    });
+    if (claimed.count !== 1) throw conflict("This collection was already claimed");
   }
 
   private async dueItems(date: string) {

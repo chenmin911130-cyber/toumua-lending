@@ -17,6 +17,7 @@ import {
 import { PrismaService } from "../src/prisma/prisma.service";
 import { AuthService } from "../src/auth/auth.service";
 import { CollectionsService } from "../src/arrangements/collections.service";
+import { SimulatedCollectionDriver } from "../src/arrangements/collection-driver";
 import { addCalendarDays, aucklandDay, reminderDaysBefore } from "../src/common/dates";
 
 const PNG_HEADER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -262,9 +263,21 @@ describe("repayment arrangements and collections", () => {
     const list = await cashier.get("/api/v1/arrangements/collections?date=2026-11-01");
     const entryId = list.body.items[0].scheduleEntryId as string;
     const once = () => post(cashier, `/api/v1/arrangements/collections/${entryId}/post?date=2026-11-01`, { received: true });
-    const [first, second] = await Promise.all([once(), once()]);
-    expect([first.status, second.status].sort()).toEqual([200, 200]);
+    let charges = 0;
+    const original = SimulatedCollectionDriver.prototype.collect;
+    SimulatedCollectionDriver.prototype.collect = async function (input) {
+      charges += 1;
+      return original.call(this, input);
+    };
+    try {
+      const [first, second] = await Promise.all([once(), once()]);
+      expect([first.status, second.status].sort()).toEqual([200, 409]);
+      expect(charges).toBe(1);
+    } finally {
+      SimulatedCollectionDriver.prototype.collect = original;
+    }
     expect(await prisma.ledgerEntry.count({ where: { loanId, type: "REPAYMENT" } })).toBe(1);
+    expect(await prisma.collectionAttempt.count({ where: { outcome: "COLLECTED" } })).toBe(1);
   });
 
   it("rejects a bad account and never stores the full number", async () => {
