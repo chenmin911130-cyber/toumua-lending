@@ -147,33 +147,46 @@ export class CorrectionsService {
         row.proposedValues as Record<string, unknown>,
       );
     }
-    // Claim the decision with a conditional write. A pre-read check is not
-    // enough: two simultaneous decisions both read REQUESTED and both write, so
-    // approval and rejection could both "succeed" and the last writer won.
-    const claimed = await this.prisma.correctionRequest.updateMany({
-      where: { id, status: CorrectionStatus.REQUESTED, version: input.expectedVersion },
-      data: {
-        status: input.decision === "approve" ? CorrectionStatus.APPROVED : CorrectionStatus.REJECTED,
-        decidedById: user.id,
-        decisionReason: input.reason ?? null,
-        version: { increment: 1 },
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // Re-read under the row lock and finish the transaction before throwing,
+      // so the loser returns 409 without aborting the connection mid-response.
+      const locked = await tx.$queryRaw<Array<{ status: string; version: number }>>`
+        SELECT "status", "version" FROM "CorrectionRequest" WHERE "id" = ${id} FOR UPDATE
+      `;
+      const held = locked[0];
+      if (!held || held.status !== CorrectionStatus.REQUESTED || held.version !== input.expectedVersion) {
+        return null;
+      }
+      const claimed = await tx.correctionRequest.updateMany({
+        where: { id, status: CorrectionStatus.REQUESTED, version: input.expectedVersion },
+        data: {
+          status: input.decision === "approve" ? CorrectionStatus.APPROVED : CorrectionStatus.REJECTED,
+          decidedById: user.id,
+          decisionReason: input.reason ?? null,
+          version: { increment: 1 },
+        },
+      });
+      if (claimed.count === 0) return null;
+      const saved = await tx.correctionRequest.findUniqueOrThrow({
+        where: { id },
+        include: this.include(),
+      });
+      await this.audit.write(
+        {
+          actorId: user.id,
+          action: input.decision === "approve" ? "correction.approve" : "correction.reject",
+          objectType: "CorrectionRequest",
+          objectId: id,
+          after: { status: saved.status },
+          reason: input.reason ?? null,
+        },
+        tx,
+      );
+      return saved;
     });
-    if (claimed.count === 0) {
+    if (!updated) {
       throw conflict("This correction was already decided. Reload to see the outcome.");
     }
-    const updated = await this.prisma.correctionRequest.findUniqueOrThrow({
-      where: { id },
-      include: this.include(),
-    });
-    await this.audit.write({
-      actorId: user.id,
-      action: input.decision === "approve" ? "correction.approve" : "correction.reject",
-      objectType: "CorrectionRequest",
-      objectId: id,
-      after: { status: updated.status },
-      reason: input.reason ?? null,
-    });
     return this.toView(updated, user);
   }
 

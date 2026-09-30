@@ -7,6 +7,7 @@ import {
   RepaymentInput,
   SaleReceiptInput,
 } from "@toumua/contracts";
+import { Prisma } from "../generated/prisma";
 import { AuthUser } from "../auth/session";
 import { conflict, notFound, validation } from "../common/http";
 import { AuditService } from "../audit/audit.service";
@@ -74,6 +75,13 @@ export class MoneyService {
     const businessDate = new Date(input.businessDate);
 
     const result = await this.prisma.$transaction(async (tx) => {
+      await lockLoan(tx, loanId);
+      const held = await tx.loan.findUnique({ where: { id: loanId } });
+      if (!held) throw notFound("Loan not found");
+      if (held.version !== input.expectedVersion || held.status !== LoanStatus.APPROVED_UNFUNDED || held.disbursedAt !== null) {
+        throw conflict("This loan was already disbursed or updated elsewhere.");
+      }
+
       const start = await beginAttempt(tx, {
         idempotencyKey,
         type: "DISBURSEMENT",
@@ -213,6 +221,17 @@ export class MoneyService {
     const businessDate = new Date(input.businessDate);
 
     const result = await this.prisma.$transaction(async (tx) => {
+      await lockLoan(tx, loanId);
+      const held = await tx.loan.findUnique({
+        where: { id: loanId },
+        include: { attempts: { select: { status: true } } },
+      });
+      if (!held) throw notFound("Loan not found");
+      if (held.status !== LoanStatus.ACTIVE) {
+        throw conflict("Repayments can only be recorded on active loans");
+      }
+      assertNoOpenAttempts(held.attempts);
+
       const start = await beginAttempt(tx, {
         idempotencyKey,
         type: "REPAYMENT",
@@ -220,6 +239,9 @@ export class MoneyService {
         initiatedById: user.id,
         body,
       });
+      if (start.kind === "replay") {
+        return { replayId: start.attemptId };
+      }
 
       // Claim this exact version inside the transaction. Checking the version
       // before the transaction let two concurrent repayments both read the same
@@ -342,6 +364,10 @@ export class MoneyService {
       };
     });
 
+    if ("replayId" in result) {
+      return this.replayMoneyResult(result.replayId, user.id);
+    }
+
     await this.notifications.notifyBorrower(
       loan.borrowerId,
       "A repayment was recorded",
@@ -392,6 +418,20 @@ export class MoneyService {
 
     const businessDate = new Date(input.businessDate);
     const result = await this.prisma.$transaction(async (tx) => {
+      await lockLoan(tx, loanId);
+      const held = await tx.loan.findUnique({
+        where: { id: loanId },
+        include: { attempts: { select: { status: true } } },
+      });
+      if (!held) throw notFound("Loan not found");
+      if (held.status !== LoanStatus.DEFAULTED) {
+        throw conflict("Sale proceeds can only be recorded on defaulted loans");
+      }
+      if (held.version !== input.expectedVersion) {
+        throw conflict("This loan was updated elsewhere. Reload and try again.");
+      }
+      assertNoOpenAttempts(held.attempts);
+
       const start = await beginAttempt(tx, {
         idempotencyKey,
         type: "SALE_RECEIPT",
@@ -704,4 +744,12 @@ export class MoneyService {
     if (!attempt) throw notFound("Payment attempt not found");
     return attempt;
   }
+}
+
+/** Lock the loan before any child insert so two postings cannot deadlock on the foreign-key share lock. */
+async function lockLoan(tx: Prisma.TransactionClient, loanId: string) {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "Loan" WHERE "id" = ${loanId} FOR UPDATE
+  `;
+  if (rows.length === 0) throw notFound("Loan not found");
 }
