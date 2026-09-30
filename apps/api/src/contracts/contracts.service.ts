@@ -32,7 +32,7 @@ export class ContractsService {
     @Inject(NotificationsService) private readonly notifications: NotificationsService,
   ) {}
 
-  async issue(tx: Prisma.TransactionClient, loanId: string, user: AuthUser, version = 1) {
+  async issue(tx: Prisma.TransactionClient, loanId: string, user: AuthUser, version = 1, reason?: string) {
     const loan = await tx.loan.findUniqueOrThrow({
       where: { id: loanId },
       include: {
@@ -91,6 +91,7 @@ export class ContractsService {
         action: "contract.issue",
         objectType: "LoanContract",
         objectId: row.id,
+        reason: reason ?? null,
         after: { number, loanId, version, contentSha256, lender: LEGAL_ENTITY },
       },
       tx,
@@ -181,39 +182,58 @@ export class ContractsService {
 
   async reissue(user: AuthUser, loanId: string, reason: string) {
     assertReissueContract(user);
-    const created = await this.prisma.$transaction(async (tx) => {
-      const loan = await tx.loan.findUnique({ where: { id: loanId }, select: { id: true, status: true } });
-      if (!loan) throw notFound("Loan not found");
-      if (loan.status !== "APPROVED_UNFUNDED") {
-        throw conflict("A contract can only be reissued before the loan is disbursed");
-      }
-      const current = await tx.loanContract.findFirst({
-        where: { loanId },
-        orderBy: { version: "desc" },
-      });
-      if (!current) throw notFound("Contract not found");
-      await tx.$queryRaw`SELECT id FROM "LoanContract" WHERE id = ${current.id} FOR UPDATE`;
-      const locked = await tx.loanContract.findUniqueOrThrow({ where: { id: current.id } });
-      if (locked.status === "SIGNED") throw conflict("A signed contract cannot be reissued");
-      if (locked.status !== "ISSUED") throw conflict("This contract has been superseded and cannot be signed");
-      await tx.loanContract.update({
-        where: { id: locked.id },
-        data: { status: "VOID", voidedAt: new Date(), voidReason: reason },
-      });
-      await this.audit.write(
-        {
-          actorId: user.id,
-          action: "contract.void",
-          objectType: "LoanContract",
-          objectId: locked.id,
-          reason,
-          after: { status: "VOID", version: locked.version },
-        },
-        tx,
-      );
-      return this.issue(tx, loanId, user, locked.version + 1);
+    const seen = await this.prisma.loanContract.findFirst({
+      where: { loanId },
+      orderBy: { version: "desc" },
+      select: { id: true },
     });
-    return this.summary(created);
+    try {
+      const created = await this.prisma.$transaction(async (tx) => {
+        // Serialise first-time issue. The unique (loanId, version) index is the backstop.
+        await tx.$queryRaw`SELECT id FROM "Loan" WHERE id = ${loanId} FOR UPDATE`;
+        const loan = await tx.loan.findUnique({ where: { id: loanId }, select: { id: true, status: true } });
+        if (!loan) throw notFound("Loan not found");
+        if (loan.status !== "APPROVED_UNFUNDED") {
+          throw conflict("A contract can only be reissued before the loan is disbursed");
+        }
+        const current = await tx.loanContract.findFirst({
+          where: { loanId },
+          orderBy: { version: "desc" },
+        });
+        if (!current) {
+          return this.issue(tx, loanId, user, 1, reason);
+        }
+        if (!seen || seen.id !== current.id) {
+          throw conflict("A contract was already issued");
+        }
+        await tx.$queryRaw`SELECT id FROM "LoanContract" WHERE id = ${current.id} FOR UPDATE`;
+        const locked = await tx.loanContract.findUniqueOrThrow({ where: { id: current.id } });
+        if (locked.status === "SIGNED") throw conflict("A signed contract cannot be reissued");
+        if (locked.status !== "ISSUED") throw conflict("This contract has been superseded and cannot be signed");
+        await tx.loanContract.update({
+          where: { id: locked.id },
+          data: { status: "VOID", voidedAt: new Date(), voidReason: reason },
+        });
+        await this.audit.write(
+          {
+            actorId: user.id,
+            action: "contract.void",
+            objectType: "LoanContract",
+            objectId: locked.id,
+            reason,
+            after: { status: "VOID", version: locked.version },
+          },
+          tx,
+        );
+        return this.issue(tx, loanId, user, locked.version + 1, reason);
+      });
+      return this.summary(created);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw conflict("A contract was already issued");
+      }
+      throw error;
+    }
   }
 
   private async executeSignature(input: {

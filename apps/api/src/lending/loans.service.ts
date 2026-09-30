@@ -151,7 +151,8 @@ export class LoansService {
     const loan = await this.loadLoan(loanId);
     const assets = loan.application.assets;
     const stored = assets.filter((asset) => asset.status === AssetStatus.STORED);
-    const signed = loan.contracts[0]?.status === "SIGNED";
+    const current = loan.contracts[0];
+    const signed = current?.status === "SIGNED";
     const items = [
       {
         id: "status",
@@ -180,6 +181,11 @@ export class LoansService {
         label: "Loan contract signed",
         complete: signed,
         ok: signed,
+        detail: signed
+          ? undefined
+          : current
+            ? "Sign the current contract before disbursement"
+            : "A manager needs to issue the loan contract",
       },
     ];
     return { ready: items.every((item) => item.complete), items };

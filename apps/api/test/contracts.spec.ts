@@ -354,6 +354,13 @@ describe("digital contracts and documents", () => {
       contentSha256: contract.contentSha256,
     });
     expect(signed.status).toBe(200);
+    const copy = await prisma.document.findFirstOrThrow({ where: { loanId, kind: "LOAN_CONTRACT_SIGNED" } });
+    const html = await owner.get(`/api/v1/documents/${copy.id}/file`);
+    expect(html.status).toBe(200);
+    expect(html.headers["content-security-policy"]).toBe(
+      "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'",
+    );
+    expect(html.headers["x-content-type-options"]).toBe("nosniff");
     const doc = await prisma.document.findFirstOrThrow({ where: { loanId, kind: "SIGNATURE_IMAGE" } });
     const stranger = await login("other@example.com", "Borrower12345");
     const hidden = await stranger.get(`/api/v1/documents/${doc.id}/file`);
@@ -389,5 +396,68 @@ describe("digital contracts and documents", () => {
     expect(rows.filter((row) => row.status === "SIGNED")).toHaveLength(1);
     const docs = await prisma.document.count({ where: { loanId } });
     expect(docs).toBe(2);
+  });
+
+  it("lets a manager issue version 1 for an approved loan that has no contract", async () => {
+    const { loanId, assetId, staff, manager } = await approveLoan();
+    await prisma.loanContract.deleteMany({ where: { loanId } });
+    const blocked = await staff.get(`/api/v1/loans/${loanId}/disbursement-readiness`);
+    const gate = blocked.body.items.find((item: { id: string }) => item.id === "contract_signed");
+    expect(gate.ok).toBe(false);
+    expect(gate.detail).toContain("issue the loan contract");
+    const issued = await post(manager, `/api/v1/loans/${loanId}/contract/reissue`, {
+      reason: "Loan approved before contracts existed",
+    });
+    expect(issued.status).toBe(200);
+    expect(issued.body.version).toBe(1);
+    expect(issued.body.status).toBe("ISSUED");
+    const audit = await prisma.auditEvent.findFirst({
+      where: { action: "contract.issue", objectId: issued.body.id },
+    });
+    expect(audit?.reason).toBe("Loan approved before contracts existed");
+    const before = await staff.get(`/api/v1/loans/${loanId}`);
+    const valuer = await login("val@example.com", "Valuation12");
+    await post(valuer, `/api/v1/assets/${assetId}/intake`, {
+      expectedVersion: before.body.version,
+      receivedOn: "2026-09-18",
+      inspectedOn: "2026-09-18",
+      inspectionResult: "PASS",
+      location: "Vault A",
+    });
+    const contract = await prisma.loanContract.findFirstOrThrow({ where: { loanId } });
+    const signed = await post(staff, `/api/v1/contracts/${contract.id}/sign-in-branch`, {
+      typedName: "Alex Borrower",
+      signaturePng: SIGNATURE,
+      borrowerPresent: true,
+      contentSha256: contract.contentSha256,
+    });
+    expect(signed.status).toBe(200);
+    const cashier = await login("cashier@example.com", "Cashier12345");
+    const current = await cashier.get(`/api/v1/loans/${loanId}`);
+    const disbursed = await postIdempotent(
+      cashier,
+      `/api/v1/loans/${loanId}/disbursements`,
+      { expectedVersion: current.body.version, businessDate: "2026-09-18", method: "CASH" },
+      "legacy-disburse",
+    );
+    expect(disbursed.status).toBe(201);
+  });
+
+  it("lets exactly one of two simultaneous first issues create version 1", async () => {
+    const { loanId, manager } = await approveLoan();
+    await prisma.loanContract.deleteMany({ where: { loanId } });
+    const other = await login("manager@example.com", "Manager12345");
+    const body = { reason: "Loan approved before contracts existed" };
+    const [first, second] = await allowingSocketFlake(() =>
+      Promise.all([
+        post(manager, `/api/v1/loans/${loanId}/contract/reissue`, body),
+        post(other, `/api/v1/loans/${loanId}/contract/reissue`, body),
+      ]),
+    );
+    expect([first.status, second.status].sort()).toEqual([200, 409]);
+    const rows = await prisma.loanContract.findMany({ where: { loanId } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.version).toBe(1);
+    expect(rows[0]?.status).toBe("ISSUED");
   });
 });

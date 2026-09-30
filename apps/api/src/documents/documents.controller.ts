@@ -16,6 +16,12 @@ export class DocumentsDownloadController {
     res.setHeader("content-type", opened.mimeType);
     res.setHeader("content-disposition", `inline; filename="${opened.filename.replace(/"/g, "")}"`);
     res.setHeader("x-content-type-options", "nosniff");
+    if (opened.mimeType === "text/html") {
+      res.setHeader(
+        "content-security-policy",
+        "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'",
+      );
+    }
     opened.stream.pipe(res);
   }
 }

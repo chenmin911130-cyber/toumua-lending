@@ -115,8 +115,11 @@ export function StaffLoansPage() {
 
 export function StaffLoanDetailPage() {
   const { id = "" } = useParams();
+  const { user } = useAuth();
   const [loan, setLoan] = useState<LoanDetail | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [issueReason, setIssueReason] = useState("");
+  const [issueError, setIssueError] = useState<unknown>(null);
   useEffect(() => {
     void api<LoanDetail>(`/loans/${id}`).then(setLoan).catch(setError);
   }, [id]);
@@ -159,6 +162,32 @@ export function StaffLoanDetailPage() {
           {" · "}
           <Link to={`/staff/contracts/${loan.contract.id}`}>View contract</Link>
         </p>
+      ) : loan.status === "APPROVED_UNFUNDED" && user?.role === "MANAGER" ? (
+        <form
+          className="stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setIssueError(null);
+            void api<{ id: string }>(`/loans/${id}/contract/reissue`, {
+              method: "POST",
+              body: JSON.stringify({ reason: issueReason }),
+            })
+              .then((created) => {
+                window.location.assign(`/staff/contracts/${created.id}`);
+              })
+              .catch(setIssueError);
+          }}
+        >
+          <h2>Issue contract</h2>
+          <p className="hint">This loan was approved before a contract existed. Issue version 1 so it can be signed and disbursed.</p>
+          <Field label="Reason">
+            <input value={issueReason} onChange={(event) => setIssueReason(event.target.value)} required />
+          </Field>
+          {issueError ? <p className="error">{errorMessage(issueError, "Could not issue the contract")}</p> : null}
+          <Button type="submit">Issue contract</Button>
+        </form>
+      ) : loan.status === "APPROVED_UNFUNDED" ? (
+        <p className="hint">A manager needs to issue the loan contract before it can be signed.</p>
       ) : null}
       <table className="data-table">
         <thead><tr><th>#</th><th>Due</th><th>Amount</th><th>Paid</th><th>Status</th></tr></thead>
