@@ -246,6 +246,26 @@ describe("STAFF", () => {
     expect((await cashier.get("/api/v1/staff")).status).toBe(403);
   });
 
+  it("refuses an owner invitation and still invites a manager", async () => {
+    const admin = await loginAdmin();
+    const ownerInvite = await post(admin, "/api/v1/staff", {
+      name: "Second Owner",
+      email: "second-owner@example.com",
+      role: "OWNER",
+    });
+    expect(ownerInvite.status).toBe(403);
+    expect(await prisma.user.findUnique({ where: { emailNormalized: "second-owner@example.com" } })).toBeNull();
+    expect(await prisma.invitation.findFirst({ where: { email: "second-owner@example.com" } })).toBeNull();
+
+    const managerInvite = await post(admin, "/api/v1/staff", {
+      name: "Morgan Manager",
+      email: "morgan-manager@example.com",
+      role: "MANAGER",
+    });
+    expect(managerInvite.status).toBe(201);
+    expect(managerInvite.body.role).toBe("MANAGER");
+  });
+
   it("lets an owner assign manager to someone else but not owner or their own role", async () => {
     const passwordHash = await auth.hashPassword("Ownerpass1234");
     const ownerUser = await prisma.user.create({

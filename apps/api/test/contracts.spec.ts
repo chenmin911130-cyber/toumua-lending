@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { INestApplication } from "@nestjs/common";
 import { escapeHtml, renderContract, sha256Text } from "../src/contracts/contract-template";
+import { AuditService } from "../src/audit/audit.service";
 import { DocumentsService } from "../src/documents/documents.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { AuthService } from "../src/auth/auth.service";
@@ -522,6 +523,88 @@ describe("digital contracts and documents", () => {
     expect(signature.status).toBe(409);
     expect(copy.status).toBe(409);
     expect(await prisma.document.count({ where: { id: { in: [saved.signatureDocId!, saved.signedDocId!] }, deletedAt: null } })).toBe(2);
+  });
+
+  it("a rejected signature leaves no new file in the documents directory", async () => {
+    const dir = join(process.env.UPLOAD_DIR ?? join(process.cwd(), "../../storage/uploads"), "documents");
+    const snapshot = () => new Set(existsSync(dir) ? readdirSync(dir) : []);
+    const addedSince = (before: Set<string>) =>
+      (existsSync(dir) ? readdirSync(dir) : []).filter((name) => !before.has(name));
+
+    const firstLoan = await approveLoan();
+    const firstContract = await prisma.loanContract.findFirstOrThrow({ where: { loanId: firstLoan.loanId } });
+    const beforeHash = snapshot();
+    const hashMismatch = await post(firstLoan.staff, `/api/v1/contracts/${firstContract.id}/sign-in-branch`, {
+      typedName: "Alex Borrower",
+      signaturePng: SIGNATURE,
+      borrowerPresent: true,
+      contentSha256: "a".repeat(64),
+    });
+    expect(hashMismatch.status).toBe(409);
+    expect(addedSince(beforeHash)).toEqual([]);
+    expect((await prisma.loanContract.findUniqueOrThrow({ where: { id: firstContract.id } })).status).toBe("ISSUED");
+    expect(await prisma.document.count({ where: { loanId: firstLoan.loanId } })).toBe(0);
+
+    const raceLoan = await approveLoan();
+    const raceContract = await prisma.loanContract.findFirstOrThrow({ where: { loanId: raceLoan.loanId } });
+    const beforeRace = snapshot();
+    const raceBody = {
+      typedName: "Alex Borrower",
+      signaturePng: SIGNATURE,
+      borrowerPresent: true,
+      contentSha256: raceContract.contentSha256,
+    };
+    const otherOfficer = await login("loan@example.com", "LoanOfficer12");
+    const [raceFirst, raceSecond] = await Promise.all([
+      post(raceLoan.staff, `/api/v1/contracts/${raceContract.id}/sign-in-branch`, raceBody),
+      post(otherOfficer, `/api/v1/contracts/${raceContract.id}/sign-in-branch`, raceBody),
+    ]);
+    expect([raceFirst.status, raceSecond.status].sort()).toEqual([200, 409]);
+    const raceDocs = await prisma.document.findMany({ where: { loanId: raceLoan.loanId } });
+    expect(raceDocs).toHaveLength(2);
+    const raceKeys = new Set(raceDocs.map((row) => row.storageKey));
+    expect(addedSince(beforeRace).sort()).toEqual([...raceKeys].sort());
+    expect(addedSince(beforeRace).every((name) => raceKeys.has(name))).toBe(true);
+
+    const rollbackLoan = await approveLoan();
+    const rollbackContract = await prisma.loanContract.findFirstOrThrow({ where: { loanId: rollbackLoan.loanId } });
+    const beforeRollback = snapshot();
+    const originalWrite = AuditService.prototype.write;
+    AuditService.prototype.write = async function (input, ...rest) {
+      if (input.action === "contract.sign") {
+        throw new Error("rollback after documents were stored");
+      }
+      return originalWrite.call(this, input, ...rest);
+    };
+    try {
+      const rejected = await post(rollbackLoan.staff, `/api/v1/contracts/${rollbackContract.id}/sign-in-branch`, {
+        typedName: "Alex Borrower",
+        signaturePng: SIGNATURE,
+        borrowerPresent: true,
+        contentSha256: rollbackContract.contentSha256,
+      });
+      expect(rejected.status).toBe(500);
+      expect((await prisma.loanContract.findUniqueOrThrow({ where: { id: rollbackContract.id } })).status).toBe(
+        "ISSUED",
+      );
+      expect(await prisma.document.count({ where: { loanId: rollbackLoan.loanId } })).toBe(0);
+      expect(addedSince(beforeRollback)).toEqual([]);
+    } finally {
+      AuditService.prototype.write = originalWrite;
+    }
+
+    const recovered = await post(rollbackLoan.staff, `/api/v1/contracts/${rollbackContract.id}/sign-in-branch`, {
+      typedName: "Alex Borrower",
+      signaturePng: SIGNATURE,
+      borrowerPresent: true,
+      contentSha256: rollbackContract.contentSha256,
+    });
+    expect(recovered.status).toBe(200);
+    const savedDocs = await prisma.document.findMany({ where: { loanId: rollbackLoan.loanId } });
+    expect(savedDocs).toHaveLength(2);
+    for (const row of savedDocs) {
+      expect(existsSync(join(dir, row.storageKey))).toBe(true);
+    }
   });
 
   it("returns 404 for an unknown borrower and removes a file when the database write fails", async () => {

@@ -99,6 +99,16 @@ export class DocumentsService {
     }
   }
 
+  discardStored(storageKeys: string[]): void {
+    for (const storageKey of storageKeys) {
+      try {
+        unlinkSync(this.filePath(storageKey));
+      } catch {
+        // A rolled-back signature must not keep the file, even if a second cleanup races it.
+      }
+    }
+  }
+
   async open(user: AuthUser, id: string) {
     const row = await this.prisma.document.findUnique({ where: { id } });
     if (!row || row.deletedAt) throw notFound("Document not found");

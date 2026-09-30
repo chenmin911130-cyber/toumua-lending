@@ -249,7 +249,10 @@ export class ContractsService {
     const signature = decodeSignaturePng(input.signaturePng);
     const signedAt = new Date();
     // Raising the HTTP error inside the transaction has dropped the connection, and a retry then signs nothing.
-    const result = await this.prisma.$transaction(async (tx) => {
+    const storedKeys: string[] = [];
+    let result;
+    try {
+      result = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "LoanContract" WHERE id = ${input.contractId} FOR UPDATE`;
       const contract = await tx.loanContract.findUnique({
         where: { id: input.contractId },
@@ -278,6 +281,7 @@ export class ContractsService {
         tx,
         input.actorId,
       );
+      storedKeys.push(signatureDoc.storageKey);
       const signedHtml = renderSignedContract(contract.bodyHtml, {
         signerName: input.typedName.trim(),
         signerRole: input.signerRole,
@@ -303,6 +307,7 @@ export class ContractsService {
         tx,
         input.actorId,
       );
+      storedKeys.push(signedDoc.storageKey);
       const updated = await tx.loanContract.updateMany({
         where: { id: contract.id, status: "ISSUED" },
         data: {
@@ -336,7 +341,11 @@ export class ContractsService {
         tx,
       );
       return { contract, signedDocId: signedDoc.id };
-    });
+      });
+    } catch (error) {
+      this.documents.discardStored(storedKeys);
+      throw error;
+    }
     if ("lost" in result) {
       if (result.lost === "missing") throw notFound("Contract not found");
       if (result.lost === "signed") throw conflict("This contract is already signed");

@@ -52,6 +52,9 @@ export class StaffService {
 
   async invite(actor: AuthUser, input: InviteStaffInput): Promise<StaffAccount> {
     this.assertManageStaff(actor);
+    if (input.role === "OWNER") {
+      throw forbidden("The owner role cannot be assigned");
+    }
     const emailNormalized = normalizeEmail(input.email);
     const existing = await this.prisma.user.findUnique({
       where: { emailNormalized },
