@@ -141,6 +141,9 @@ export function StaffLoanDetailPage() {
   const repay = actionFor(loan, "repay");
   const declareDefault = actionFor(loan, "default");
   const saleReceipt = actionFor(loan, "sale-receipt");
+  const showDisbursementFlow =
+    loan.status === "APPROVED_UNFUNDED" &&
+    (user?.role === "CASHIER" || user?.role === "MANAGER" || user?.role === "LOAN_OFFICER");
   return (
     <main className="staff-page">
       <Link to="/staff/loans">← Loans</Link>
@@ -157,11 +160,25 @@ export function StaffLoanDetailPage() {
       {loan.defaultReason ? <p className="hint">Default: {loan.defaultReason}</p> : null}
       {loan.overdueAmount !== "0.00" ? <p className="error">Overdue {loan.overdueAmount}</p> : null}
       <div className="hero-actions">
-        {disburse?.allowed ? (
+        {showDisbursementFlow ? (
+          <>
+            <Link
+              className={disburse?.allowed ? "btn btn-primary" : "btn btn-secondary"}
+              to={`/staff/loans/${id}/disbursement`}
+            >
+              {disburse?.allowed ? "Disbursement" : "Disbursement checklist"}
+            </Link>
+            {!disburse?.allowed ? (
+              <p className="hint" style={{ flexBasis: "100%", margin: 0 }}>
+                Not ready yet: {disburse?.reason ?? "complete the checklist first"}.
+              </p>
+            ) : null}
+          </>
+        ) : disburse?.allowed ? (
           <Link className="btn btn-primary" to={`/staff/loans/${id}/disbursement`}>Disbursement</Link>
-        ) : (
-          <p className="hint">Disbursement unavailable: {disburse?.reason ?? "not permitted"}</p>
-        )}
+        ) : user?.role === "CASHIER" ? (
+          <p className="hint">Disbursement is only for approved, unfunded loans.</p>
+        ) : null}
         {repay?.allowed ? (
           <Link className="btn btn-secondary" to={`/staff/loans/${id}/repayment`}>Repayment</Link>
         ) : (
@@ -175,13 +192,22 @@ export function StaffLoanDetailPage() {
         ) : null}
       </div>
       {loan.contract ? (
-        <p className="hint">
-          Contract {loan.contract.number} v{loan.contract.version} · {loan.contract.status}
-          {loan.contract.signerMethod ? ` · ${loan.contract.signerMethod}` : ""}
-          {loan.contract.signedAt ? ` · ${loan.contract.signedAt.slice(0, 16).replace("T", " ")}` : ""}
-          {" · "}
-          <Link to={`/staff/contracts/${loan.contract.id}`}>View contract</Link>
-        </p>
+        <section className="card stack">
+          <h2>Loan contract</h2>
+          <p className="hint">
+            {loan.contract.number} · version {loan.contract.version} · {loan.contract.status}
+            {loan.contract.signerMethod ? ` · ${loan.contract.signerMethod}` : ""}
+            {loan.contract.signedAt ? ` · signed ${loan.contract.signedAt.slice(0, 16).replace("T", " ")}` : ""}
+          </p>
+          {loan.contract.status === "ISSUED" ? (
+            <p className="hint">
+              The borrower signs online under My loans, or staff can use Sign in branch on the contract page.
+            </p>
+          ) : null}
+          <Link className="btn btn-primary" to={`/staff/contracts/${loan.contract.id}`}>
+            Open contract
+          </Link>
+        </section>
       ) : loan.status === "APPROVED_UNFUNDED" && user?.role === "MANAGER" ? (
         <form
           className="stack"

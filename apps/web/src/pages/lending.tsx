@@ -15,7 +15,10 @@ import {
   aucklandBusinessDate,
   aucklandDateTimeLocal,
   aucklandWallTimeToIso,
+  businessDateFromStored,
+  formatDate,
   loyaltyBadgeLabel,
+  loyaltyRateLine,
 } from "../format";
 
 type BorrowerDetail = BorrowerSummary & {
@@ -25,10 +28,96 @@ type BorrowerDetail = BorrowerSummary & {
 };
 
 type TermsPreview = {
-  loyaltyTier?: string;
+  policy?: string;
+  requestedAmount?: string;
+  frequency?: string;
+  periods?: number;
+  firstPaymentDate?: string;
+  installment?: string;
+  total?: string;
+  baseAnnualRateBps?: number;
   discountBps?: number;
+  annualRateBps?: number;
+  loyaltyTier?: string;
   interestSaved?: string;
+  schedule?: Array<{ number: number; dueDate: string; amount: string }>;
 };
+
+const STAFF_SUBMIT_READINESS_IDS = new Set([
+  "borrower",
+  "loan-details",
+  "security",
+  "valuations",
+  "terms",
+]);
+
+function staffCanSubmit(readiness: ApplicationDetail["readiness"]) {
+  return readiness
+    .filter((item) => STAFF_SUBMIT_READINESS_IDS.has(item.id))
+    .every((item) => item.complete);
+}
+
+function TermsSchedulePreview({ preview }: { preview: TermsPreview }) {
+  const schedule = preview.schedule ?? [];
+  return (
+    <section className="stack" style={{ marginTop: 8 }}>
+      <h3 style={{ margin: "8px 0 0", fontSize: 18 }}>Schedule preview</h3>
+      <dl className="detail-list">
+        <dt>Loan amount</dt>
+        <dd>${preview.requestedAmount ?? "—"}</dd>
+        <dt>Repayment</dt>
+        <dd>
+          ${preview.installment ?? "—"} {preview.frequency ? statusLabel(preview.frequency).toLowerCase() : ""}
+          {preview.periods ? ` · ${preview.periods} periods` : ""}
+        </dd>
+        <dt>Total repayable</dt>
+        <dd>${preview.total ?? "—"}</dd>
+        <dt>First payment</dt>
+        <dd>{preview.firstPaymentDate ? formatDate(preview.firstPaymentDate) : "—"}</dd>
+        {preview.baseAnnualRateBps != null && preview.annualRateBps != null ? (
+          <>
+            <dt>Annual rate</dt>
+            <dd>
+              {loyaltyRateLine(
+                preview.baseAnnualRateBps,
+                preview.discountBps ?? 0,
+                preview.annualRateBps,
+              )}
+            </dd>
+          </>
+        ) : null}
+        {preview.loyaltyTier ? (
+          <>
+            <dt>Loyalty tier</dt>
+            <dd>{loyaltyBadgeLabel(preview.loyaltyTier)}</dd>
+          </>
+        ) : null}
+      </dl>
+      {schedule.length ? (
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Due date</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {schedule.map((row) => (
+              <tr key={row.number}>
+                <td>{row.number}</td>
+                <td>{formatDate(businessDateFromStored(row.dueDate))}</td>
+                <td>${row.amount}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="hint">No instalments in this preview.</p>
+      )}
+    </section>
+  );
+}
 
 const STEPS = [
   { key: "borrower", label: "Borrower", path: "borrower" },
@@ -151,7 +240,17 @@ export function BorrowersPage() {
                 </button>
               </td>
               <td>{row.phone}</td>
-              <td>{row.linkedUserId ? "Linked" : "—"}</td>
+              <td>
+                {row.linkedUserId ? (
+                  <Link to={`/staff/borrowers/${row.id}/account-link`} data-control-id="S17-06">
+                    Linked
+                  </Link>
+                ) : (
+                  <Link to={`/staff/borrowers/${row.id}/account-link`} className="muted-link" data-control-id="S17-06">
+                    Link account
+                  </Link>
+                )}
+              </td>
               <td>{new Date(row.updatedAt).toLocaleDateString()}</td>
             </tr>
           )) : (
@@ -376,19 +475,41 @@ export function AccountLinkPage() {
 }
 
 export function ApplicationsPage() {
+  const { user } = useAuth();
   const [data, setData] = useState<CursorListResponse<ApplicationSummary> | null>(null);
   const [status, setStatus] = useState("ALL");
+  const [error, setError] = useState<unknown>(null);
   const navigate = useNavigate();
+  const isValuer = user?.role === "VALUATION_OFFICER";
 
   async function reload() {
     const params = new URLSearchParams();
     if (status !== "ALL") params.set("status", status);
-    setData(await api<CursorListResponse<ApplicationSummary>>(`/applications?${params}`));
+    setError(null);
+    try {
+      setData(await api<CursorListResponse<ApplicationSummary>>(`/applications?${params}`));
+    } catch (err) {
+      setError(err);
+      setData(null);
+    }
   }
 
   useEffect(() => {
+    if (isValuer) return;
     void reload();
-  }, [status]);
+  }, [status, isValuer]);
+
+  if (isValuer) {
+    return (
+      <main className="staff-page">
+        <h1>Applications</h1>
+        <p className="hint">
+          Valuation officers work from the valuation queue, not the full applications list.{" "}
+          <Link className="btn btn-primary" to="/staff/valuations">Open valuation queue</Link>
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="staff-page">
@@ -401,6 +522,7 @@ export function ApplicationsPage() {
           New application
         </Button>
       </div>
+      {error ? <p className="error">{errorMessage(error, "Could not load applications")}</p> : null}
       <div className="toolbar">
         <select value={status} onChange={(event) => setStatus(event.target.value)}>
           <option value="ALL">All statuses</option>
@@ -458,6 +580,7 @@ export function ApplicationWizardPage() {
   const [app, setApp] = useState<ApplicationDetail | null>(null);
   const [borrowerQuery, setBorrowerQuery] = useState("");
   const [borrowers, setBorrowers] = useState<BorrowerSummary[]>([]);
+  const [pickedBorrower, setPickedBorrower] = useState<BorrowerSummary | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [amount, setAmount] = useState("");
   const [purpose, setPurpose] = useState("");
@@ -469,6 +592,16 @@ export function ApplicationWizardPage() {
   const [frequency, setFrequency] = useState("MONTHLY");
   const [periods, setPeriods] = useState("12");
   const [preview, setPreview] = useState<TermsPreview | null>(null);
+  const [uploadingAssetId, setUploadingAssetId] = useState<string | null>(null);
+  const [photoMessage, setPhotoMessage] = useState("");
+  const { user: staffUser } = useAuth();
+  const [valuationAmount, setValuationAmount] = useState("");
+  const [valuationBasis, setValuationBasis] = useState("In-person inspection for loan security");
+  const [valuationBorrowerPresent, setValuationBorrowerPresent] = useState(true);
+  const [savingValuationAssetId, setSavingValuationAssetId] = useState<string | null>(null);
+  const [valuationsByAsset, setValuationsByAsset] = useState<
+    Record<string, { id: string; version: number; status: string }>
+  >({});
 
   async function reload() {
     const detail = await api<ApplicationDetail>(`/applications/${id}`);
@@ -485,6 +618,40 @@ export function ApplicationWizardPage() {
     void reload();
   }, [id]);
 
+  useEffect(() => {
+    if (step === "review") void reload();
+  }, [step, id]);
+
+  useEffect(() => {
+    if (step !== "security" || !id) return;
+    void api<{
+      items: Array<{ id: string; assetId: string; version: number; status: string }>;
+    }>(`/applications/${id}/valuations`)
+      .then((data) => {
+        const map: Record<string, { id: string; version: number; status: string }> = {};
+        for (const row of data.items) {
+          map[row.assetId] = { id: row.id, version: row.version, status: row.status };
+        }
+        setValuationsByAsset(map);
+      })
+      .catch(() => setValuationsByAsset({}));
+  }, [step, id, app?.assets.length]);
+
+  useEffect(() => {
+    if (app?.requestedAmount && !valuationAmount) {
+      setValuationAmount(app.requestedAmount);
+    }
+  }, [app?.requestedAmount, valuationAmount]);
+
+  useEffect(() => {
+    if (!app?.borrowerId) {
+      setPickedBorrower(null);
+      return;
+    }
+    if (pickedBorrower?.id === app.borrowerId) return;
+    void api<BorrowerDetail>(`/borrowers/${app.borrowerId}`).then(setPickedBorrower);
+  }, [app?.borrowerId, pickedBorrower?.id]);
+
   const currentIndex = useMemo(
     () => STEPS.findIndex((item) => item.path === step),
     [step],
@@ -500,7 +667,7 @@ export function ApplicationWizardPage() {
     setBorrowers(data.items);
   }
 
-  async function saveBorrower(borrowerId: string) {
+  async function saveBorrower(row: BorrowerSummary) {
     if (!app) return;
     setError(null);
     try {
@@ -508,11 +675,12 @@ export function ApplicationWizardPage() {
         method: "PATCH",
         body: JSON.stringify({
           expectedVersion: app.version,
-          borrowerId,
+          borrowerId: row.id,
           currentStep: "BORROWER",
         }),
       });
       setApp(saved);
+      setPickedBorrower(row);
     } catch (err) {
       setError(err);
     }
@@ -562,16 +730,61 @@ export function ApplicationWizardPage() {
     }
   }
 
+  async function completeAssetValuation(assetId: string, valuationId: string, version: number) {
+    if (!app) return;
+    setSavingValuationAssetId(assetId);
+    setError(null);
+    try {
+      const participants = await api<{
+        loanOfficers: Array<{ id: string }>;
+        valuationOfficers: Array<{ id: string }>;
+      }>(`/applications/${id}/valuations`);
+      const loanOfficerId =
+        staffUser?.role === "LOAN_OFFICER"
+          ? staffUser.id
+          : participants.loanOfficers[0]?.id ?? "";
+      const valuationOfficerId = participants.valuationOfficers[0]?.id ?? "";
+      if (!loanOfficerId || !valuationOfficerId) {
+        throw new Error("Demo loan and valuation officers are missing. Run pnpm seed:demo.");
+      }
+      await api(`/valuations/${valuationId}/complete`, {
+        method: "POST",
+        body: JSON.stringify({
+          expectedVersion: version,
+          amount: valuationAmount,
+          valuationDate: aucklandBusinessDate(),
+          basis: valuationBasis,
+          borrowerPresent: valuationBorrowerPresent,
+          loanOfficerId,
+          valuationOfficerId,
+          participatedAt: aucklandWallTimeToIso(aucklandDateTimeLocal()),
+        }),
+      });
+      await reload();
+      setPhotoMessage("Valuation saved for this asset.");
+    } catch (err) {
+      setError(err);
+    } finally {
+      setSavingValuationAssetId(null);
+    }
+  }
+
   async function uploadPhoto(assetId: string, file: File) {
     if (file.size > 8 * 1024 * 1024) {
       setError(new Error("Photo must be under 8 MB"));
       return;
     }
+    setUploadingAssetId(assetId);
+    setPhotoMessage("");
+    setError(null);
     try {
       await uploadFile(`/applications/${id}/assets/${assetId}/photos`, file);
       await reload();
+      setPhotoMessage(`Photo added for this asset (${file.name}).`);
     } catch (err) {
       setError(err);
+    } finally {
+      setUploadingAssetId(null);
     }
   }
 
@@ -654,17 +867,36 @@ export function ApplicationWizardPage() {
       {step === "borrower" ? (
         <section className="card stack">
           <h2>Borrower</h2>
+          <p className="hint">
+            Pick a borrower whose login is linked under Borrowers → Link account, so they can see this application after you submit it.
+          </p>
           <input
             value={borrowerQuery}
             onChange={(event) => void searchBorrowers(event.target.value)}
-            placeholder="Search borrowers"
+            placeholder="Search by name, number, phone, or email"
           />
           {borrowers.map((row) => (
-            <button key={row.id} type="button" className="linkish" onClick={() => void saveBorrower(row.id)}>
+            <button key={row.id} type="button" className="linkish" onClick={() => void saveBorrower(row)}>
               {row.name} · {row.number}
+              {row.email ? ` · ${row.email}` : " · no email on file"}
+              {row.linkedUserId ? " · login linked" : " · no login linked"}
             </button>
           ))}
-          {app.borrowerName ? <p>Selected: {app.borrowerName}</p> : null}
+          {app.borrowerId && pickedBorrower ? (
+            <div className="stack">
+              <p>
+                Selected: {pickedBorrower.name} · {pickedBorrower.number}
+                {pickedBorrower.email ? ` · ${pickedBorrower.email}` : " · no email on file"}
+                {pickedBorrower.linkedUserId ? " · login linked" : " · no login linked"}
+              </p>
+              {!pickedBorrower.linkedUserId ? (
+                <p className="error" role="alert">
+                  This borrower has no linked customer login yet.{" "}
+                  <Link to={`/staff/borrowers/${app.borrowerId}/account-link`}>Link account</Link> before you submit.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -687,23 +919,102 @@ export function ApplicationWizardPage() {
       {step === "security" ? (
         <section className="card stack">
           <h2>Security assets</h2>
-          {app.assets.map((asset) => (
+          <p className="hint">Add at least one photo per asset before you submit. JPG, PNG, or WebP, up to 8 MB each.</p>
+          {error ? <p className="error" role="alert">{errorMessage(error, "Could not update security assets")}</p> : null}
+          {photoMessage ? <p className="hint" role="status">{photoMessage}</p> : null}
+          {app.assets.map((asset) => {
+            const linkedValuation = valuationsByAsset[asset.id];
+            const valuationId = asset.valuationId ?? linkedValuation?.id ?? null;
+            const valuationVersion = asset.valuationVersion ?? linkedValuation?.version ?? null;
+            const valuationStatus = asset.valuationStatus ?? linkedValuation?.status ?? null;
+            return (
             <article key={asset.id} className="stack">
               <strong>{asset.name}</strong>
               <span>{asset.description}</span>
               <span>{asset.condition}</span>
-              <span>{asset.photoCount} photo(s) · valuation {asset.valuationStatus ?? "requested"}</span>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) void uploadPhoto(asset.id, file);
-                }}
-              />
-              <Link to={`/staff/applications/${id}/valuation`}>Open valuation</Link>
+              <span>{asset.photoCount} photo(s) · valuation {valuationStatus ?? "requested"}</span>
+              {asset.photos?.length ? (
+                <ul className="photo-grid" style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  {asset.photos.map((photo) => (
+                    <li key={photo.id}>
+                      <img src={photo.url} alt={`${asset.name} photo`} loading="lazy" />
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="hint">No photos yet.</p>
+              )}
+              <Field label={uploadingAssetId === asset.id ? "Uploading photo…" : "Add photo"}>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={uploadingAssetId === asset.id}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (file) void uploadPhoto(asset.id, file);
+                  }}
+                />
+              </Field>
+              {valuationStatus === "COMPLETED" ? (
+                <p className="hint">
+                  Valuation recorded{asset.valuationAmount ? ` · $${asset.valuationAmount}` : ""}.
+                </p>
+              ) : valuationId && valuationVersion ? (
+                <div className="stack">
+                  <p className="hint">Record a valuation so Review can tick security checks.</p>
+                  <Field label="Security value (NZD)">
+                    <input
+                      value={valuationAmount}
+                      onChange={(event) => setValuationAmount(event.target.value)}
+                      placeholder={app.requestedAmount ? `At least ${app.requestedAmount}` : "e.g. 2500"}
+                      required
+                    />
+                  </Field>
+                  <Field label="Basis">
+                    <textarea
+                      value={valuationBasis}
+                      onChange={(event) => setValuationBasis(event.target.value)}
+                      required
+                    />
+                  </Field>
+                  <label className="checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={valuationBorrowerPresent}
+                      onChange={(event) => setValuationBorrowerPresent(event.target.checked)}
+                    />
+                    Borrower present at inspection
+                  </label>
+                  <div className="hero-actions">
+                    <Button
+                      type="button"
+                      disabled={savingValuationAssetId === asset.id}
+                      onClick={() =>
+                        void completeAssetValuation(asset.id, valuationId, valuationVersion)
+                      }
+                    >
+                      {savingValuationAssetId === asset.id ? "Saving valuation…" : "Save valuation"}
+                    </Button>
+                    <Link
+                      className="btn btn-secondary"
+                      to={`/staff/applications/${id}/valuation`}
+                    >
+                      Open full valuation form
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <p className="hint">
+                  Loading valuation record…{" "}
+                  <button type="button" className="linkish" onClick={() => void reload()}>
+                    Retry
+                  </button>
+                </p>
+              )}
             </article>
-          ))}
+          );
+          })}
           <form className="stack" onSubmit={(event) => void addAsset(event)}>
             <Field label="Asset name"><input value={assetName} onChange={(event) => setAssetName(event.target.value)} required /></Field>
             <Field label="Description"><textarea value={assetDescription} onChange={(event) => setAssetDescription(event.target.value)} required /></Field>
@@ -744,20 +1055,74 @@ export function ApplicationWizardPage() {
             <Button type="submit">Save terms</Button>
             <Button type="button" variant="secondary" onClick={() => void loadPreview()}>Preview schedule</Button>
           </div>
-          {preview ? <pre>{JSON.stringify(preview, null, 2)}</pre> : null}
+          {preview ? <TermsSchedulePreview preview={preview} /> : null}
         </form>
       ) : null}
 
       {step === "review" ? (
         <section className="card stack">
           <h2>Review</h2>
-          <ul>
+          <ul className="readiness-list">
             {app.readiness.map((item) => (
-              <li key={item.id}>{item.complete ? "✓" : "○"} {item.label}</li>
+              <li key={item.id} className={item.complete ? "readiness-done" : "readiness-pending"}>
+                {item.complete ? "✓" : "○"}{" "}
+                {!item.complete && item.href ? (
+                  <Link to={item.href}>{item.label}</Link>
+                ) : (
+                  item.label
+                )}
+              </li>
             ))}
           </ul>
+          {app.assets.length ? (
+            <div className="stack">
+              <h3 style={{ margin: "8px 0 0", fontSize: 16 }}>Security checklist (step 3)</h3>
+              <ul>
+                {app.assets.map((asset) => {
+                  const photosOk = asset.photoCount > 0;
+                  const valuedOk = asset.valuationStatus === "COMPLETED";
+                  return (
+                    <li key={asset.id}>
+                      <strong>{asset.name}</strong>
+                      {" — "}
+                      {photosOk ? "✓ photo" : "○ add photo"}
+                      {" · "}
+                      {valuedOk
+                        ? `✓ valued${asset.valuationAmount ? ` ($${asset.valuationAmount})` : ""}`
+                        : "○ save valuation"}
+                      {!photosOk || !valuedOk ? (
+                        <>
+                          {" "}
+                          <Link to={`/staff/applications/${id}/edit/security`}>Fix on security</Link>
+                        </>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+              {app.requestedAmount ? (
+                <p className="hint">
+                  Loan amount ${app.requestedAmount}. Total security value must be at least that much after every asset is valued.
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="hint">
+              No security assets yet.{" "}
+              <Link to={`/staff/applications/${id}/edit/security`}>Add an asset on step 3</Link>.
+            </p>
+          )}
+          {!staffCanSubmit(app.readiness) ? (
+            <p className="hint">
+              Submit stays blocked until every asset has a photo and a completed valuation (step 3).
+            </p>
+          ) : null}
           {error ? <p className="error">{errorMessage(error, "Could not submit application")}</p> : null}
-          <Button data-control-id="S04-06" onClick={() => void submitApplication()} disabled={app.status !== "DRAFT"}>
+          <Button
+            data-control-id="S04-06"
+            onClick={() => void submitApplication()}
+            disabled={app.status !== "DRAFT" || !staffCanSubmit(app.readiness)}
+          >
             Submit for review
           </Button>
         </section>
@@ -766,29 +1131,160 @@ export function ApplicationWizardPage() {
   );
 }
 
+type ValuationListRow = {
+  id: string;
+  asset?: { name?: string };
+  amount?: string | null;
+  basis?: string | null;
+  version?: number;
+};
+
+type StaffPick = { id: string; name: string; email: string };
+
+type ValuationQueueItem = {
+  id: string;
+  applicationId: string;
+  applicationNumber: string;
+  applicationStatus: string;
+  borrowerName: string | null;
+  assetName: string;
+  status: string;
+  updatedAt: string;
+};
+
+export function ValuationQueuePage() {
+  const [items, setItems] = useState<ValuationQueueItem[]>([]);
+  const [error, setError] = useState<unknown>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    void api<{ items: ValuationQueueItem[] }>("/valuations/queue")
+      .then((data) => {
+        setItems(data.items);
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        setError(err);
+        setItems([]);
+        setLoading(false);
+      });
+  }, []);
+
+  return (
+    <main className="staff-page">
+      <h1>Valuation queue</h1>
+      <p className="hint">
+        Open an application to record security values. Loan officers create drafts; valuation officers complete them here.
+      </p>
+      {loading ? <p className="hint">Loading queue…</p> : null}
+      {error ? (
+        <p className="error">
+          {errorMessage(error, "Could not load valuation queue")}
+          {" "}
+          If you just updated the project, restart <code>pnpm dev:api</code> so <code>/valuations/queue</code> is available.
+        </p>
+      ) : null}
+      {!loading && !error ? (
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Application</th>
+              <th>Borrower</th>
+              <th>Asset</th>
+              <th>Status</th>
+              <th>Updated</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {items.length ? items.map((row) => (
+              <tr key={row.id}>
+                <td>{row.applicationNumber}</td>
+                <td>{row.borrowerName ?? "—"}</td>
+                <td>{row.assetName}</td>
+                <td>{statusLabel(row.status)}</td>
+                <td>{formatDate(businessDateFromStored(row.updatedAt.slice(0, 10)))}</td>
+                <td>
+                  <Link
+                    className="btn btn-secondary"
+                    to={`/staff/applications/${row.applicationId}/valuation`}
+                  >
+                    Open valuation
+                  </Link>
+                </td>
+              </tr>
+            )) : (
+              <tr>
+                <td colSpan={6} className="empty-row">
+                  No pending valuations. When a loan officer adds security on a draft application, it will appear here.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      ) : null}
+    </main>
+  );
+}
+
 export function ValuationPage() {
   const { id = "" } = useParams();
-  const [items, setItems] = useState<Array<Record<string, unknown>>>([]);
+  const { user: staffUser } = useAuth();
+  const [items, setItems] = useState<ValuationListRow[]>([]);
+  const [loanOfficers, setLoanOfficers] = useState<StaffPick[]>([]);
+  const [valuationOfficers, setValuationOfficers] = useState<StaffPick[]>([]);
   const [amount, setAmount] = useState("");
-  const [basis, setBasis] = useState("");
+  const [basis, setBasis] = useState("In-person inspection for loan security");
   const [valuationDate, setValuationDate] = useState(() => aucklandBusinessDate());
   const [participatedAt, setParticipatedAt] = useState(() => aucklandDateTimeLocal());
-  const [borrowerPresent, setBorrowerPresent] = useState(false);
+  const [borrowerPresent, setBorrowerPresent] = useState(true);
   const [loanOfficerId, setLoanOfficerId] = useState("");
   const [valuationOfficerId, setValuationOfficerId] = useState("");
   const [error, setError] = useState<unknown>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    void api<{ items: Array<Record<string, unknown>> }>(`/applications/${id}/valuations`).then((data) => {
-      setItems(data.items);
-      const first = data.items[0];
-      if (first) {
-        setAmount(String(first.amount ?? ""));
-        setBasis(String(first.basis ?? ""));
-      }
-    });
-  }, [id]);
+    let active = true;
+    setLoading(true);
+    setError(null);
+    void api<{
+      items: ValuationListRow[];
+      loanOfficers?: StaffPick[];
+      valuationOfficers?: StaffPick[];
+    }>(`/applications/${id}/valuations`)
+      .then((data) => {
+        if (!active) return;
+        setItems(data.items ?? []);
+        const officers = data.loanOfficers ?? [];
+        const valuers = data.valuationOfficers ?? [];
+        setLoanOfficers(officers);
+        setValuationOfficers(valuers);
+        const first = data.items?.[0];
+        if (first) {
+          setAmount(String(first.amount ?? ""));
+          if (first.basis) setBasis(String(first.basis));
+        }
+        const defaultLoan =
+          staffUser?.role === "LOAN_OFFICER"
+            ? staffUser.id
+            : officers[0]?.id ?? "";
+        setLoanOfficerId(defaultLoan);
+        setValuationOfficerId(valuers[0]?.id ?? "");
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        setError(err);
+        setItems([]);
+        setLoanOfficers([]);
+        setValuationOfficers([]);
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id, staffUser?.id, staffUser?.role]);
 
   async function complete(valuationId: string, version: number) {
     setError(null);
@@ -816,20 +1312,42 @@ export function ValuationPage() {
     <main className="staff-page">
       <Link to={`/staff/applications/${id}/edit/security`}>← Security assets</Link>
       <h1>Valuation</h1>
-      {items.map((item) => (
-        <section key={String(item.id)} className="card stack">
-          <h2>{String((item.asset as { name?: string })?.name ?? "Asset")}</h2>
+      {loading ? <p className="hint">Loading valuations…</p> : null}
+      {error ? <p className="error">{errorMessage(error, "Could not load valuations")}</p> : null}
+      {!loading && items.length === 0 ? (
+        <p className="hint">
+          No valuation records yet.{" "}
+          <Link to={`/staff/applications/${id}/edit/security`}>Add a security asset first</Link>.
+        </p>
+      ) : null}
+      {!loading ? items.map((item) => (
+        <section key={item.id} className="card stack">
+          <h2>{item.asset?.name ?? "Asset"}</h2>
           <Field label="Amount"><input value={amount} onChange={(event) => setAmount(event.target.value)} required data-control-id="S05-01" /></Field>
           <Field label="Valuation date"><input type="date" value={valuationDate} onChange={(event) => setValuationDate(event.target.value)} data-control-id="S05-02" /></Field>
           <Field label="Basis"><textarea value={basis} onChange={(event) => setBasis(event.target.value)} required data-control-id="S05-03" /></Field>
-          <Field label="Loan officer ID"><input value={loanOfficerId} onChange={(event) => setLoanOfficerId(event.target.value)} required /></Field>
-          <Field label="Valuation officer ID"><input value={valuationOfficerId} onChange={(event) => setValuationOfficerId(event.target.value)} required /></Field>
+          <Field label="Loan officer">
+            <select value={loanOfficerId} onChange={(event) => setLoanOfficerId(event.target.value)} required>
+              <option value="">Select loan officer</option>
+              {loanOfficers.map((row) => (
+                <option key={row.id} value={row.id}>{row.name} · {row.email}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Valuation officer">
+            <select value={valuationOfficerId} onChange={(event) => setValuationOfficerId(event.target.value)} required>
+              <option value="">Select valuation officer</option>
+              {valuationOfficers.map((row) => (
+                <option key={row.id} value={row.id}>{row.name} · {row.email}</option>
+              ))}
+            </select>
+          </Field>
           <Field label="Participation time"><input type="datetime-local" value={participatedAt} onChange={(event) => setParticipatedAt(event.target.value)} data-control-id="S05-04" /></Field>
           <label className="checkbox-row"><input type="checkbox" checked={borrowerPresent} onChange={(event) => setBorrowerPresent(event.target.checked)} />Borrower present</label>
           {error ? <p className="error">{errorMessage(error, "Could not complete valuation")}</p> : null}
-          <Button onClick={() => void complete(String(item.id), Number(item.version ?? 1))}>Save valuation</Button>
+          <Button onClick={() => void complete(item.id, Number(item.version ?? 1))}>Save valuation</Button>
         </section>
-      ))}
+      )) : null}
     </main>
   );
 }
@@ -838,18 +1356,43 @@ export function CustomerApplicationDetailPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const [item, setItem] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
-    void api<Record<string, unknown>>(`/me/applications/${id}`).then((data) => {
-      if (data.status === "DRAFT" && CUSTOMER_SELF_APPLY) {
-        navigate("/customer/apply", { replace: true });
-        return;
-      }
-      setItem(data);
-    });
+    let active = true;
+    setLoading(true);
+    setError(null);
+    setItem(null);
+    void api<Record<string, unknown>>(`/me/applications/${id}`)
+      .then((data) => {
+        if (!active) return;
+        if (data.status === "DRAFT" && CUSTOMER_SELF_APPLY) {
+          navigate("/customer/apply", { replace: true });
+          return;
+        }
+        setItem(data);
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        setError(err);
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [id, navigate]);
 
-  if (!item) return <main className="page"><p>Loading application…</p></main>;
+  if (loading && !error) return <main className="page"><p>Loading application…</p></main>;
+  if (error || !item) {
+    return (
+      <main className="page">
+        <p className="error">{errorMessage(error, "Could not load application")}</p>
+        <Link className="btn btn-secondary" to="/customer/applications">Back to applications</Link>
+      </main>
+    );
+  }
 
   const stages = (item.stages as Array<{ id: string; label: string; complete: boolean }>) ?? [];
 

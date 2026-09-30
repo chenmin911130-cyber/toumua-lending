@@ -12,7 +12,7 @@ import {
   normalizeEmail,
 } from "@toumua/contracts";
 import { PrismaService } from "../prisma/prisma.service";
-import { MailService } from "../mail/mail.service";
+import { MailService, mailIsDeliverable } from "../mail/mail.service";
 import { AuditService } from "../audit/audit.service";
 import { RateLimitService } from "../common/rate-limit.service";
 import { hashToken, maskEmail, randomToken } from "../common/ids";
@@ -80,8 +80,8 @@ export class AuthService {
       where: { emailNormalized },
     });
     if (existing) {
-      throw conflict("This email cannot be used", {
-        email: ["This email cannot be used"],
+      throw conflict("This email is already registered. Log in to continue.", {
+        email: ["This email is already registered. Log in to continue."],
       });
     }
     const passwordHash = await this.hashPassword(input.password);
@@ -102,7 +102,12 @@ export class AuthService {
       objectId: user.id,
       after: { email: user.email, role: user.role },
     });
-    await this.issueVerificationEmail(user);
+    try {
+      await this.issueVerificationEmail(user);
+    } catch {
+      // The account still exists. The pending page offers in-app verification
+      // when this server cannot deliver mail.
+    }
     const session = await this.createSession(user.id, true);
     return { user: toPublicUser(user, true), session };
   }
@@ -195,6 +200,9 @@ export class AuthService {
     if (user.role !== "CUSTOMER" || user.status !== "PENDING_VERIFICATION") {
       throw forbidden();
     }
+    if (!mailIsDeliverable()) {
+      return { sent: false, retryAfterSeconds: 0 };
+    }
     await this.rateLimit.consume(
       `resend-verify:${user.id}`,
       1,
@@ -202,6 +210,39 @@ export class AuthService {
     );
     await this.issueVerificationEmail(user);
     return { sent: true, retryAfterSeconds: this.resendSeconds() };
+  }
+
+  async verifyWithoutEmail(userId: string, sessionId: string) {
+    if (mailIsDeliverable()) {
+      throw forbidden("Use the verification link sent to your email");
+    }
+    const user = await this.requireUser(userId);
+    if (user.role !== "CUSTOMER" || user.status === "INACTIVE") {
+      throw forbidden();
+    }
+    if (!user.emailVerifiedAt) {
+      await this.prisma.$transaction([
+        this.prisma.user.update({
+          where: { id: user.id },
+          data: { emailVerifiedAt: new Date(), status: "ACTIVE" },
+        }),
+        this.prisma.verificationToken.updateMany({
+          where: { userId: user.id, type: "EMAIL_VERIFY", usedAt: null },
+          data: { usedAt: new Date() },
+        }),
+        this.prisma.session.update({
+          where: { id: sessionId },
+          data: { restricted: false },
+        }),
+      ]);
+    } else {
+      await this.prisma.session.update({
+        where: { id: sessionId },
+        data: { restricted: false },
+      });
+    }
+    const fresh = await this.requireUser(user.id);
+    return toPublicUser(fresh, false);
   }
 
   async changePendingEmail(userId: string, email: string) {

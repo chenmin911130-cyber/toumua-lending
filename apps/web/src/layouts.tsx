@@ -271,6 +271,15 @@ export function StaffLayout({ children }: { children?: ReactNode }) {
         <nav className="staff-nav">
           <GlobalSearch />
           {STAFF_NAV.flatMap((item) => {
+            if (user.role === "VALUATION_OFFICER" && item.to === "/staff/applications") {
+              return [{ to: "/staff/valuations", label: "Valuations" }];
+            }
+            if (
+              user.role === "VALUATION_OFFICER" &&
+              (item.to === "/staff/borrowers" || item.to === "/staff/loans" || item.to === "/staff/transactions")
+            ) {
+              return [];
+            }
             const links = [item];
             if (
               item.to === "/staff/collateral" &&

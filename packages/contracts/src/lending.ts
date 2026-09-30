@@ -195,6 +195,9 @@ export type ApplicationDetail = ApplicationSummary & {
     identifier: string | null;
     photoCount: number;
     valuationStatus: ValuationStatus | null;
+    valuationId: string | null;
+    valuationVersion: number | null;
+    valuationAmount: string | null;
     photos: Array<{ id: string; url: string }>;
   }>;
   terms: {
@@ -543,6 +546,8 @@ export type LoanSummary = {
   defaultedAt: string | null;
   updatedAt: string;
   nextDueDate: string | null;
+  /** Set on customer loan lists when a contract is waiting for the borrower signature. */
+  pendingContractId?: string | null;
 };
 
 export type CustomerAssetView = {

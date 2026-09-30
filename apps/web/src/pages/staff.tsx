@@ -103,7 +103,7 @@ export function StaffHomePage() {
           </article>
         </section>
       ) : role === "VALUATION_OFFICER" ? (
-        <p className="hint"><Link to="/staff/applications">Open the valuation queue</Link></p>
+        <p className="hint"><Link to="/staff/valuations">Open the valuation queue</Link></p>
       ) : null}
       {showReviews ? (
         <>

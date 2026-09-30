@@ -25,6 +25,23 @@ export function assertManageValuation(user: PublicUser) {
   throw forbidden();
 }
 
+/** Read or complete valuations on an application (wizard + queue). */
+export function assertViewApplicationValuations(user: PublicUser) {
+  if (!user.isStaff) throw forbidden();
+  if (user.role && LENDING_ROLES.has(user.role)) return;
+  if (user.role && VALUATION_ROLES.has(user.role)) return;
+  throw forbidden();
+}
+
+export function assertCompleteApplicationValuation(user: PublicUser, draftApplication: boolean) {
+  if (!user.isStaff) throw forbidden();
+  if (draftApplication) {
+    if (user.role && (LENDING_ROLES.has(user.role) || VALUATION_ROLES.has(user.role))) return;
+    throw forbidden();
+  }
+  assertManageValuation(user);
+}
+
 export function assertManageAccountLink(user: PublicUser) {
   if (!user.isStaff) throw forbidden();
   if (user.role && LENDING_ROLES.has(user.role)) return;

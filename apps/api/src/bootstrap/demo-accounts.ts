@@ -189,6 +189,19 @@ export async function seedDemoAccounts(
   });
 
   await upsertUser(prisma, {
+    email: demoEmail("loan.officer2"),
+    name: "Jordan Loan",
+    passwordHash,
+    role: BusinessRole.LOAN_OFFICER,
+  });
+  await upsertUser(prisma, {
+    email: demoEmail("loan.officer3"),
+    name: "Priya Rao",
+    passwordHash,
+    role: BusinessRole.LOAN_OFFICER,
+  });
+
+  await upsertUser(prisma, {
     email: demoEmail("manager"),
     name: "Morgan Manager",
     passwordHash,
@@ -216,6 +229,18 @@ export async function seedDemoAccounts(
   await upsertUser(prisma, {
     email: demoEmail("valuation"),
     name: "Sam Valuer",
+    passwordHash,
+    role: BusinessRole.VALUATION_OFFICER,
+  });
+  await upsertUser(prisma, {
+    email: demoEmail("valuation2"),
+    name: "Hana Apelu",
+    passwordHash,
+    role: BusinessRole.VALUATION_OFFICER,
+  });
+  await upsertUser(prisma, {
+    email: demoEmail("valuation3"),
+    name: "Chris Field",
     passwordHash,
     role: BusinessRole.VALUATION_OFFICER,
   });

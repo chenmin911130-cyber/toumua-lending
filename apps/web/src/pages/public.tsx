@@ -142,6 +142,13 @@ export function RegisterPage() {
     }
   }
 
+  const formError =
+    error &&
+    !fieldError(error, "name") &&
+    !fieldError(error, "email") &&
+    !fieldError(error, "password") &&
+    !fieldError(error, "confirmPassword");
+
   return (
     <AuthSplit
       title="Your next step starts here."
@@ -153,6 +160,11 @@ export function RegisterPage() {
       <h1>Create your account</h1>
       <p className="hint" style={{ marginTop: 0 }}>{CUSTOMER_SELF_APPLY ? "Register, then apply with the amount you need and the security you can offer." : "Register to view an application or loan the office has linked to you."}</p>
       <form onSubmit={(event) => void onSubmit(event)}>
+        {formError ? (
+          <p className="auth-error" role="alert">
+            {errorMessage(error, "Could not create your account. Check your details and try again.")}
+          </p>
+        ) : null}
         <Field label="Full name" name="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} error={fieldError(error, "name")} />
         <Field label="Email address" name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={fieldError(error, "email")} />
         <PasswordField label="Password" name="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={12} maxLength={128} hint="Use 12 to 128 characters." error={fieldError(error, "password")} />
@@ -168,12 +180,21 @@ export function RegisterPage() {
 }
 
 export function VerifyPendingPage() {
-  const { user, refresh } = useAuth();
+  const { user, refresh, setUser } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [editing, setEditing] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState<unknown>(null);
   const [wait, setWait] = useState(0);
+  const [deliverable, setDeliverable] = useState<boolean | null>(null);
+  const [verifying, setVerifying] = useState(false);
+
+  useEffect(() => {
+    void api<{ deliverable: boolean }>("/auth/email/delivery")
+      .then((data) => setDeliverable(data.deliverable))
+      .catch(() => setDeliverable(false));
+  }, []);
 
   useEffect(() => {
     if (!wait) return;
@@ -184,12 +205,32 @@ export function VerifyPendingPage() {
   async function resend() {
     setError(null);
     try {
-      const result = await api<{ retryAfterSeconds: number }>("/auth/email/resend", { method: "POST" });
+      const result = await api<{ sent: boolean; retryAfterSeconds: number }>("/auth/email/resend", { method: "POST" });
+      if (!result.sent) {
+        setDeliverable(false);
+        setMessage("");
+        return;
+      }
       setMessage("Verification email sent.");
       setWait(result.retryAfterSeconds);
     } catch (err) {
+      setDeliverable(false);
       setError(err);
       setMessage("");
+    }
+  }
+
+  async function verifyHere() {
+    setError(null);
+    setVerifying(true);
+    try {
+      const data = await api<MeResponse>("/auth/email/verify-current", { method: "POST" });
+      setUser(data.user);
+      navigate("/customer");
+    } catch (err) {
+      setError(err);
+    } finally {
+      setVerifying(false);
     }
   }
 
@@ -212,13 +253,27 @@ export function VerifyPendingPage() {
   return (
     <main className="center-state">
       <div className="center-icon" aria-hidden>✉</div>
-      <h1>Check your email</h1>
-      <p>Open the verification link sent to your email address to continue.</p>
+      <h1>{deliverable === false ? "Account created" : "Check your email"}</h1>
+      <p>
+        {deliverable === false
+          ? "This demo cannot send a verification email. Verify this account here to continue."
+          : "Open the verification link sent to your email address to continue."}
+      </p>
       {user?.email ? <p className="hint">{maskEmail(user.email)}</p> : null}
-      <div className="info-bar">Your account is waiting for email verification.</div>
-      <Button controlId="A04-01" type="button" variant="secondary" disabled={wait > 0} onClick={() => void resend()}>
-        {wait > 0 ? `Resend in ${wait}s` : "Resend verification email"}
-      </Button>
+      <div className="info-bar">
+        {deliverable === false
+          ? "Email delivery is not set up on this server."
+          : "Your account is waiting for email verification."}
+      </div>
+      {deliverable === false ? (
+        <Button controlId="A04-03" type="button" disabled={verifying} onClick={() => void verifyHere()}>
+          {verifying ? "Verifying…" : "Verify account"}
+        </Button>
+      ) : (
+        <Button controlId="A04-01" type="button" variant="secondary" disabled={wait > 0 || deliverable === null} onClick={() => void resend()}>
+          {wait > 0 ? `Resend in ${wait}s` : "Resend verification email"}
+        </Button>
+      )}
       <p>
         <button type="button" className="btn btn-ghost" data-control-id="A04-02" onClick={() => setEditing(true)}>
           Use a different email

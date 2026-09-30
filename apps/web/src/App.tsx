@@ -66,6 +66,7 @@ import {
   BorrowersPage,
   CustomerApplicationDetailPage,
   ValuationPage,
+  ValuationQueuePage,
 } from "./pages/lending";
 import { StaffStoragePage } from "./pages/storage";
 import { StaffRemindersPage } from "./pages/reminders";
@@ -124,6 +125,7 @@ export function App() {
         <Route path="/staff/borrowers/:id/account-link" element={<AccountLinkPage />} />
         <Route path="/staff/applications" element={<ApplicationsPage />} />
         <Route path="/staff/applications/:id/edit/:step" element={<ApplicationWizardPage />} />
+        <Route path="/staff/valuations" element={<ValuationQueuePage />} />
         <Route path="/staff/applications/:id/valuation" element={<ValuationPage />} />
         <Route path="/staff/applications/:id/review" element={<ApplicationReviewPage />} />
         <Route path="/staff/collateral" element={<StaffCollateralPage />} />

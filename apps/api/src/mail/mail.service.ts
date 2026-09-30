@@ -3,6 +3,15 @@ import nodemailer, { Transporter } from "nodemailer";
 import { PrismaService } from "../prisma/prisma.service";
 import { mailUnavailable } from "../common/http";
 
+/** True when a message can leave this process. Loopback SMTP and a missing host cannot. */
+export function mailIsDeliverable(): boolean {
+  const driver = process.env.MAIL_DRIVER ?? "smtp";
+  if (driver === "memory") return true;
+  if (driver !== "smtp") return false;
+  const host = (process.env.MAIL_SMTP_HOST ?? "127.0.0.1").trim().toLowerCase();
+  return host !== "127.0.0.1" && host !== "localhost" && host !== "::1";
+}
+
 type SendMailInput = {
   userId?: string;
   to: string;

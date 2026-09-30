@@ -90,9 +90,17 @@ export function CustomerLoanDetailPage() {
       ) : null}
       {loan.defaultReason ? <p className="hint">Default note: {loan.defaultReason}</p> : null}
       {loan.contract?.status === "ISSUED" ? (
-        <p>
-          <Link to={`/customer/contracts/${loan.contract.id}`}>Your loan contract is ready to sign</Link>
-        </p>
+        <section className="card stack" style={{ marginTop: 24, borderColor: "var(--teal, #0d6e6e)" }}>
+          <h2 className="serif" style={{ fontSize: 28, margin: 0 }}>Sign your loan contract</h2>
+          <p className="hint">
+            Contract {loan.contract.number} must be signed before the office can release your funds.
+          </p>
+          <Link className="btn btn-primary" to={`/customer/contracts/${loan.contract.id}`}>
+            Review and sign contract
+          </Link>
+        </section>
+      ) : loan.contract?.status === "SIGNED" ? (
+        <p className="hint">Contract {loan.contract.number} signed — waiting for disbursement.</p>
       ) : null}
       {loan.reminders.enabled && loan.reminders.phoneMasked ? (
         <p>
@@ -418,7 +426,16 @@ export function CustomerLoansListPage() {
               <span>{statusLabel(loan.status)} · balance ${loan.balance}</span>
             </div>
             <div className="hero-actions">
-              <Link className="btn btn-primary" to={`/customer/loans/${loan.id}`} data-control-id="C09-01">
+              {loan.pendingContractId ? (
+                <Link className="btn btn-primary" to={`/customer/contracts/${loan.pendingContractId}`}>
+                  Sign contract
+                </Link>
+              ) : null}
+              <Link
+                className={loan.pendingContractId ? "btn btn-secondary" : "btn btn-primary"}
+                to={`/customer/loans/${loan.id}`}
+                data-control-id="C09-01"
+              >
                 Open loan
               </Link>
               <Link className="btn btn-secondary" to={`/customer/loans/${loan.id}/repayments`}>

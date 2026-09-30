@@ -86,7 +86,16 @@ export function CustomerHomePage() {
               </span>
             </div>
             <div className="hero-actions">
-              <Link className="btn btn-primary" to={`/customer/loans/${loan.id}`} data-control-id="C03-01">
+              {loan.pendingContractId ? (
+                <Link className="btn btn-primary" to={`/customer/contracts/${loan.pendingContractId}`}>
+                  Sign contract
+                </Link>
+              ) : null}
+              <Link
+                className={loan.pendingContractId ? "btn btn-secondary" : "btn btn-primary"}
+                to={`/customer/loans/${loan.id}`}
+                data-control-id="C03-01"
+              >
                 Open loan
               </Link>
               <Link className="btn btn-secondary" to={`/customer/loans/${loan.id}/repayments`} data-control-id="C05-01">

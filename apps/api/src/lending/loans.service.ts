@@ -219,10 +219,15 @@ export class LoansService {
         borrower: { select: { name: true } },
         application: { select: { number: true } },
         schedule: { orderBy: { number: "asc" } },
+        contracts: { orderBy: { version: "desc" }, take: 1 },
       },
     });
     return {
-      items: items.map((row) => this.toSummary(row)),
+      items: items.map((row) => ({
+        ...this.toSummary(row),
+        pendingContractId:
+          row.contracts[0]?.status === "ISSUED" ? row.contracts[0].id : null,
+      })),
       nextCursor: null,
       total: items.length,
     };

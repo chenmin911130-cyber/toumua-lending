@@ -654,6 +654,62 @@ export class ApplicationsService {
       },
     });
     if (!row) throw notFound("Application not found");
+    await Promise.all(
+      row.assets.map((asset) => this.ensureValuation(id, asset.id)),
+    );
+    if (row.assets.some((asset) => asset.valuations.length === 0)) {
+      const refreshed = await this.prisma.application.findUnique({
+        where: { id },
+        include: {
+          borrower: { select: { name: true } },
+          assets: {
+            orderBy: { sortOrder: "asc" },
+            include: { photos: true, valuations: true },
+          },
+          terms: true,
+        },
+      });
+      if (!refreshed) throw notFound("Application not found");
+      return this.loadDetailFromRow(refreshed);
+    }
+    return this.loadDetailFromRow(row);
+  }
+
+  private loadDetailFromRow(row: {
+    id: string;
+    number: string;
+    status: string;
+    currentStep: string;
+    version: number;
+    borrowerId: string | null;
+    requestedAmount: string | null;
+    purpose: string | null;
+    purposeDescription: string | null;
+    proposedTermMonths: number | null;
+    submittedAt: Date | null;
+    updatedAt: Date;
+    borrower?: { name: string } | null;
+    assets: Array<{
+      id: string;
+      name: string;
+      description: string;
+      condition: string;
+      category: string | null;
+      identifier: string | null;
+      photos: Array<{ id: string }>;
+      valuations: Array<{ id: string; status: string; version: number; amount: string | null }>;
+    }>;
+    terms: {
+      firstPaymentDate: Date | null;
+      frequency: string | null;
+      periods: number | null;
+      interestMethod: string | null;
+      policyConfigured: boolean;
+      loyaltyTier: string;
+      discountBps: number;
+      previewJson: unknown;
+    } | null;
+  }): ApplicationDetail {
     const raw = {
       id: row.id,
       status: row.status,
@@ -693,6 +749,12 @@ export class ApplicationsService {
         identifier: asset.identifier,
         photoCount: asset.photos.length,
         valuationStatus: (asset.valuations[0]?.status as ValuationStatus | undefined) ?? null,
+        valuationId: asset.valuations[0]?.id ?? null,
+        valuationVersion: asset.valuations[0]?.version ?? null,
+        valuationAmount:
+          asset.valuations[0]?.status === ValuationStatus.COMPLETED
+            ? asset.valuations[0].amount
+            : null,
         photos: asset.photos.map((photo) => ({
           id: photo.id,
           url: `/api/v1/photos/${photo.id}/file`,

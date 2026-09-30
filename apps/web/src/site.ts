@@ -7,7 +7,7 @@ export const LEGAL_ENTITY = "Toumu’a Lending Ltd";
 export const CONTACT_PHONE = "021 150 1502";
 export const CONTACT_EMAIL = "office@toumua.nz";
 export const CONTACT_ADDRESS = "Auckland, New Zealand";
-export const CONTACT_HOURS = "Monday–Friday, 9:00am–5:00pm NZST";
+export const CONTACT_HOURS = "Monday-Friday, 9:00am-5:00pm NZST";
 
 export const TAGLINE = "Secured loans for personal, vehicle and business needs.";
 

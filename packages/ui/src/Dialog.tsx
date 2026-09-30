@@ -10,19 +10,22 @@ type Props = {
 
 export function Dialog({ title, open, onClose, children, controlId }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!open) return;
     const node = dialogRef.current;
     const focusable = node?.querySelector<HTMLElement>("input,button,textarea,select");
-    focusable?.focus();
+    focusable?.focus({ preventScroll: true });
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return (

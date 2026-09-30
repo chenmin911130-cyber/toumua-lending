@@ -12,6 +12,7 @@ import {
 } from "@toumua/contracts";
 import { Request, Response } from "express";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
+import { mailIsDeliverable } from "../mail/mail.service";
 import { AuthService } from "./auth.service";
 import { AllowRestricted, Public } from "./auth.guard";
 import { CurrentUser } from "./current-user.decorator";
@@ -85,9 +86,21 @@ export class AuthController {
   }
 
   @AllowRestricted()
+  @Get("email/delivery")
+  delivery() {
+    return { deliverable: mailIsDeliverable() };
+  }
+
+  @AllowRestricted()
   @Post("email/resend")
   resend(@CurrentUser() user: AuthUser) {
     return this.auth.resendVerification(user.id);
+  }
+
+  @AllowRestricted()
+  @Post("email/verify-current")
+  async verifyCurrent(@CurrentUser() user: AuthUser) {
+    return { user: await this.auth.verifyWithoutEmail(user.id, user.sessionId) };
   }
 
   @AllowRestricted()

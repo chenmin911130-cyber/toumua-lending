@@ -1,4 +1,4 @@
-import { Body, Controller, Inject, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { completeValuationSchema } from "@toumua/contracts";
 import { RequireStaff } from "../auth/auth.guard";
@@ -12,6 +12,11 @@ import { ValuationsService } from "./valuations.service";
 @Controller("valuations")
 export class ValuationsController {
   constructor(@Inject(ValuationsService) private readonly valuations: ValuationsService) {}
+
+  @Get("queue")
+  queue(@CurrentUser() user: AuthUser) {
+    return this.valuations.listQueue(user);
+  }
 
   @Post(":id/complete")
   complete(
