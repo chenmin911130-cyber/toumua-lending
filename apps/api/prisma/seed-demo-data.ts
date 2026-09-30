@@ -12,6 +12,7 @@ import { MoneyService } from "../src/lending/money.service";
 import { UploadsService } from "../src/lending/uploads.service";
 import { ValuationsService } from "../src/lending/valuations.service";
 import { ContractsService } from "../src/contracts/contracts.service";
+import { ArrangementsService } from "../src/arrangements/arrangements.service";
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -67,6 +68,7 @@ async function main() {
   const loans = app.get(LoansService);
   const corrections = app.get(CorrectionsService);
   const contracts = app.get(ContractsService);
+  const arrangements = app.get(ArrangementsService);
 
   const users = await prisma.user.findMany({ include: { permissions: true } });
   const byEmail = new Map(users.map((user) => [user.email, user]));
@@ -255,6 +257,15 @@ async function main() {
     }
     void posted;
   }
+
+  const sarahArrangement = await arrangements.requestForStaff(manager, sarahLoanId, {
+    method: "BANK_AUTOMATIC_PAYMENT",
+    accountName: "Sarah Tama",
+    accountNumber: "12-3456-1234567-012",
+    bankName: "ANZ",
+    consent: true,
+  });
+  await arrangements.activate(cashier, sarahArrangement.id);
 
   const james = await openFile("james.latu@toumua.nz", "1800.00", "Vehicle");
   await valueAndSubmit(james.id, "3200.00");

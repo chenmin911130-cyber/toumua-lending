@@ -18,6 +18,7 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { LendingModule } from "./lending/lending.module";
 import { RemindersModule } from "./reminders/reminders.module";
 import { SmsModule } from "./sms/sms.module";
+import { ArrangementsModule } from "./arrangements/arrangements.module";
 
 /**
  * Tests run against a throwaway cluster whose configuration arrives entirely
@@ -44,6 +45,7 @@ const isolateFromEnvFile =
     NotificationsModule,
     SmsModule,
     RemindersModule,
+    ArrangementsModule,
   ],
   controllers: [
     AuditController,

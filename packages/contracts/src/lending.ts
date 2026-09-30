@@ -257,6 +257,7 @@ export const PaymentMethod = {
   CHEQUE: "CHEQUE",
   MOBILE_WALLET: "MOBILE_WALLET",
   CARD: "CARD",
+  AUTOMATIC_PAYMENT: "AUTOMATIC_PAYMENT",
 } as const;
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
 
@@ -269,6 +270,7 @@ export const METHOD_REQUIRES_REFERENCE: Record<PaymentMethod, boolean> = {
   CHEQUE: true,
   MOBILE_WALLET: true,
   CARD: true,
+  AUTOMATIC_PAYMENT: false,
 };
 
 /** Business dates are calendar dates, never instants. */
@@ -293,6 +295,7 @@ const paymentMethodField = z.enum([
   PaymentMethod.CHEQUE,
   PaymentMethod.MOBILE_WALLET,
   PaymentMethod.CARD,
+  PaymentMethod.AUTOMATIC_PAYMENT,
 ]);
 
 /** Rejects a method that requires an external reference when none was given. */
@@ -581,6 +584,7 @@ export type CustomerLoanDetail = {
     daysBefore: number;
   };
   contract: LoanContractSummary | null;
+  arrangement: ArrangementSummary | null;
 };
 
 export type LoanDetail = LoanSummary & {
@@ -592,6 +596,7 @@ export type LoanDetail = LoanSummary & {
   overdueAmount: string;
   schedule: ScheduleEntryView[];
   contract: LoanContractSummary | null;
+  arrangement: ArrangementSummary | null;
   allowedActions: AllowedAction[];
 };
 
@@ -899,5 +904,60 @@ export type SettlementQuoteView = {
   surplusOrShortfall: string;
   pendingSettlement: boolean;
   reason?: string;
+};
+
+export const NZ_ACCOUNT_NUMBER = /^\d{2}-\d{4}-\d{7}-\d{2,3}$/;
+
+export const arrangementRequestSchema = z.object({
+  method: z.enum(["BANK_AUTOMATIC_PAYMENT", "DIRECT_DEBIT"]),
+  accountName: z.string().trim().min(1, "Account name is required").max(160),
+  accountNumber: z.string().trim().regex(NZ_ACCOUNT_NUMBER, "Enter a New Zealand account number"),
+  bankName: z.string().trim().max(120).optional().nullable(),
+  consent: z.literal(true, {
+    errorMap: () => ({ message: "The borrower must consent to automatic repayment" }),
+  }),
+});
+
+export type ArrangementRequestInput = z.infer<typeof arrangementRequestSchema>;
+
+export const arrangementCancelSchema = z.object({
+  reason: z.string().trim().min(1, "A reason is required").max(500),
+});
+
+export type ArrangementCancelInput = z.infer<typeof arrangementCancelSchema>;
+
+export const collectionPostSchema = z.object({
+  received: z.literal(true, {
+    errorMap: () => ({ message: "Confirm the collection was received" }),
+  }),
+  amount: moneyField("Amount").optional(),
+  externalReference: z.string().trim().max(200).optional().nullable(),
+});
+
+export type CollectionPostInput = z.infer<typeof collectionPostSchema>;
+
+export type ArrangementSummary = {
+  id: string;
+  loanId: string;
+  method: "BANK_AUTOMATIC_PAYMENT" | "DIRECT_DEBIT";
+  status: "REQUESTED" | "ACTIVE" | "CANCELLED";
+  accountName: string;
+  accountNumberLast4: string;
+  bankName: string | null;
+  activatedAt: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+};
+
+export type CollectionRow = {
+  scheduleEntryId: string;
+  loanId: string;
+  loanNumber: string;
+  borrowerName: string;
+  installmentNumber: number;
+  amount: string;
+  dueDate: string;
+  idempotencyKey: string;
+  arrangementId: string;
 };
 

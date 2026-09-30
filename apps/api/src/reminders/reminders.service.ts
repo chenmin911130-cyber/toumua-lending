@@ -116,7 +116,13 @@ export class RemindersService {
     const claimed = await this.claim(entry.id, kind);
     if (!claimed) return false;
 
-    const body = reminderBody(kind, subtract(entry.amount, entry.paidAmount), entry.loan.number, entry.dueDate);
+    const body = reminderBody(
+      kind,
+      subtract(entry.amount, entry.paidAmount),
+      entry.loan.number,
+      entry.dueDate,
+      await this.hasActiveArrangement(entry.loan.id),
+    );
     const sent = await this.sms.send({
       toPhone: entry.loan.borrower.phone,
       body,
@@ -160,6 +166,14 @@ export class RemindersService {
     return true;
   }
 
+  private async hasActiveArrangement(loanId: string) {
+    const row = await this.prisma.repaymentArrangement.findFirst({
+      where: { loanId, status: "ACTIVE" },
+      select: { id: true },
+    });
+    return row != null;
+  }
+
   /**
    * Inserts the reminder row first. A unique violation means this installment
    * and kind were already claimed, including by a concurrent run.
@@ -185,9 +199,18 @@ function reminderKind(due: string, today: string, soon: string): ReminderKindNam
   return null;
 }
 
-function reminderBody(kind: ReminderKindName, amount: string, loanNumber: string, due: Date): string {
+function reminderBody(
+  kind: ReminderKindName,
+  amount: string,
+  loanNumber: string,
+  due: Date,
+  automatic = false,
+): string {
   const money = `$${amount}`;
   const when = formatReminderDate(due);
+  if (kind === "DUE_SOON" && automatic) {
+    return `Toumu'a Lending: repayment of ${money} for loan ${loanNumber} will be collected automatically on ${when}.`;
+  }
   if (kind === "DUE_SOON") {
     return `Toumu'a Lending: repayment of ${money} for loan ${loanNumber} is due on ${when}. Reply or call us if you need help.`;
   }

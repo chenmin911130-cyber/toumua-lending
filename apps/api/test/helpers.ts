@@ -101,6 +101,8 @@ export async function resetDb(prisma: PrismaService) {
       "SmsMessage",
       "LoanContract",
       "Document",
+      "CollectionAttempt",
+      "RepaymentArrangement",
       "CorrectionRequest",
       "Receipt",
       "LedgerEntry",

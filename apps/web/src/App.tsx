@@ -70,6 +70,7 @@ import {
 import { StaffStoragePage } from "./pages/storage";
 import { StaffRemindersPage } from "./pages/reminders";
 import { CustomerContractPage, StaffContractPage } from "./pages/contracts";
+import { StaffCollectionsPage } from "./pages/collections";
 import { ActivityLogPage, StaffAccountsPage, StaffHomePage } from "./pages/staff";
 
 export function App() {
@@ -132,6 +133,7 @@ export function App() {
         <Route path="/staff/collateral/:id/sale" element={<StaffSalePage />} />
         <Route path="/staff/loans" element={<StaffLoansPage />} />
         <Route path="/staff/reminders" element={<StaffRemindersPage />} />
+        <Route path="/staff/collections" element={<StaffCollectionsPage />} />
         <Route path="/staff/loans/:id" element={<StaffLoanDetailPage />} />
         <Route path="/staff/contracts/:id" element={<StaffContractPage />} />
         <Route path="/staff/loans/:id/disbursement" element={<StaffDisbursementPage />} />

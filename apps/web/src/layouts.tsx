@@ -285,6 +285,9 @@ export function StaffLayout({ children }: { children?: ReactNode }) {
               (user.role === "MANAGER" || user.role === "OWNER" || user.role === "CASHIER")
             ) {
               links.push({ to: "/staff/reminders", label: "Reminders" });
+              if (user.role === "MANAGER" || user.role === "CASHIER") {
+                links.push({ to: "/staff/collections", label: "Collections" });
+              }
             }
             return links;
           }).map((item) => (

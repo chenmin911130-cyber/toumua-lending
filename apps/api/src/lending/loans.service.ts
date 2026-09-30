@@ -27,6 +27,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { subtract, sum } from "./money";
 import { reminderDaysBefore } from "../common/dates";
 import { maskSmsPhone } from "../sms/phone";
+import { cancelOpenArrangements } from "../arrangements/arrangement-lifecycle";
 
 @Injectable()
 export class LoansService {
@@ -117,26 +118,38 @@ export class LoansService {
     }
     // Conditional write, for the same reason as repayments and corrections: a
     // pre-read version check lets two simultaneous declarations both pass.
-    const claimed = await this.prisma.loan.updateMany({
-      where: { id: loanId, status: LoanStatus.ACTIVE, version: input.expectedVersion },
-      data: {
-        status: LoanStatus.DEFAULTED,
-        defaultedAt: new Date(input.businessDate),
-        defaultedById: user.id,
-        defaultReason: `${input.policyBasis}: ${input.reason}`,
-        version: { increment: 1 },
-      },
+    const claimed = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.loan.updateMany({
+        where: { id: loanId, status: LoanStatus.ACTIVE, version: input.expectedVersion },
+        data: {
+          status: LoanStatus.DEFAULTED,
+          defaultedAt: new Date(input.businessDate),
+          defaultedById: user.id,
+          defaultReason: `${input.policyBasis}: ${input.reason}`,
+          version: { increment: 1 },
+        },
+      });
+      if (updated.count === 0) return 0;
+      await cancelOpenArrangements(tx, this.audit, {
+        loanId,
+        reason: "Loan defaulted",
+        actorId: user.id,
+      });
+      await this.audit.write(
+        {
+          actorId: user.id,
+          action: "loan.default",
+          objectType: "Loan",
+          objectId: loanId,
+          after: { status: LoanStatus.DEFAULTED, reason: input.reason },
+        },
+        tx,
+      );
+      return updated.count;
     });
-    if (claimed.count === 0) {
+    if (claimed === 0) {
       throw conflict("This loan was updated elsewhere. Reload and try again.");
     }
-    await this.audit.write({
-      actorId: user.id,
-      action: "loan.default",
-      objectType: "Loan",
-      objectId: loanId,
-      after: { status: LoanStatus.DEFAULTED, reason: input.reason },
-    });
     await this.notifications.notifyBorrower(
       loan.borrowerId,
       "Your loan is in default",
@@ -257,6 +270,11 @@ export class LoansService {
       },
       schedule: { orderBy: { number: "asc" as const } },
       contracts: { orderBy: { version: "desc" as const }, take: 1 },
+      arrangements: {
+        where: { status: { in: ["REQUESTED", "ACTIVE"] as ("REQUESTED" | "ACTIVE")[] } },
+        orderBy: { createdAt: "desc" as const },
+        take: 1,
+      },
     };
   }
 
@@ -267,6 +285,11 @@ export class LoansService {
       schedule: { orderBy: { number: "asc" as const } },
       attempts: { select: { id: true, status: true } },
       contracts: { orderBy: { version: "desc" as const }, take: 1 },
+      arrangements: {
+        where: { status: { in: ["REQUESTED", "ACTIVE"] as ("REQUESTED" | "ACTIVE")[] } },
+        orderBy: { createdAt: "desc" as const },
+        take: 1,
+      },
     };
   }
 
@@ -379,6 +402,18 @@ export class LoansService {
         contentSha256: string;
         signedDocId: string | null;
       }>;
+      arrangements?: Array<{
+        id: string;
+        loanId: string;
+        method: string;
+        status: string;
+        accountName: string;
+        accountNumberLast4: string;
+        bankName: string | null;
+        activatedAt: Date | null;
+        cancelledAt: Date | null;
+        cancelReason: string | null;
+      }>;
     },
     receipts: Array<{
       id: string;
@@ -448,6 +483,7 @@ export class LoansService {
         };
       }),
       contract: contractSummary(loan.contracts?.[0]),
+      arrangement: arrangementSummary(loan.arrangements?.[0]),
     };
   }
 
@@ -480,6 +516,7 @@ export class LoansService {
       overdueAmount,
       schedule,
       contract: contractSummary(loan.contracts?.[0]),
+      arrangement: arrangementSummary(loan.arrangements?.[0]),
       allowedActions: [
         {
           id: "disburse",
@@ -561,5 +598,32 @@ function contractSummary(row: {
     signerMethod: row.signerMethod,
     contentSha256: row.contentSha256,
     signedDocId: row.signedDocId,
+  };
+}
+
+function arrangementSummary(row: {
+  id: string;
+  loanId: string;
+  method: string;
+  status: string;
+  accountName: string;
+  accountNumberLast4: string;
+  bankName: string | null;
+  activatedAt: Date | null;
+  cancelledAt: Date | null;
+  cancelReason: string | null;
+} | undefined) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    loanId: row.loanId,
+    method: row.method as "BANK_AUTOMATIC_PAYMENT" | "DIRECT_DEBIT",
+    status: row.status as "REQUESTED" | "ACTIVE" | "CANCELLED",
+    accountName: row.accountName,
+    accountNumberLast4: row.accountNumberLast4,
+    bankName: row.bankName,
+    activatedAt: row.activatedAt?.toISOString() ?? null,
+    cancelledAt: row.cancelledAt?.toISOString() ?? null,
+    cancelReason: row.cancelReason,
   };
 }

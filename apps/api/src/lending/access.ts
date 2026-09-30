@@ -115,6 +115,31 @@ export function assertPostMoney(user: PublicUser) {
   assertRole(user, CASHIER_ROLES, "a cashier");
 }
 
+const ACTIVATE_ARRANGEMENT_ROLES = new Set<string>([BusinessRole.CASHIER, BusinessRole.MANAGER]);
+
+/** The office confirms a bank authority before collections can run. */
+export function assertActivateArrangement(user: PublicUser) {
+  assertRole(user, ACTIVATE_ARRANGEMENT_ROLES, "a cashier or manager");
+}
+
+const CANCEL_ARRANGEMENT_ROLES = new Set<string>([
+  BusinessRole.LOAN_OFFICER,
+  BusinessRole.CASHIER,
+  BusinessRole.MANAGER,
+]);
+
+/** Staff may cancel an arrangement. The borrower cancels through their own loan. */
+export function assertCancelArrangement(user: PublicUser) {
+  assertRole(user, CANCEL_ARRANGEMENT_ROLES, "a loan officer, cashier or manager");
+}
+
+const COLLECTION_READ_ROLES = new Set<string>([BusinessRole.CASHIER, BusinessRole.MANAGER]);
+
+/** The collections list is for the cashier who posts and the manager who oversees it. */
+export function assertReadCollections(user: PublicUser) {
+  assertRole(user, COLLECTION_READ_ROLES, "a cashier or manager");
+}
+
 /** Reading loans and transactions: lending roles plus cashier and accountant. */
 const LEDGER_READ_ROLES = new Set<string>([
   BusinessRole.LOAN_OFFICER,

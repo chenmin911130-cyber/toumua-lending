@@ -7,6 +7,7 @@ import { aucklandBusinessDate } from "../format";
 import { ResourceGate, useAsyncResource } from "../load-state";
 import { useAuth } from "../auth";
 import { StorageLocationField } from "./storage";
+import { AutomaticRepaymentsCard } from "./arrangements";
 
 type AssetView = {
   id: string;
@@ -120,9 +121,13 @@ export function StaffLoanDetailPage() {
   const [error, setError] = useState<unknown>(null);
   const [issueReason, setIssueReason] = useState("");
   const [issueError, setIssueError] = useState<unknown>(null);
+  const [arrangement, setArrangement] = useState(loan?.arrangement ?? null);
   useEffect(() => {
     void api<LoanDetail>(`/loans/${id}`).then(setLoan).catch(setError);
   }, [id]);
+  useEffect(() => {
+    setArrangement(loan?.arrangement ?? null);
+  }, [loan]);
   if (error) return <main className="staff-page"><p className="error">{errorMessage(error, "Could not load loan")}</p></main>;
   if (!loan) return <main className="staff-page"><p>Loading loan…</p></main>;
   const disburse = actionFor(loan, "disburse");
@@ -189,6 +194,7 @@ export function StaffLoanDetailPage() {
       ) : loan.status === "APPROVED_UNFUNDED" ? (
         <p className="hint">A manager needs to issue the loan contract before it can be signed.</p>
       ) : null}
+      <AutomaticRepaymentsCard loanId={id} arrangement={arrangement} mode="staff" onChange={setArrangement} />
       <table className="data-table">
         <thead><tr><th>#</th><th>Due</th><th>Amount</th><th>Paid</th><th>Status</th></tr></thead>
         <tbody>

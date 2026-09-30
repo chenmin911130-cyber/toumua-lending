@@ -24,6 +24,7 @@ import { compare, min, subtract } from "./money";
 import { NumbersService } from "./numbers.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { LoansService } from "./loans.service";
+import { cancelOpenArrangements } from "../arrangements/arrangement-lifecycle";
 
 @Injectable()
 export class MoneyService {
@@ -331,6 +332,11 @@ export class MoneyService {
           where: { id: loanId },
           data: { status: LoanStatus.SETTLED, settledAt: new Date() },
         });
+        await cancelOpenArrangements(tx, this.audit, {
+          loanId,
+          reason: "Loan settled",
+          actorId: user.id,
+        });
       }
 
       await tx.paymentAttempt.update({
@@ -364,7 +370,7 @@ export class MoneyService {
       };
     });
 
-    if ("replayId" in result) {
+    if ("replayId" in result && typeof result.replayId === "string") {
       return this.replayMoneyResult(result.replayId, user.id);
     }
 
@@ -540,6 +546,11 @@ export class MoneyService {
         await tx.loan.update({
           where: { id: loanId },
           data: { status: LoanStatus.SETTLED, settledAt: new Date() },
+        });
+        await cancelOpenArrangements(tx, this.audit, {
+          loanId,
+          reason: "Loan settled",
+          actorId: user.id,
         });
       }
       await this.audit.write(

@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import type { CustomerLoanDetail, LoanSummary } from "@toumua/contracts";
 import { api, errorMessage } from "../api";
 import { formatDate, formatDateTime, statusLabel } from "../format";
+import { AutomaticRepaymentsCard } from "./arrangements";
 
 type ListResponse = { items: LoanSummary[]; total: number };
 
@@ -37,6 +38,10 @@ function useCustomerLoan(loanId: string) {
 export function CustomerLoanDetailPage() {
   const { loanId = "" } = useParams();
   const { loan, error } = useCustomerLoan(loanId);
+  const [arrangement, setArrangement] = useState(loan?.arrangement ?? null);
+  useEffect(() => {
+    setArrangement(loan?.arrangement ?? null);
+  }, [loan]);
   if (error) {
     return (
       <main className="page">
@@ -86,6 +91,9 @@ export function CustomerLoanDetailPage() {
           Reminders: SMS to {loan.reminders.phoneMasked}, {loan.reminders.daysBefore} days before each due date
         </p>
       ) : null}
+      {loan.arrangement?.status === "ACTIVE" || arrangement?.status === "ACTIVE" ? (
+        <p>The next repayment will be collected automatically.</p>
+      ) : null}
       <div className="hero-actions" style={{ marginTop: 24 }}>
         <Link className="btn btn-primary" to={`/customer/loans/${loanId}/repayments`} data-control-id="C03-02">
           View repayment schedule
@@ -97,6 +105,12 @@ export function CustomerLoanDetailPage() {
           Contact our team
         </Link>
       </div>
+      <AutomaticRepaymentsCard
+        loanId={loanId}
+        arrangement={arrangement}
+        mode="customer"
+        onChange={setArrangement}
+      />
       <section style={{ marginTop: 40 }}>
         <h2>Loan details</h2>
         <dl className="detail-list">

@@ -167,6 +167,9 @@ model User {
   notifications       Notification[]
   documentsUploaded   Document[]            @relation("DocumentUploadedBy")
   contractsWitnessed  LoanContract[]        @relation("ContractWitness")
+  arrangementsRequested RepaymentArrangement[] @relation("ArrangementRequestedBy")
+  arrangementsActivated RepaymentArrangement[] @relation("ArrangementActivatedBy")
+  arrangementsConsented RepaymentArrangement[] @relation("ArrangementConsentedBy")
 }
 
 model Notification {
@@ -399,6 +402,7 @@ model Loan {
   smsMessages SmsMessage[]
   documents Document[]
   contracts LoanContract[]
+  arrangements RepaymentArrangement[]
 
   @@index([status, updatedAt])
   @@index([borrowerId])
@@ -418,6 +422,7 @@ model ScheduleEntry {
   updatedAt  DateTime            @updatedAt
 
   reminders RepaymentReminder[]
+  collectionAttempts CollectionAttempt[]
 
   @@unique([loanId, number])
   @@index([loanId, dueDate])
@@ -733,4 +738,61 @@ model LoanContract {
 
   @@unique([loanId, version])
   @@index([loanId, status])
+}
+
+enum ArrangementMethod {
+  BANK_AUTOMATIC_PAYMENT
+  DIRECT_DEBIT
+}
+
+enum ArrangementStatus {
+  REQUESTED
+  ACTIVE
+  CANCELLED
+}
+
+/// Borrower authority to collect repayments. The full account number is never stored.
+model RepaymentArrangement {
+  id                 String              @id @default(cuid())
+  loanId             String
+  loan               Loan                @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  method             ArrangementMethod
+  status             ArrangementStatus   @default(REQUESTED)
+  accountName        String
+  accountNumberLast4 String
+  bankName           String?
+  requestedById      String
+  requestedBy        User                @relation("ArrangementRequestedBy", fields: [requestedById], references: [id])
+  consentedById      String
+  consentedBy        User                @relation("ArrangementConsentedBy", fields: [consentedById], references: [id])
+  consentedAt        DateTime
+  consentHow         String
+  activatedById      String?
+  activatedBy        User?               @relation("ArrangementActivatedBy", fields: [activatedById], references: [id], onDelete: SetNull)
+  activatedAt        DateTime?
+  cancelledAt        DateTime?
+  cancelReason       String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  attempts CollectionAttempt[]
+
+  @@index([loanId, status])
+}
+
+/// One row per arrangement, installment and Auckland collection date. Failures stay here and are not posted.
+model CollectionAttempt {
+  id               String               @id @default(cuid())
+  arrangementId    String
+  arrangement      RepaymentArrangement @relation(fields: [arrangementId], references: [id], onDelete: Cascade)
+  scheduleEntryId  String
+  scheduleEntry    ScheduleEntry        @relation(fields: [scheduleEntryId], references: [id], onDelete: Cascade)
+  collectionDate   DateTime
+  idempotencyKey   String               @unique
+  outcome          String
+  failureReason    String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@unique([arrangementId, scheduleEntryId, collectionDate])
 }
