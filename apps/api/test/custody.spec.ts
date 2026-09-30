@@ -287,6 +287,58 @@ describe("storage locations, custody history, and borrower on assets", () => {
     expect(inactive.status).toBe(422);
   });
 
+  it("relocates an asset inside a location that is already full", async () => {
+    const manager = await login("manager@example.com", "Manager12345");
+    const safe = await createLocation(manager, {
+      code: "SAFE-A-01",
+      name: "Main safe",
+      kind: "SAFE",
+      capacity: 1,
+    });
+    const loan = await valuedLoan();
+    const intake = await post(loan.valuer, `/api/v1/assets/${loan.assetId}/intake`, {
+      expectedVersion: loan.version,
+      receivedOn: "2026-09-18",
+      inspectedOn: "2026-09-18",
+      inspectionResult: "PASS",
+      storageLocationId: safe.id,
+    });
+    expect(intake.status).toBe(201);
+    const moved = await patch(loan.valuer, `/api/v1/assets/${loan.assetId}/custody`, {
+      expectedVersion: intake.body.version,
+      storageLocationId: safe.id,
+      reason: "same shelf",
+    });
+    expect(moved.status).toBe(200);
+    expect(moved.body.storageLocation.code).toBe("SAFE-A-01");
+  });
+
+  it("hides borrower names on a storage location from a cashier", async () => {
+    const manager = await login("manager@example.com", "Manager12345");
+    const safe = await createLocation(manager, {
+      code: "SAFE-A-01",
+      name: "Main safe",
+      kind: "SAFE",
+      capacity: 1,
+    });
+    const loan = await valuedLoan("Named Borrower");
+    const intake = await post(loan.valuer, `/api/v1/assets/${loan.assetId}/intake`, {
+      expectedVersion: loan.version,
+      receivedOn: "2026-09-18",
+      inspectedOn: "2026-09-18",
+      inspectionResult: "PASS",
+      storageLocationId: safe.id,
+    });
+    expect(intake.status).toBe(201);
+    const visible = await manager.get(`/api/v1/storage-locations/${safe.id}`);
+    expect(visible.body.assets[0].borrowerName).toBe("Named Borrower");
+    const cashier = await login("cashier@example.com", "Cashier12345");
+    const hidden = await cashier.get(`/api/v1/storage-locations/${safe.id}`);
+    expect(hidden.status).toBe(200);
+    expect(hidden.body.assets[0].borrowerName).toBeNull();
+    expect(hidden.body.assets[0].borrowerNumber).toBeNull();
+  });
+
   it("lets only one of two simultaneous intakes take the last free slot", async () => {
     const manager = await login("manager@example.com", "Manager12345");
     const safe = await createLocation(manager, {

@@ -245,4 +245,41 @@ describe("STAFF", () => {
     });
     expect((await cashier.get("/api/v1/staff")).status).toBe(403);
   });
+
+  it("lets an owner assign manager to someone else but not owner or their own role", async () => {
+    const passwordHash = await auth.hashPassword("Ownerpass1234");
+    const ownerUser = await prisma.user.create({
+      data: {
+        email: "owner@example.com",
+        emailNormalized: "owner@example.com",
+        name: "Owen Owner",
+        passwordHash,
+        role: BusinessRole.OWNER,
+        status: "ACTIVE",
+        emailVerifiedAt: new Date(),
+      },
+    });
+    await seedManager(prisma, auth);
+    const manager = await prisma.user.findFirstOrThrow({ where: { emailNormalized: "manager@example.com" } });
+    const owner = await agentWithCsrf(app);
+    await post(owner, "/api/v1/auth/login", {
+      email: "owner@example.com",
+      password: "Ownerpass1234",
+    });
+    const assigned = await patch(owner, `/api/v1/staff/${manager.id}/role`, {
+      role: "MANAGER",
+      reason: "Stays a manager",
+    });
+    expect(assigned.status).toBe(200);
+    const ownerRole = await patch(owner, `/api/v1/staff/${manager.id}/role`, {
+      role: "OWNER",
+      reason: "Make another owner",
+    });
+    expect(ownerRole.status).toBe(403);
+    const self = await patch(owner, `/api/v1/staff/${ownerUser.id}/role`, {
+      role: "MANAGER",
+      reason: "Step down",
+    });
+    expect(self.status).toBe(403);
+  });
 });

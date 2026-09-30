@@ -119,6 +119,9 @@ export class StaffService {
     if (actor.id === id) {
       throw forbidden("You cannot change your own role");
     }
+    if (input.role === "OWNER") {
+      throw forbidden("The owner role cannot be assigned");
+    }
     const user = await this.requireStaff(id);
     await this.prisma.user.update({
       where: { id },

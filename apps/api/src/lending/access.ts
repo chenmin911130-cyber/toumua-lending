@@ -193,3 +193,14 @@ export function assertReissueContract(user: PublicUser) {
 export function assertDeleteDocument(user: PublicUser) {
   assertRole(user, DECISION_ROLES, "a manager");
 }
+
+const STORAGE_BORROWER_ROLES = new Set<string>([
+  BusinessRole.MANAGER,
+  BusinessRole.VALUATION_OFFICER,
+  BusinessRole.OWNER,
+]);
+
+/** Borrower names on a storage slot are limited to people who already handle the customer file. */
+export function canSeeStorageBorrower(user: PublicUser): boolean {
+  return Boolean(user.role && STORAGE_BORROWER_ROLES.has(user.role));
+}

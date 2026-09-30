@@ -11,7 +11,7 @@ import { conflict, notFound } from "../common/http";
 import { AuditService } from "../audit/audit.service";
 import { Prisma } from "../generated/prisma";
 import { PrismaService } from "../prisma/prisma.service";
-import { assertManageStorageLocations, assertReadLedger } from "./access";
+import { assertManageStorageLocations, assertReadLedger, canSeeStorageBorrower } from "./access";
 import { assetsAtLocation, occupiedByLocation } from "./storage-occupancy";
 
 const TRACKED_FIELDS = ["code", "name", "kind", "secure", "capacity", "notes", "active"] as const;
@@ -89,13 +89,14 @@ export class StorageLocationsService {
     const row = await this.prisma.storageLocation.findUnique({ where: { id } });
     if (!row) throw notFound("Storage location not found");
     const assets = await assetsAtLocation(this.prisma, id);
+    const revealBorrower = canSeeStorageBorrower(user);
     return {
       ...toView(row, assets.length),
       assets: assets.map((asset) => ({
         id: asset.id,
         name: asset.name,
-        borrowerName: asset.application.borrower?.name ?? null,
-        borrowerNumber: asset.application.borrower?.number ?? null,
+        borrowerName: revealBorrower ? (asset.application.borrower?.name ?? null) : null,
+        borrowerNumber: revealBorrower ? (asset.application.borrower?.number ?? null) : null,
         loanNumber: asset.application.loan?.number ?? null,
       })),
     };
