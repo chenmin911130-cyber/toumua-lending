@@ -250,22 +250,28 @@ export function VerifyPendingPage() {
     }
   }
 
+  const demoVerify = deliverable === false;
+
   return (
     <main className="center-state">
       <div className="center-icon" aria-hidden>✉</div>
-      <h1>{deliverable === false ? "Account created" : "Check your email"}</h1>
+      <h1>{demoVerify ? "Account created" : deliverable === null ? "Setting up verification" : "Check your email"}</h1>
       <p>
-        {deliverable === false
+        {demoVerify
           ? "This demo cannot send a verification email. Verify this account here to continue."
-          : "Open the verification link sent to your email address to continue."}
+          : deliverable === null
+            ? "Checking whether this server can send email…"
+            : "Open the verification link sent to your email address to continue."}
       </p>
       {user?.email ? <p className="hint">{maskEmail(user.email)}</p> : null}
       <div className="info-bar">
-        {deliverable === false
+        {demoVerify
           ? "Email delivery is not set up on this server."
-          : "Your account is waiting for email verification."}
+          : deliverable === null
+            ? "One moment…"
+            : "Your account is waiting for email verification."}
       </div>
-      {deliverable === false ? (
+      {demoVerify ? (
         <Button controlId="A04-03" type="button" disabled={verifying} onClick={() => void verifyHere()}>
           {verifying ? "Verifying…" : "Verify account"}
         </Button>
