@@ -1,8 +1,9 @@
-import { writeFileSync } from "node:fs";
+import { writeFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { INestApplication } from "@nestjs/common";
 import { escapeHtml, renderContract, sha256Text } from "../src/contracts/contract-template";
+import { DocumentsService } from "../src/documents/documents.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { AuthService } from "../src/auth/auth.service";
 import {
@@ -519,5 +520,47 @@ describe("digital contracts and documents", () => {
       contentSha256: first.contentSha256,
     });
     expect(signed.status).toBe(409);
+  });
+
+  it("refuses to delete a document that a contract still references", async () => {
+    const { loanId, staff, manager } = await approveLoan();
+    const contract = await prisma.loanContract.findFirstOrThrow({ where: { loanId } });
+    const signed = await post(staff, `/api/v1/contracts/${contract.id}/sign-in-branch`, {
+      typedName: "Alex Borrower",
+      signaturePng: SIGNATURE,
+      borrowerPresent: true,
+      contentSha256: contract.contentSha256,
+    });
+    expect(signed.status).toBe(200);
+    const saved = await prisma.loanContract.findUniqueOrThrow({ where: { id: contract.id } });
+    const signature = await manager.delete(`/api/v1/documents/${saved.signatureDocId}`).set("x-csrf-token", await csrfOf(manager));
+    const copy = await manager.delete(`/api/v1/documents/${saved.signedDocId}`).set("x-csrf-token", await csrfOf(manager));
+    expect(signature.status).toBe(409);
+    expect(copy.status).toBe(409);
+    expect(await prisma.document.count({ where: { id: { in: [saved.signatureDocId!, saved.signedDocId!] }, deletedAt: null } })).toBe(2);
+  });
+
+  it("returns 404 for an unknown borrower and removes a file when the database write fails", async () => {
+    const manager = await login("manager@example.com", "Manager12345");
+    const missing = await manager
+      .post("/api/v1/borrowers/missing-borrower/documents")
+      .set("x-csrf-token", await csrfOf(manager))
+      .attach("file", PNG_HEADER, { filename: "id.png", contentType: "image/png" });
+    expect(missing.status).toBe(404);
+
+    const dir = join(process.env.UPLOAD_DIR ?? join(process.cwd(), "../../storage/uploads"), "documents");
+    const before = new Set(existsSync(dir) ? readdirSync(dir) : []);
+    const docs = app.get(DocumentsService);
+    await expect(
+      docs.store({
+        kind: "OTHER",
+        buffer: PNG_HEADER,
+        filename: "orphan.png",
+        mimeType: "image/png",
+        loanId: "missing-loan",
+      }),
+    ).rejects.toThrow();
+    const added = (existsSync(dir) ? readdirSync(dir) : []).filter((name) => !before.has(name));
+    expect(added).toEqual([]);
   });
 });

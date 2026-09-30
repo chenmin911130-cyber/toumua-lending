@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "../generated/prisma";
@@ -54,32 +54,49 @@ export class DocumentsService {
       mimeType = sniffed;
     }
     const sha256 = createHash("sha256").update(input.buffer).digest("hex");
+    if (input.borrowerId) {
+      const borrower = await this.prisma.borrower.findUnique({
+        where: { id: input.borrowerId },
+        select: { id: true },
+      });
+      if (!borrower) throw notFound("Borrower not found");
+    }
     const storageKey = randomUUID();
-    writeFileSync(this.filePath(storageKey), input.buffer);
-    const row = await client.document.create({
-      data: {
-        kind: input.kind,
-        borrowerId: input.borrowerId ?? null,
-        loanId: input.loanId ?? null,
-        filename: safeStoredName(input.filename, mimeType),
-        mimeType,
-        sizeBytes: input.buffer.length,
-        sha256,
-        storageKey,
-        uploadedById: input.userId ?? null,
-      },
-    });
-    await this.audit.write(
-      {
-        actorId: actorId ?? input.userId ?? null,
-        action: "document.store",
-        objectType: "Document",
-        objectId: row.id,
-        after: { kind: row.kind, sha256, loanId: row.loanId, borrowerId: row.borrowerId },
-      },
-      client,
-    );
-    return row;
+    const path = this.filePath(storageKey);
+    writeFileSync(path, input.buffer);
+    try {
+      const row = await client.document.create({
+        data: {
+          kind: input.kind,
+          borrowerId: input.borrowerId ?? null,
+          loanId: input.loanId ?? null,
+          filename: safeStoredName(input.filename, mimeType),
+          mimeType,
+          sizeBytes: input.buffer.length,
+          sha256,
+          storageKey,
+          uploadedById: input.userId ?? null,
+        },
+      });
+      await this.audit.write(
+        {
+          actorId: actorId ?? input.userId ?? null,
+          action: "document.store",
+          objectType: "Document",
+          objectId: row.id,
+          after: { kind: row.kind, sha256, loanId: row.loanId, borrowerId: row.borrowerId },
+        },
+        client,
+      );
+      return row;
+    } catch (error) {
+      try {
+        unlinkSync(path);
+      } catch {
+        // The failed write should not leave a file, even if a second cleanup races it.
+      }
+      throw error;
+    }
   }
 
   async open(user: AuthUser, id: string) {
@@ -137,6 +154,11 @@ export class DocumentsService {
     assertDeleteDocument(user);
     const row = await this.prisma.document.findUnique({ where: { id } });
     if (!row || row.deletedAt) throw notFound("Document not found");
+    const referenced = await this.prisma.loanContract.findFirst({
+      where: { OR: [{ signatureDocId: id }, { signedDocId: id }] },
+      select: { id: true },
+    });
+    if (referenced) throw conflict("This document belongs to a signed contract");
     const updated = await this.prisma.document.update({
       where: { id },
       data: { deletedAt: new Date() },
