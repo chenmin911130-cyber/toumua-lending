@@ -12,7 +12,7 @@ import {
   normalizeEmail,
 } from "@toumua/contracts";
 import { PrismaService } from "../prisma/prisma.service";
-import { MailService, mailIsDeliverable } from "../mail/mail.service";
+import { MailService, inAppEmailVerifyAllowed, mailIsDeliverable } from "../mail/mail.service";
 import { AuditService } from "../audit/audit.service";
 import { RateLimitService } from "../common/rate-limit.service";
 import { hashToken, maskEmail, randomToken } from "../common/ids";
@@ -213,7 +213,7 @@ export class AuthService {
   }
 
   async verifyWithoutEmail(userId: string, sessionId: string) {
-    if (mailIsDeliverable()) {
+    if (!inAppEmailVerifyAllowed()) {
       throw forbidden("Use the verification link sent to your email");
     }
     const user = await this.requireUser(userId);

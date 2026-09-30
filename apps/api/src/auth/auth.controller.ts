@@ -12,7 +12,7 @@ import {
 } from "@toumua/contracts";
 import { Request, Response } from "express";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
-import { mailIsDeliverable } from "../mail/mail.service";
+import { inAppEmailVerifyAllowed, mailIsDeliverable } from "../mail/mail.service";
 import { AuthService } from "./auth.service";
 import { AllowRestricted, Public } from "./auth.guard";
 import { CurrentUser } from "./current-user.decorator";
@@ -88,7 +88,10 @@ export class AuthController {
   @AllowRestricted()
   @Get("email/delivery")
   delivery() {
-    return { deliverable: mailIsDeliverable() };
+    return {
+      deliverable: mailIsDeliverable(),
+      inAppVerifyAllowed: inAppEmailVerifyAllowed(),
+    };
   }
 
   @AllowRestricted()

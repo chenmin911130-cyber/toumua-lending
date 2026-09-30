@@ -188,12 +188,19 @@ export function VerifyPendingPage() {
   const [error, setError] = useState<unknown>(null);
   const [wait, setWait] = useState(0);
   const [deliverable, setDeliverable] = useState<boolean | null>(null);
+  const [inAppVerify, setInAppVerify] = useState<boolean | null>(null);
   const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
-    void api<{ deliverable: boolean }>("/auth/email/delivery")
-      .then((data) => setDeliverable(data.deliverable))
-      .catch(() => setDeliverable(false));
+    void api<{ deliverable: boolean; inAppVerifyAllowed?: boolean }>("/auth/email/delivery")
+      .then((data) => {
+        setDeliverable(data.deliverable);
+        setInAppVerify(data.inAppVerifyAllowed ?? !data.deliverable);
+      })
+      .catch(() => {
+        setDeliverable(null);
+        setInAppVerify(null);
+      });
   }, []);
 
   useEffect(() => {
@@ -250,16 +257,17 @@ export function VerifyPendingPage() {
     }
   }
 
-  const demoVerify = deliverable === false;
+  const demoVerify = inAppVerify === true;
+  const checking = inAppVerify === null && deliverable === null;
 
   return (
     <main className="center-state">
       <div className="center-icon" aria-hidden>✉</div>
-      <h1>{demoVerify ? "Account created" : deliverable === null ? "Setting up verification" : "Check your email"}</h1>
+      <h1>{demoVerify ? "Account created" : checking ? "Setting up verification" : "Check your email"}</h1>
       <p>
         {demoVerify
           ? "This demo cannot send a verification email. Verify this account here to continue."
-          : deliverable === null
+          : checking
             ? "Checking whether this server can send email…"
             : "Open the verification link sent to your email address to continue."}
       </p>
@@ -267,7 +275,7 @@ export function VerifyPendingPage() {
       <div className="info-bar">
         {demoVerify
           ? "Email delivery is not set up on this server."
-          : deliverable === null
+          : checking
             ? "One moment…"
             : "Your account is waiting for email verification."}
       </div>

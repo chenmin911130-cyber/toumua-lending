@@ -14,6 +14,12 @@ export function mailIsDeliverable(): boolean {
   return host !== "127.0.0.1" && host !== "localhost" && host !== "::1";
 }
 
+/** Pending-page "Verify account" — demo flag wins even if SMTP env is misconfigured. */
+export function inAppEmailVerifyAllowed(): boolean {
+  if (process.env.DEMO_IN_APP_EMAIL_VERIFY === "1") return true;
+  return !mailIsDeliverable();
+}
+
 type SendMailInput = {
   userId?: string;
   to: string;
