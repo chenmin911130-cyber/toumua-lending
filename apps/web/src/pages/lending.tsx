@@ -20,6 +20,7 @@ import {
   loyaltyBadgeLabel,
   loyaltyRateLine,
 } from "../format";
+import { BorrowerPicker } from "../components/BorrowerPicker";
 
 type BorrowerDetail = BorrowerSummary & {
   linkedUser: { id: string; name: string; email: string } | null;
@@ -578,8 +579,6 @@ export function ApplicationWizardPage() {
   const step = stepParam ?? (location.pathname.endsWith("/review") ? "review" : "borrower");
   const navigate = useNavigate();
   const [app, setApp] = useState<ApplicationDetail | null>(null);
-  const [borrowerQuery, setBorrowerQuery] = useState("");
-  const [borrowers, setBorrowers] = useState<BorrowerSummary[]>([]);
   const [pickedBorrower, setPickedBorrower] = useState<BorrowerSummary | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [amount, setAmount] = useState("");
@@ -657,16 +656,6 @@ export function ApplicationWizardPage() {
     [step],
   );
 
-  async function searchBorrowers(value: string) {
-    setBorrowerQuery(value);
-    if (value.trim().length < 1) {
-      setBorrowers([]);
-      return;
-    }
-    const data = await api<CursorListResponse<BorrowerSummary>>(`/borrowers?q=${encodeURIComponent(value.trim())}`);
-    setBorrowers(data.items);
-  }
-
   async function saveBorrower(row: BorrowerSummary) {
     if (!app) return;
     setError(null);
@@ -681,6 +670,25 @@ export function ApplicationWizardPage() {
       });
       setApp(saved);
       setPickedBorrower(row);
+    } catch (err) {
+      setError(err);
+    }
+  }
+
+  async function clearBorrower() {
+    if (!app) return;
+    setError(null);
+    try {
+      const saved = await api<ApplicationDetail>(`/applications/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          expectedVersion: app.version,
+          borrowerId: null,
+          currentStep: "BORROWER",
+        }),
+      });
+      setApp(saved);
+      setPickedBorrower(null);
     } catch (err) {
       setError(err);
     }
@@ -870,33 +878,13 @@ export function ApplicationWizardPage() {
           <p className="hint">
             Pick a borrower whose login is linked under Borrowers → Link account, so they can see this application after you submit it.
           </p>
-          <input
-            value={borrowerQuery}
-            onChange={(event) => void searchBorrowers(event.target.value)}
-            placeholder="Search by name, number, phone, or email"
+          {error ? <p className="error" role="alert">{errorMessage(error, "Could not update borrower")}</p> : null}
+          <BorrowerPicker
+            selected={app.borrowerId && pickedBorrower ? pickedBorrower : null}
+            borrowerIdForLink={app.borrowerId}
+            onPick={(row) => saveBorrower(row)}
+            onClear={() => clearBorrower()}
           />
-          {borrowers.map((row) => (
-            <button key={row.id} type="button" className="linkish" onClick={() => void saveBorrower(row)}>
-              {row.name} · {row.number}
-              {row.email ? ` · ${row.email}` : " · no email on file"}
-              {row.linkedUserId ? " · login linked" : " · no login linked"}
-            </button>
-          ))}
-          {app.borrowerId && pickedBorrower ? (
-            <div className="stack">
-              <p>
-                Selected: {pickedBorrower.name} · {pickedBorrower.number}
-                {pickedBorrower.email ? ` · ${pickedBorrower.email}` : " · no email on file"}
-                {pickedBorrower.linkedUserId ? " · login linked" : " · no login linked"}
-              </p>
-              {!pickedBorrower.linkedUserId ? (
-                <p className="error" role="alert">
-                  This borrower has no linked customer login yet.{" "}
-                  <Link to={`/staff/borrowers/${app.borrowerId}/account-link`}>Link account</Link> before you submit.
-                </p>
-              ) : null}
-            </div>
-          ) : null}
         </section>
       ) : null}
 

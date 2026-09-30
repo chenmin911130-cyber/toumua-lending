@@ -33,17 +33,37 @@ export function StorageLocationField({
 }) {
   const [locations, setLocations] = useState<StorageLocationView[]>([]);
   const [error, setError] = useState<unknown>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     void api<{ items: StorageLocationView[] }>("/storage-locations?active=true")
-      .then((data) => setLocations(data.items))
-      .catch(setError);
+      .then((data) => {
+        setLocations(data.items);
+        setError(null);
+      })
+      .catch(setError)
+      .finally(() => setLoading(false));
   }, []);
 
+  const emptyHint =
+    !loading && !error && locations.length === 0
+      ? "No active storage locations yet. A manager or valuation officer can add them under Staff → Storage."
+      : undefined;
+
   return (
-    <Field label="Storage location" error={error ? errorMessage(error, "Could not load locations") : undefined}>
-      <select value={value} onChange={(event) => onChange(event.target.value)} required>
-        <option value="">Select a location</option>
+    <Field
+      label="Storage location"
+      error={error ? errorMessage(error, "Could not load locations") : undefined}
+      hint={emptyHint}
+    >
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        required
+        disabled={loading || Boolean(error) || locations.length === 0}
+      >
+        <option value="">{loading ? "Loading locations…" : "Select a location"}</option>
         {locations.map((location) => (
           <option key={location.id} value={location.id} disabled={locationIsFull(location)}>
             {formatLocationOption(location)}

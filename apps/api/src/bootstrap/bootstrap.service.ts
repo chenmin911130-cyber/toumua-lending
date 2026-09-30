@@ -3,6 +3,7 @@ import { Permission, normalizeEmail } from "@toumua/contracts";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuthService } from "../auth/auth.service";
 import { seedDemoAccounts } from "./demo-accounts";
+import { seedDemoStorageLocations } from "./demo-storage-locations";
 
 @Injectable()
 export class BootstrapService implements OnModuleInit {
@@ -17,6 +18,7 @@ export class BootstrapService implements OnModuleInit {
     await this.ensureBootstrapAdmin();
     if (process.env.NODE_ENV === "test") return;
     await seedDemoAccounts(this.prisma, (password) => this.auth.hashPassword(password));
+    await seedDemoStorageLocations(this.prisma);
     this.logger.log("Seeded COMP721 demo accounts with password project721");
   }
 

@@ -4,6 +4,7 @@ import argon2 from "argon2";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma";
 import { DEMO_CUSTOMERS, DEMO_PASSWORD, seedDemoAccounts } from "../src/bootstrap/demo-accounts";
+import { seedDemoStorageLocations } from "../src/bootstrap/demo-storage-locations";
 
 config({ path: resolve(__dirname, "../../../.env") });
 
@@ -19,6 +20,8 @@ async function main() {
     await seedDemoAccounts(prisma, (password) =>
       argon2.hash(password, { type: argon2.argon2id }),
     );
+    const locations = await seedDemoStorageLocations(prisma);
+    console.log(`Demo storage locations ready (${locations.size}).`);
     console.log("Demo accounts ready. Password for all: project721");
     console.log("  Admin     admin@toumua.nz    /staff/login");
     console.log("  Staff     staff@toumua.nz    /staff/login");

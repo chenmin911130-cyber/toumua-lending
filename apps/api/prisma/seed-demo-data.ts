@@ -14,16 +14,9 @@ import { ValuationsService } from "../src/lending/valuations.service";
 import { ContractsService } from "../src/contracts/contracts.service";
 import { ArrangementsService } from "../src/arrangements/arrangements.service";
 import { RemindersService } from "../src/reminders/reminders.service";
+import { seedDemoStorageLocations } from "../src/bootstrap/demo-storage-locations";
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-
-const DEMO_LOCATIONS = [
-  { code: "SAFE-A-01", name: "Main safe", kind: "SAFE" as const, secure: true, capacity: 10 },
-  { code: "SAFE-A-02", name: "Main safe lower shelf", kind: "SAFE" as const, secure: true, capacity: 10 },
-  { code: "CAB-B-01", name: "Locked cabinet B", kind: "LOCKED_CABINET" as const, secure: true, capacity: 8 },
-  { code: "YARD-01", name: "Secure vehicle yard", kind: "SECURE_YARD" as const, secure: true, capacity: 6 },
-  { code: "OFF-01", name: "Off-site storage (partner)", kind: "OFFSITE" as const, secure: true, capacity: 20 },
-];
 
 function day(offset: number) {
   return addCalendarDays(aucklandDay(), offset);
@@ -37,27 +30,12 @@ async function main() {
   process.env.CALCULATION_POLICY = process.env.CALCULATION_POLICY ?? "demo";
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ["error", "warn"] });
   const prisma = app.get(PrismaService);
+  const locations = await seedDemoStorageLocations(prisma);
   const existing = await prisma.application.count({ where: { number: { startsWith: "DEMO-" } } });
   if (existing > 0) {
-    console.log("Demo data already present");
+    console.log("Demo data already present (storage locations refreshed)");
     await app.close();
     return;
-  }
-
-  const locations = new Map<string, string>();
-  for (const location of DEMO_LOCATIONS) {
-    const row = await prisma.storageLocation.upsert({
-      where: { code: location.code },
-      create: location,
-      update: {
-        name: location.name,
-        kind: location.kind,
-        secure: location.secure,
-        capacity: location.capacity,
-        active: true,
-      },
-    });
-    locations.set(location.code, row.id);
   }
 
   const applications = app.get(ApplicationsService);
