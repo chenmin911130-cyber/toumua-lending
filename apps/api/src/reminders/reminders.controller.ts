@@ -5,6 +5,8 @@ import { RequireStaff } from "../auth/auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { AuthUser } from "../auth/session";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
+import { aucklandDay } from "../common/dates";
+import { validation } from "../common/http";
 import { assertRunReminders } from "../lending/access";
 import { RemindersService } from "./reminders.service";
 
@@ -21,6 +23,9 @@ export class RemindersController {
     @Body(new ZodValidationPipe(runRemindersSchema)) body: { asOf?: string },
   ) {
     assertRunReminders(user);
+    if (body.asOf && body.asOf > aucklandDay()) {
+      throw validation("As of cannot be later than today");
+    }
     const asOf = body.asOf ? new Date(`${body.asOf}T00:00:00.000Z`) : new Date();
     return this.reminders.runDue(asOf, user.id);
   }

@@ -53,6 +53,14 @@ export const runRemindersSchema = z.object({
 
 export type RunRemindersInput = z.infer<typeof runRemindersSchema>;
 
+export type ReminderRunResult = {
+  dueSoon: number;
+  dueToday: number;
+  overdue: number;
+  skipped: number;
+  failed: number;
+};
+
 export type SmsOutboxItem = {
   id: string;
   createdAt: string;

@@ -1,16 +1,11 @@
 import { FormEvent, useEffect, useState } from "react";
-import type { CursorListResponse, SmsOutboxItem } from "@toumua/contracts";
+import type { CursorListResponse, ReminderRunResult, SmsOutboxItem } from "@toumua/contracts";
 import { Button, Field } from "@toumua/ui";
 import { api, errorMessage } from "../api";
 import { useAuth } from "../auth";
 import { aucklandBusinessDate, formatDateTime } from "../format";
 
-type RunResult = {
-  dueSoon: number;
-  dueToday: number;
-  overdue: number;
-  skipped: number;
-};
+type RunResult = ReminderRunResult;
 
 export function StaffRemindersPage() {
   const { user } = useAuth();
@@ -65,7 +60,7 @@ export function StaffRemindersPage() {
       {error ? <p className="error">{errorMessage(error, "Could not load reminders")}</p> : null}
       {result ? (
         <p>
-          {result.dueSoon} due soon · {result.dueToday} due today · {result.overdue} overdue
+          {result.dueSoon} due soon · {result.dueToday} due today · {result.overdue} overdue · {result.failed} failed
         </p>
       ) : null}
       <table className="data-table">

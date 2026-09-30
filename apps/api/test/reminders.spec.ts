@@ -169,7 +169,7 @@ describe("repayment SMS reminders", () => {
 
     const second = await post(manager, "/api/v1/reminders/run", { asOf: "2026-06-01" });
     expect(second.status).toBe(200);
-    expect(second.body).toEqual({ dueSoon: 0, dueToday: 0, overdue: 0, skipped: 0 });
+    expect(second.body).toEqual({ dueSoon: 0, dueToday: 0, overdue: 0, skipped: 0, failed: 0 });
     expect(await prisma.smsMessage.count()).toBe(1);
     expect(await prisma.repaymentReminder.count()).toBe(1);
     expect(await prisma.auditEvent.count({ where: { action: "reminder.send" } })).toBe(1);
@@ -182,7 +182,7 @@ describe("repayment SMS reminders", () => {
     const manager = await login("manager@example.com", "Manager12345");
     const response = await post(manager, "/api/v1/reminders/run", { asOf: "2026-06-01" });
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ dueSoon: 0, dueToday: 0, overdue: 0, skipped: 0 });
+    expect(response.body).toEqual({ dueSoon: 0, dueToday: 0, overdue: 0, skipped: 0, failed: 0 });
     expect(await prisma.smsMessage.count()).toBe(0);
     expect(await prisma.repaymentReminder.count()).toBe(0);
   });
@@ -202,7 +202,7 @@ describe("repayment SMS reminders", () => {
     expect(sent?.body).toContain("overdue");
 
     const again = await post(manager, "/api/v1/reminders/run", { asOf: "2026-06-01" });
-    expect(again.body).toEqual({ dueSoon: 0, dueToday: 0, overdue: 0, skipped: 0 });
+    expect(again.body).toEqual({ dueSoon: 0, dueToday: 0, overdue: 0, skipped: 0, failed: 0 });
     expect(await prisma.smsMessage.count()).toBe(2);
   });
 
@@ -286,7 +286,78 @@ describe("repayment SMS reminders", () => {
     expect(await prisma.smsMessage.count({ where: { loanId: flood.loan.id } })).toBe(3);
 
     const fourth = await reminders.runDue(AS_OF);
-    expect(fourth).toEqual({ dueSoon: 0, dueToday: 0, overdue: 0, skipped: 0 });
+    expect(fourth).toEqual({ dueSoon: 0, dueToday: 0, overdue: 0, skipped: 0, failed: 0 });
     expect(await prisma.smsMessage.count()).toBe(4);
+  });
+
+  it("sends one overdue text when three runs overlap on one loan", async () => {
+    const flood = await installment({ tag: "RACE3", phone: "021 234 5678", due: "2026-05-01" });
+    for (const [index, due] of ["2026-05-08", "2026-05-15"].entries()) {
+      await prisma.scheduleEntry.create({
+        data: {
+          loanId: flood.loan.id,
+          number: index + 2,
+          dueDate: new Date(`${due}T00:00:00.000Z`),
+          amount: "120.00",
+          paidAmount: "0.00",
+          status: "PENDING",
+        },
+      });
+    }
+    const reminders = app.get(RemindersService);
+    await Promise.all([reminders.runDue(AS_OF), reminders.runDue(AS_OF), reminders.runDue(AS_OF)]);
+    expect(await prisma.smsMessage.count({ where: { loanId: flood.loan.id, status: "SENT" } })).toBe(1);
+    expect(await prisma.repaymentReminder.count({ where: { kind: "OVERDUE" } })).toBe(1);
+  });
+
+  it("retries a failed send instead of burning the reminder", async () => {
+    await installment({ tag: "FAIL1", phone: "021 234 5678", due: "2026-05-01" });
+    const reminders = app.get(RemindersService);
+    const previousDriver = process.env.SMS_DRIVER;
+    const previousUrl = process.env.SMS_WEBHOOK_URL;
+    process.env.SMS_DRIVER = "webhook";
+    process.env.SMS_WEBHOOK_URL = "http://127.0.0.1:9/sms";
+    try {
+      const failed = await reminders.runDue(AS_OF);
+      expect(failed.failed).toBe(1);
+      expect(failed.overdue).toBe(0);
+      expect(await prisma.repaymentReminder.count()).toBe(0);
+      expect(await prisma.smsMessage.count({ where: { status: "FAILED" } })).toBe(1);
+      process.env.SMS_DRIVER = "memory";
+      delete process.env.SMS_WEBHOOK_URL;
+      const recovered = await reminders.runDue(AS_OF);
+      expect(recovered).toMatchObject({ overdue: 1, failed: 0 });
+      expect(await prisma.smsMessage.count({ where: { status: "SENT" } })).toBe(1);
+      expect(await prisma.repaymentReminder.count()).toBe(1);
+    } finally {
+      process.env.SMS_DRIVER = previousDriver;
+      if (previousUrl === undefined) delete process.env.SMS_WEBHOOK_URL;
+      else process.env.SMS_WEBHOOK_URL = previousUrl;
+    }
+  });
+
+  it("rejects a manual run dated after today", async () => {
+    const manager = await login("manager@example.com", "Manager12345");
+    const future = await post(manager, "/api/v1/reminders/run", { asOf: "2099-01-01" });
+    expect(future.status).toBe(422);
+  });
+
+  it("runs the morning cron only when the flag is set outside tests", async () => {
+    await installment({ tag: "CRON2", phone: "021 234 5678", due: "2026-06-01" });
+    process.env.SMS_DRIVER = "memory";
+    const reminders = app.get(RemindersService);
+    const previous = process.env.NODE_ENV;
+    delete process.env.REMINDER_CRON_ENABLED;
+    process.env.NODE_ENV = "development";
+    try {
+      await reminders.tick();
+      expect(await prisma.repaymentReminder.count()).toBe(0);
+      process.env.REMINDER_CRON_ENABLED = "1";
+      await reminders.tick();
+      expect(await prisma.smsMessage.count({ where: { status: "SENT" } })).toBe(1);
+    } finally {
+      process.env.NODE_ENV = previous;
+      process.env.REMINDER_CRON_ENABLED = "0";
+    }
   });
 });
