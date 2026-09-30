@@ -598,4 +598,4 @@ BLOCKED 必须附上失败命令、错误输出的前 20 行，以及已尝试�
 R-Phase 0 · DONE · commit 6e54412 · Reverted auth/resetDb test workarounds; local Docker Postgres in sheet; STAFF_APPROVE_LIMIT profile default in .env.example; vitest 30s (64/0/0 local, no retry/lock).
 R-Phase 2 · DONE · commit 8724bf3 (API), 4c84468 (web/README/report line) · Owner staff API/guard/tests; OWNER staff-accounts nav, CARD option, README casing.
 Branch: `agent/client-requirements` (no PR). Final `pnpm test:api`: 64 passed, 0 failed, 0 skipped (~50s local Docker). Final `pnpm --filter @toumua/web test`: 4 passed, 0 failed, 0 skipped.
-R-Phase 3 · DONE · commit a67aadc · Named storage locations, asset change history, and borrower on the collateral list; isolated API tests 95 passed, 0 failed, 3 skipped; web tests 4 passed.
+R-Phase 3 · DONE · commit a67aadc, 387ea0d · Named storage locations, asset change history, and borrower on the collateral list; capacity row locks so two placements cannot overfill one slot. Isolated API tests 97 passed, 0 failed, 3 skipped; web tests 4 passed.
