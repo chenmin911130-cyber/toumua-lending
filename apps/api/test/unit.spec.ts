@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { advance, buildSchedule, outstanding, quoteRepayment, quoteSettlement } from "../src/lending/calculation-policy";
 import { classifyApproval } from "../src/lending/approval-policy";
-import { buildReadiness, isReadyForCustomerSubmit, isReadyToSubmit } from "../src/lending/readiness";
+import { buildReadiness, isReadyForCustomerSubmit, isReadyForStaffSubmit, isReadyToSubmit, isValuationCovered } from "../src/lending/readiness";
 import {
   add,
   compare,
@@ -234,54 +234,61 @@ describe("customer application readiness", () => {
     expect(isReadyForCustomerSubmit(items)).toBe(true);
     expect(isReadyToSubmit(items)).toBe(false);
   });
+
+  it("enforces the coverage rule at decision time but not at submit", () => {
+    const items = buildReadiness({
+      id: "app-2",
+      status: "DRAFT",
+      borrowerId: "bor-1",
+      requestedAmount: "1000.00",
+      purpose: "Business",
+      proposedTermMonths: 12,
+      assets: [
+        { id: "a1", name: "Watch", photoCount: 2, valuationStatus: "COMPLETED", valuationAmount: toCents("400.00") },
+      ],
+      terms: {
+        firstPaymentDate: new Date("2026-10-01"),
+        frequency: "MONTHLY",
+        periods: 12,
+        policyConfigured: true,
+      },
+    });
+    // Submitting a prepared file is allowed: coverage is a decision rule.
+    expect(isReadyForStaffSubmit(items)).toBe(true);
+    // Approval will be refused because 400 < 1000.
+    const covered = items.find((item) => item.id === "assets-covered")!;
+    expect(covered.complete).toBe(false);
+    expect(isValuationCovered("1000.00", "400.00")).toBe(false);
+    expect(isValuationCovered("1000.00", "1000.00")).toBe(true);
+    expect(isValuationCovered("1000.00", "1500.00")).toBe(true);
+  });
 });
 
 describe("approval routing", () => {
-  const previousLimit = process.env.STAFF_APPROVE_LIMIT;
-  afterEach(() => {
-    if (previousLimit === undefined) delete process.env.STAFF_APPROVE_LIMIT;
-    else process.env.STAFF_APPROVE_LIMIT = previousLimit;
-  });
-
-  it("sends every amount to a manager when no staff limit is configured", () => {
-    delete process.env.STAFF_APPROVE_LIMIT;
-    for (const requestedAmount of ["0.01", "500.00", "3000.00", "8000.00"]) {
-      expect(
-        classifyApproval({
-          requestedAmount,
-          purpose: "Vehicle repair",
-          purposeDescription: null,
-          assetCount: 1,
-        }).requiresManager,
-      ).toBe(true);
-    }
-  });
-
-  it("lets staff take a small simple file when STAFF_APPROVE_LIMIT is set", () => {
-    process.env.STAFF_APPROVE_LIMIT = "3000.00";
+  it("flags complex files for manager attention (no staff monetary exception)", () => {
     expect(
       classifyApproval({
         requestedAmount: "3000.00",
         purpose: "Vehicle repair",
         purposeDescription: null,
         assetCount: 1,
-      }).requiresManager,
+      }).complex,
     ).toBe(false);
     expect(
       classifyApproval({
-        requestedAmount: "3000.01",
+        requestedAmount: "8000.00",
         purpose: "Vehicle repair",
         purposeDescription: null,
         assetCount: 1,
-      }).requiresManager,
-    ).toBe(true);
+      }).complex,
+    ).toBe(false);
     expect(
       classifyApproval({
         requestedAmount: "500.00",
         purpose: "Other",
         purposeDescription: null,
         assetCount: 1,
-      }).requiresManager,
+      }).complex,
     ).toBe(true);
     expect(
       classifyApproval({
@@ -289,7 +296,7 @@ describe("approval routing", () => {
         purpose: "School fees",
         purposeDescription: null,
         assetCount: 3,
-      }).requiresManager,
+      }).complex,
     ).toBe(true);
   });
 });

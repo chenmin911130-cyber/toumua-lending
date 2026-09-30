@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../api";
+import { api, errorMessage } from "../api";
 
 type Hit = { id: string; label: string; meta: string; href: string };
 type SearchResponse = {
@@ -24,6 +24,7 @@ export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [data, setData] = useState<SearchResponse | null>(null);
+  const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -40,12 +41,26 @@ export function GlobalSearch() {
   useEffect(() => {
     if (!open || q.trim().length < 2) {
       setData(null);
+      setError(null);
       return;
     }
+    const controller = new AbortController();
     const handle = window.setTimeout(() => {
-      void api<SearchResponse>(`/search?q=${encodeURIComponent(q.trim())}`).then(setData);
+      setError(null);
+      void api<SearchResponse>(`/search?q=${encodeURIComponent(q.trim())}`, { signal: controller.signal })
+        .then((next) => {
+          if (!controller.signal.aborted) setData(next);
+        })
+        .catch((err: unknown) => {
+          if (controller.signal.aborted) return;
+          setData(null);
+          setError(err);
+        });
     }, 200);
-    return () => window.clearTimeout(handle);
+    return () => {
+      controller.abort();
+      window.clearTimeout(handle);
+    };
   }, [open, q]);
 
   if (!open) {
@@ -73,6 +88,7 @@ export function GlobalSearch() {
           aria-label="Search"
         />
         <p className="hint">Type at least 2 characters. Esc closes.</p>
+        {error ? <p className="error" role="alert">{errorMessage(error, "Search failed")}</p> : null}
         {data ? (
           GROUPS.map((group) =>
             data[group.key].length ? (
@@ -96,7 +112,7 @@ export function GlobalSearch() {
               </section>
             ) : null,
           )
-        ) : q.trim().length >= 2 ? (
+        ) : !error && q.trim().length >= 2 ? (
           <p className="hint">Searching…</p>
         ) : null}
         {data && GROUPS.every((group) => data[group.key].length === 0) ? (

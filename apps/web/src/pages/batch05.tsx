@@ -1,8 +1,10 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Button, Field } from "@toumua/ui";
 import type { CorrectionView, CursorListResponse, LoanDetail } from "@toumua/contracts";
 import { api, errorMessage, fieldError, postIdempotent } from "../api";
+import { aucklandBusinessDate } from "../format";
+import { ResourceGate, useAsyncResource } from "../load-state";
 
 type AssetView = {
   id: string;
@@ -23,22 +25,25 @@ type PaymentAttemptView = {
   requestBody: Record<string, unknown>;
 };
 
+function proposedText(value: unknown) {
+  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return "—";
+}
+
 export function StaffDefaultPage() {
   const { id = "" } = useParams();
-  const [loan, setLoan] = useState<LoanDetail | null>(null);
+  const resource = useAsyncResource(id, (loanId, signal) => api<LoanDetail>(`/loans/${loanId}`, { signal }));
+  const loan = resource.data;
   const [reason, setReason] = useState("");
   const [policyBasis, setPolicyBasis] = useState("");
-  const [businessDate, setBusinessDate] = useState(new Date().toISOString().slice(0, 10));
-  const [error, setError] = useState<unknown>(null);
-
-  useEffect(() => {
-    void api<LoanDetail>(`/loans/${id}`).then(setLoan).catch(setError);
-  }, [id]);
+  const [businessDate, setBusinessDate] = useState(() => aucklandBusinessDate());
+  const [submitError, setSubmitError] = useState<unknown>(null);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!loan) return;
-    setError(null);
+    setSubmitError(null);
     try {
       await api(`/loans/${id}/default`, {
         method: "POST",
@@ -51,26 +56,32 @@ export function StaffDefaultPage() {
       });
       window.location.href = `/staff/loans/${id}`;
     } catch (err) {
-      setError(err);
+      setSubmitError(err);
     }
   }
 
-  if (!loan) return <main className="staff-page"><p>Loading…</p></main>;
+  if (!loan) {
+    return (
+      <main className="staff-page">
+        <ResourceGate loading={resource.loading} error={resource.error} ready={false} onRetry={resource.retry} loadingLabel="Loading…" errorFallback="Could not load loan" />
+      </main>
+    );
+  }
   return (
     <main className="staff-page">
       <Link to={`/staff/loans/${id}`}>← Loan</Link>
       <h1>Declare default</h1>
       <form className="card stack" onSubmit={(event) => void submit(event)}>
-        <Field label="Default date">
-          <input type="date" value={businessDate} onChange={(e) => setBusinessDate(e.target.value)} required />
+        <Field label="Default date" id="default-date">
+          <input id="default-date" type="date" value={businessDate} onChange={(e) => setBusinessDate(e.target.value)} required />
         </Field>
-        <Field label="Policy basis" error={fieldError(error, "policyBasis")}>
+        <Field label="Policy basis" error={fieldError(submitError, "policyBasis")}>
           <input value={policyBasis} onChange={(e) => setPolicyBasis(e.target.value)} required />
         </Field>
-        <Field label="Reason" error={fieldError(error, "reason")}>
+        <Field label="Reason" error={fieldError(submitError, "reason")}>
           <textarea value={reason} onChange={(e) => setReason(e.target.value)} required />
         </Field>
-        {error ? <p className="error">{errorMessage(error, "Could not declare default")}</p> : null}
+        {submitError ? <p className="error">{errorMessage(submitError, "Could not declare default")}</p> : null}
         <Button type="submit">Confirm default</Button>
       </form>
     </main>
@@ -79,22 +90,25 @@ export function StaffDefaultPage() {
 
 export function StaffSaleReceiptPage() {
   const { id = "" } = useParams();
-  const [loan, setLoan] = useState<LoanDetail | null>(null);
+  const resource = useAsyncResource(id, (loanId, signal) => api<LoanDetail>(`/loans/${loanId}`, { signal }));
+  const loan = resource.data;
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("CASH");
-  const [businessDate, setBusinessDate] = useState(new Date().toISOString().slice(0, 10));
-  const [error, setError] = useState<unknown>(null);
+  const [businessDate, setBusinessDate] = useState(() => aucklandBusinessDate());
+  const [submitError, setSubmitError] = useState<unknown>(null);
   const [result, setResult] = useState<string | null>(null);
   const idempotencyKey = useRef(`web-sale-${id}-${crypto.randomUUID()}`);
 
   useEffect(() => {
-    void api<LoanDetail>(`/loans/${id}`).then(setLoan).catch(setError);
+    idempotencyKey.current = `web-sale-${id}-${crypto.randomUUID()}`;
+    setSubmitError(null);
+    setResult(null);
   }, [id]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!loan) return;
-    setError(null);
+    setSubmitError(null);
     try {
       const response = await postIdempotent<{ receiptNumber: string; balanceAfter: string }>(
         `/loans/${id}/sale-receipts`,
@@ -102,31 +116,37 @@ export function StaffSaleReceiptPage() {
         idempotencyKey.current,
       );
       setResult(`${response.receiptNumber} · balance ${response.balanceAfter}`);
-      setLoan(await api<LoanDetail>(`/loans/${id}`));
+      resource.setData(await api<LoanDetail>(`/loans/${id}`));
     } catch (err) {
-      setError(err);
+      setSubmitError(err);
     }
   }
 
-  if (!loan) return <main className="staff-page"><p>Loading…</p></main>;
+  if (!loan) {
+    return (
+      <main className="staff-page">
+        <ResourceGate loading={resource.loading} error={resource.error} ready={false} onRetry={resource.retry} loadingLabel="Loading…" errorFallback="Could not load loan" />
+      </main>
+    );
+  }
   return (
     <main className="staff-page">
       <Link to={`/staff/loans/${id}`}>← Loan</Link>
       <h1>Sale proceeds</h1>
       <p className="hint">Outstanding balance: {loan.balance}</p>
       <form className="card stack" onSubmit={(event) => void submit(event)}>
-        <Field label="Amount" error={fieldError(error, "amount")}>
+        <Field label="Amount" error={fieldError(submitError, "amount")}>
           <input value={amount} onChange={(e) => setAmount(e.target.value)} required />
         </Field>
-        <Field label="Business date">
-          <input type="date" value={businessDate} onChange={(e) => setBusinessDate(e.target.value)} required />
+        <Field label="Business date" id="sale-receipt-date">
+          <input id="sale-receipt-date" type="date" value={businessDate} onChange={(e) => setBusinessDate(e.target.value)} required />
         </Field>
         <Field label="Method">
           <select value={method} onChange={(e) => setMethod(e.target.value)}>
             <option value="CASH">Cash</option>
           </select>
         </Field>
-        {error ? <p className="error">{errorMessage(error, "Could not record sale proceeds")}</p> : null}
+        {submitError ? <p className="error">{errorMessage(submitError, "Could not record sale proceeds")}</p> : null}
         {result ? <p className="hint">{result}</p> : null}
         <Button type="submit">Record sale proceeds</Button>
       </form>
@@ -136,22 +156,19 @@ export function StaffSaleReceiptPage() {
 
 export function StaffReturnPage() {
   const { id = "" } = useParams();
-  const [asset, setAsset] = useState<AssetView | null>(null);
-  const [returnedOn, setReturnedOn] = useState(new Date().toISOString().slice(0, 10));
+  const resource = useAsyncResource(id, (assetId, signal) => api<AssetView>(`/assets/${assetId}`, { signal }));
+  const asset = resource.data;
+  const [returnedOn, setReturnedOn] = useState(() => aucklandBusinessDate());
   const [recipientName, setRecipientName] = useState("");
   const [verificationMethod, setVerificationMethod] = useState("");
-  const [error, setError] = useState<unknown>(null);
-
-  useEffect(() => {
-    void api<AssetView>(`/assets/${id}`).then(setAsset).catch(setError);
-  }, [id]);
+  const [submitError, setSubmitError] = useState<unknown>(null);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!asset) return;
-    setError(null);
+    setSubmitError(null);
     try {
-      const saved = await api<AssetView>(`/assets/${id}/return`, {
+      resource.setData(await api<AssetView>(`/assets/${id}/return`, {
         method: "POST",
         body: JSON.stringify({
           expectedVersion: asset.version,
@@ -160,14 +177,19 @@ export function StaffReturnPage() {
           verificationMethod,
           identityConfirmed: true,
         }),
-      });
-      setAsset(saved);
+      }));
     } catch (err) {
-      setError(err);
+      setSubmitError(err);
     }
   }
 
-  if (!asset) return <main className="staff-page"><p>Loading…</p></main>;
+  if (!asset) {
+    return (
+      <main className="staff-page">
+        <ResourceGate loading={resource.loading} error={resource.error} ready={false} onRetry={resource.retry} loadingLabel="Loading…" errorFallback="Could not load collateral" />
+      </main>
+    );
+  }
   const action = asset.allowedActions.find((row) => row.id === "return");
   return (
     <main className="staff-page">
@@ -175,16 +197,16 @@ export function StaffReturnPage() {
       <h1>Return {asset.name}</h1>
       {action?.allowed ? (
         <form className="card stack" onSubmit={(event) => void submit(event)}>
-          <Field label="Return date">
-            <input type="date" value={returnedOn} onChange={(e) => setReturnedOn(e.target.value)} required />
+          <Field label="Return date" id="return-date">
+            <input id="return-date" type="date" value={returnedOn} onChange={(e) => setReturnedOn(e.target.value)} required />
           </Field>
-          <Field label="Recipient name" error={fieldError(error, "recipientName")}>
+          <Field label="Recipient name" error={fieldError(submitError, "recipientName")}>
             <input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} required />
           </Field>
-          <Field label="Verification method" error={fieldError(error, "verificationMethod")}>
+          <Field label="Verification method" error={fieldError(submitError, "verificationMethod")}>
             <input value={verificationMethod} onChange={(e) => setVerificationMethod(e.target.value)} required />
           </Field>
-          {error ? <p className="error">{errorMessage(error, "Could not record return")}</p> : null}
+          {submitError ? <p className="error">{errorMessage(submitError, "Could not record return")}</p> : null}
           <Button type="submit">Confirm return</Button>
         </form>
       ) : (
@@ -196,25 +218,22 @@ export function StaffReturnPage() {
 
 export function StaffSalePage() {
   const { id = "" } = useParams();
-  const [asset, setAsset] = useState<AssetView | null>(null);
+  const resource = useAsyncResource(id, (assetId, signal) => api<AssetView>(`/assets/${assetId}`, { signal }));
+  const asset = resource.data;
   const [buyerName, setBuyerName] = useState("");
   const [buyerContact, setBuyerContact] = useState("");
   const [saleAmount, setSaleAmount] = useState("");
-  const [saleDate, setSaleDate] = useState(new Date().toISOString().slice(0, 10));
+  const [saleDate, setSaleDate] = useState(() => aucklandBusinessDate());
   const [method, setMethod] = useState("Private sale");
   const [notes, setNotes] = useState("");
-  const [error, setError] = useState<unknown>(null);
-
-  useEffect(() => {
-    void api<AssetView>(`/assets/${id}`).then(setAsset).catch(setError);
-  }, [id]);
+  const [submitError, setSubmitError] = useState<unknown>(null);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!asset) return;
-    setError(null);
+    setSubmitError(null);
     try {
-      const saved = await api<AssetView>(`/assets/${id}/sale`, {
+      resource.setData(await api<AssetView>(`/assets/${id}/sale`, {
         method: "POST",
         body: JSON.stringify({
           expectedVersion: asset.version,
@@ -225,14 +244,19 @@ export function StaffSalePage() {
           method,
           notes,
         }),
-      });
-      setAsset(saved);
+      }));
     } catch (err) {
-      setError(err);
+      setSubmitError(err);
     }
   }
 
-  if (!asset) return <main className="staff-page"><p>Loading…</p></main>;
+  if (!asset) {
+    return (
+      <main className="staff-page">
+        <ResourceGate loading={resource.loading} error={resource.error} ready={false} onRetry={resource.retry} loadingLabel="Loading…" errorFallback="Could not load collateral" />
+      </main>
+    );
+  }
   const action = asset.allowedActions.find((row) => row.id === "sale");
   return (
     <main className="staff-page">
@@ -243,10 +267,10 @@ export function StaffSalePage() {
           <Field label="Buyer name"><input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} required /></Field>
           <Field label="Buyer contact"><input value={buyerContact} onChange={(e) => setBuyerContact(e.target.value)} required /></Field>
           <Field label="Sale amount"><input value={saleAmount} onChange={(e) => setSaleAmount(e.target.value)} required /></Field>
-          <Field label="Sale date"><input type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)} required /></Field>
+          <Field label="Sale date" id="sale-date"><input id="sale-date" type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)} required /></Field>
           <Field label="Disposal method"><input value={method} onChange={(e) => setMethod(e.target.value)} required /></Field>
           <Field label="Notes"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
-          {error ? <p className="error">{errorMessage(error, "Could not record sale")}</p> : null}
+          {submitError ? <p className="error">{errorMessage(submitError, "Could not record sale")}</p> : null}
           <Button type="submit">Confirm sale</Button>
         </form>
       ) : (
@@ -286,42 +310,48 @@ export function StaffCorrectionsPage() {
 
 export function StaffCorrectionDetailPage() {
   const { id = "" } = useParams();
-  const [correction, setCorrection] = useState<CorrectionView | null>(null);
-  const [error, setError] = useState<unknown>(null);
-  const postKey = useRef(`web-correction-${id}`);
-
-  useEffect(() => {
-    void api<CorrectionView>(`/corrections/${id}`).then(setCorrection).catch(setError);
-  }, [id]);
+  const resource = useAsyncResource(id, (correctionId, signal) => api<CorrectionView>(`/corrections/${correctionId}`, { signal }));
+  const correction = resource.data;
+  const [actionError, setActionError] = useState<unknown>(null);
+  // Key follows the route id, so posting after navigating to another correction
+  // cannot replay the previous correction's request.
+  const postKey = useMemo(() => `web-correction-${id}`, [id]);
 
   async function decide(decision: "approve" | "reject") {
     if (!correction) return;
-    setError(null);
+    setActionError(null);
     try {
-      setCorrection(
+      resource.setData(
         await api<CorrectionView>(`/corrections/${id}/decision`, {
           method: "POST",
           body: JSON.stringify({ expectedVersion: correction.version, decision }),
         }),
       );
     } catch (err) {
-      setError(err);
+      setActionError(err);
     }
   }
 
   async function postCorrection() {
     if (!correction) return;
-    setError(null);
+    setActionError(null);
     try {
-      setCorrection(await postIdempotent<CorrectionView>(`/corrections/${id}/post`, {}, postKey.current));
+      resource.setData(await postIdempotent<CorrectionView>(`/corrections/${id}/post`, {}, postKey));
     } catch (err) {
-      setError(err);
+      setActionError(err);
     }
   }
 
-  if (!correction) return <main className="staff-page"><p>Loading…</p></main>;
+  if (!correction) {
+    return (
+      <main className="staff-page">
+        <ResourceGate loading={resource.loading} error={resource.error} ready={false} onRetry={resource.retry} loadingLabel="Loading…" errorFallback="Could not load correction" />
+      </main>
+    );
+  }
   const decideAction = correction.allowedActions.find((row) => row.id === "decide");
   const postAction = correction.allowedActions.find((row) => row.id === "post");
+  const proposed = correction.proposedValues;
   return (
     <main className="staff-page">
       <Link to="/staff/corrections">← Corrections</Link>
@@ -333,7 +363,19 @@ export function StaffCorrectionDetailPage() {
           {correction.originalTransaction.businessDate}
         </p>
       ) : null}
-      {error ? <p className="error">{errorMessage(error, "Action failed")}</p> : null}
+      <section aria-label="Proposed correction">
+        <h2>Proposed values</h2>
+        <dl className="detail-list">
+          <dt>Amount</dt><dd>{proposedText(proposed.amount)}</dd>
+          <dt>Business date</dt><dd>{proposedText(proposed.businessDate)}</dd>
+          <dt>Method</dt><dd>{proposedText(proposed.method)}</dd>
+          <dt>Note</dt><dd>{proposedText(proposed.note)}</dd>
+        </dl>
+        <p className="hint">
+          Only repayment corrections can be approved and posted. Disbursement adjustments and other unsupported types are rejected and are not treated as repayments.
+        </p>
+      </section>
+      {actionError ? <p className="error">{errorMessage(actionError, "Action failed")}</p> : null}
       <div className="hero-actions">
         {decideAction?.allowed ? (
           <>

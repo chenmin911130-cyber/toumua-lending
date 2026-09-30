@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Logo } from "@toumua/ui";
 import { api } from "./api";
 import { useAuth } from "./auth";
@@ -144,7 +144,50 @@ export function PublicLayout() {
   );
 }
 
-export function CustomerLayout() {
+/**
+ * One notifications route for bookmarks and existing links. Staff and customers
+ * must not share a layout: the first duplicate route used to put staff inside
+ * the customer shell. /staff/notifications is the staff-only path.
+ */
+export function NotificationsShell() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const staffPath = location.pathname.startsWith("/staff/");
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      navigate(staffPath ? "/staff/login" : "/login", {
+        replace: true,
+        state: { from: location.pathname },
+      });
+      return;
+    }
+    if (user.restrictedSession || (!user.isStaff && !user.emailVerified)) {
+      navigate("/verify-email/pending", { replace: true });
+      return;
+    }
+    if (!user.isStaff && staffPath) {
+      navigate("/notifications", { replace: true });
+    }
+  }, [user, loading, navigate, location.pathname, staffPath]);
+
+  if (loading) return <p role="status">Loading session…</p>;
+  if (!user || user.restrictedSession || (!user.isStaff && !user.emailVerified)) return null;
+  if (!user.isStaff && staffPath) return null;
+  return user.isStaff ? (
+    <StaffLayout>
+      <Outlet />
+    </StaffLayout>
+  ) : (
+    <CustomerLayout>
+      <Outlet />
+    </CustomerLayout>
+  );
+}
+
+export function CustomerLayout({ children }: { children?: ReactNode }) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -162,7 +205,7 @@ export function CustomerLayout() {
 
   if (!user || user.restrictedSession) return null;
   return (
-    <div>
+    <div data-shell="customer">
       <OfflineBanner />
       <header className="customer-header">
         <div className="header-left">
@@ -177,7 +220,7 @@ export function CustomerLayout() {
         </div>
         <AccountMenu />
       </header>
-      <Outlet />
+      {children ?? <Outlet />}
     </div>
   );
 }
@@ -198,7 +241,7 @@ const STAFF_NAV = [
   { to: "/staff/transactions", label: "Transactions" },
 ];
 
-export function StaffLayout() {
+export function StaffLayout({ children }: { children?: ReactNode }) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const signOut = useSignOut(true);
@@ -216,13 +259,13 @@ export function StaffLayout() {
 
   if (!user?.isStaff) return null;
   return (
-    <div className="staff-shell">
+    <div className="staff-shell" data-shell="staff">
       <aside className="staff-sidebar">
         <NavLink to="/staff" className="staff-brand" data-control-id="GLOBAL-01">
           <span className="staff-mark">T</span>
           <span>
             <strong>Toumu’a</strong>
-            <div className="staff-sub">Lending office</div>
+            <div className="staff-sub">Lending workspace</div>
           </span>
         </NavLink>
         <nav className="staff-nav">
@@ -247,7 +290,7 @@ export function StaffLayout() {
               <NavLink to="/staff/admin/activity">Activity log</NavLink>
             ) : null}
             <NavLink to="/account">Settings</NavLink>
-            <NavLink to="/notifications">Notifications</NavLink>
+            <NavLink to="/staff/notifications">Notifications</NavLink>
             <button
               type="button"
               className="staff-nav-button"
@@ -267,7 +310,7 @@ export function StaffLayout() {
           <Logo to="/staff" />
           <AccountMenu staff />
         </header>
-        <Outlet />
+        {children ?? <Outlet />}
       </div>
     </div>
   );

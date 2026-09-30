@@ -13,7 +13,7 @@ const PRODUCTS = [
       CUSTOMER_SELF_APPLY
         ? "Apply online with the amount you need and the security you can offer."
         : "Contact our office to apply. A loan officer completes the application with you.",
-      "Staff review the file; larger or complex applications go to a manager.",
+      "Staff review the file and value the security; a manager makes every decision.",
       "Repayments are taken by the cashier. This website does not take online payments.",
     ],
   },
@@ -33,7 +33,7 @@ const PRODUCTS = [
     summary: "Office lending for a small-business purpose, still using the secured application and custody process.",
     points: [
       "Purpose and supporting notes travel with the application for the reviewer.",
-      "Complex files — including an “Other” purpose — require a manager decision.",
+      "A manager decides every application; complex files — including an “Other” purpose — get extra review.",
       "Rates and fees on a real facility would be confirmed in a written offer.",
     ],
   },

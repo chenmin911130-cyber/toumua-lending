@@ -198,7 +198,7 @@ describe("LENDING batch 03", () => {
     });
     await post(valAgent, `/api/v1/valuations/${valuationId}/complete`, {
       expectedVersion: 1,
-      amount: "500.00",
+      amount: "1000.00",
       valuationDate: "2026-09-17",
       basis: "Comparable sales",
       borrowerPresent: true,
