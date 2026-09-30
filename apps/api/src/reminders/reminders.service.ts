@@ -10,6 +10,24 @@ import { SmsService } from "../sms/sms.service";
 
 type ReminderKindName = "DUE_SOON" | "DUE_TODAY" | "OVERDUE";
 
+type DueEntry = {
+  entry: {
+    id: string;
+    number: number;
+    dueDate: Date;
+    amount: string;
+    paidAmount: string;
+    loan: {
+      id: string;
+      number: string;
+      borrowerId: string;
+      borrower: { phone: string };
+    };
+  };
+  kind: ReminderKindName;
+  due: string;
+};
+
 export type ReminderRunResult = {
   dueSoon: number;
   dueToday: number;
@@ -54,57 +72,92 @@ export class RemindersService {
       },
     });
 
+    const dueSoonOrToday: DueEntry[] = [];
+    const overdueByLoan = new Map<string, DueEntry[]>();
     for (const entry of entries) {
       const due = aucklandDay(entry.dueDate);
       const kind = reminderKind(due, today, soon);
       if (!kind) continue;
-      const claimed = await this.claim(entry.id, kind);
-      if (!claimed) continue;
-
-      const body = reminderBody(kind, subtract(entry.amount, entry.paidAmount), entry.loan.number, entry.dueDate);
-      const sent = await this.sms.send({
-        toPhone: entry.loan.borrower.phone,
-        body,
-        borrowerId: entry.loan.borrowerId,
-        loanId: entry.loan.id,
-      });
-      if (sent.id) {
-        await this.prisma.repaymentReminder.update({
-          where: { id: claimed.id },
-          data: { smsMessageId: sent.id },
-        });
-      }
-      if (sent.status === "SKIPPED") {
-        counts.skipped += 1;
-      } else if (kind === "DUE_SOON") {
-        counts.dueSoon += 1;
-      } else if (kind === "DUE_TODAY") {
-        counts.dueToday += 1;
+      const candidate: DueEntry = { entry, kind, due };
+      if (kind === "OVERDUE") {
+        const list = overdueByLoan.get(entry.loan.id) ?? [];
+        list.push(candidate);
+        overdueByLoan.set(entry.loan.id, list);
       } else {
-        counts.overdue += 1;
+        dueSoonOrToday.push(candidate);
       }
+    }
 
-      try {
-        await this.notifications.notifyBorrower(
-          entry.loan.borrowerId,
-          "Repayment reminder",
-          body,
-          `/customer/loans/${entry.loan.id}`,
-        );
-      } catch {
-        // The in-app row is a copy of the SMS. Missing it does not unwind the reminder.
+    for (const candidate of dueSoonOrToday) {
+      await this.sendClaimed(candidate, counts, actorId);
+    }
+
+    // One overdue text per loan per run: the oldest installment that does not
+    // already have an OVERDUE reminder. The next run the same day sends the
+    // next oldest, still one. The unique key stops two runs claiming the same row.
+    for (const list of overdueByLoan.values()) {
+      list.sort((a, b) => a.due.localeCompare(b.due) || a.entry.number - b.entry.number);
+      for (const candidate of list) {
+        const sent = await this.sendClaimed(candidate, counts, actorId);
+        if (sent) break;
       }
-
-      await this.audit.write({
-        actorId: actorId ?? null,
-        action: "reminder.send",
-        objectType: "ScheduleEntry",
-        objectId: entry.id,
-        after: { kind, status: sent.status, loanId: entry.loan.id },
-      });
     }
 
     return counts;
+  }
+
+  /** Claims the reminder row, then sends. A lost claim means another run owns it. */
+  private async sendClaimed(
+    candidate: DueEntry,
+    counts: ReminderRunResult,
+    actorId?: string | null,
+  ): Promise<boolean> {
+    const { entry, kind } = candidate;
+    const claimed = await this.claim(entry.id, kind);
+    if (!claimed) return false;
+
+    const body = reminderBody(kind, subtract(entry.amount, entry.paidAmount), entry.loan.number, entry.dueDate);
+    const sent = await this.sms.send({
+      toPhone: entry.loan.borrower.phone,
+      body,
+      borrowerId: entry.loan.borrowerId,
+      loanId: entry.loan.id,
+    });
+    if (sent.id) {
+      await this.prisma.repaymentReminder.update({
+        where: { id: claimed.id },
+        data: { smsMessageId: sent.id },
+      });
+    }
+    if (sent.status === "SKIPPED") {
+      counts.skipped += 1;
+    } else if (kind === "DUE_SOON") {
+      counts.dueSoon += 1;
+    } else if (kind === "DUE_TODAY") {
+      counts.dueToday += 1;
+    } else {
+      counts.overdue += 1;
+    }
+
+    try {
+      await this.notifications.notifyBorrower(
+        entry.loan.borrowerId,
+        "Repayment reminder",
+        body,
+        `/customer/loans/${entry.loan.id}`,
+      );
+    } catch {
+      // The in-app row is a copy of the SMS. Missing it does not unwind the reminder.
+    }
+
+    await this.audit.write({
+      actorId: actorId ?? null,
+      action: "reminder.send",
+      objectType: "ScheduleEntry",
+      objectId: entry.id,
+      after: { kind, status: sent.status, loanId: entry.loan.id },
+    });
+    return true;
   }
 
   /**

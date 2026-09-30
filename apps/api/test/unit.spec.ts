@@ -300,3 +300,22 @@ describe("approval routing", () => {
     ).toBe(true);
   });
 });
+
+describe("demo reminder dates from the weekly terms the seed saves", () => {
+  function dueDayOffsets(firstPaymentOffset: number) {
+    const today = new Date("2026-09-30T00:00:00.000Z");
+    const firstPaymentDate = new Date(today);
+    firstPaymentDate.setUTCDate(firstPaymentDate.getUTCDate() + firstPaymentOffset);
+    return buildSchedule({
+      principal: "100.00",
+      frequency: "WEEKLY",
+      periods: 4,
+      firstPaymentDate,
+    }).map((row) => Math.round((row.dueDate.getTime() - today.getTime()) / 86_400_000));
+  }
+
+  it("keeps a weekly step and lands David due today and Sione already overdue", () => {
+    expect(dueDayOffsets(-7)).toEqual([0, 7, 14, 21]);
+    expect(dueDayOffsets(-21)).toEqual([-14, -7, 0, 7]);
+  });
+});

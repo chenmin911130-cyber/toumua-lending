@@ -247,4 +247,46 @@ describe("repayment SMS reminders", () => {
     process.env.REMINDER_CRON_ENABLED = "0";
     expect(await prisma.repaymentReminder.count()).toBe(0);
   });
+
+  it("sends one overdue text per loan per run, oldest first, then the next", async () => {
+    const flood = await installment({ tag: "OD3", phone: "021 234 5678", due: "2026-05-01" });
+    for (const [index, due] of ["2026-05-08", "2026-05-15"].entries()) {
+      await prisma.scheduleEntry.create({
+        data: {
+          loanId: flood.loan.id,
+          number: index + 2,
+          dueDate: new Date(`${due}T00:00:00.000Z`),
+          amount: "120.00",
+          paidAmount: "0.00",
+          status: "PENDING",
+        },
+      });
+    }
+    const other = await installment({ tag: "OD1", phone: "021 555 0199", due: "2026-05-20" });
+    const reminders = app.get(RemindersService);
+
+    const first = await reminders.runDue(AS_OF);
+    expect(first).toMatchObject({ dueSoon: 0, dueToday: 0, overdue: 2, skipped: 0 });
+    const firstBodies = (await prisma.smsMessage.findMany({ orderBy: { body: "asc" } })).map((row) => row.body);
+    expect(firstBodies).toHaveLength(2);
+    expect(firstBodies.some((body) => body.includes("L-OD3") && body.includes("1 May"))).toBe(true);
+    expect(firstBodies.some((body) => body.includes("8 May") || body.includes("15 May"))).toBe(false);
+    expect(firstBodies.some((body) => body.includes("L-OD1"))).toBe(true);
+
+    const second = await reminders.runDue(AS_OF);
+    expect(second).toMatchObject({ dueSoon: 0, dueToday: 0, overdue: 1, skipped: 0 });
+    const secondMessage = await prisma.smsMessage.findFirst({
+      where: { loanId: flood.loan.id, body: { contains: "8 May" } },
+    });
+    expect(secondMessage?.status).toBe("SENT");
+    expect(await prisma.repaymentReminder.count({ where: { kind: "OVERDUE", scheduleEntry: { loanId: other.loan.id } } })).toBe(1);
+
+    const third = await reminders.runDue(AS_OF);
+    expect(third.overdue).toBe(1);
+    expect(await prisma.smsMessage.count({ where: { loanId: flood.loan.id } })).toBe(3);
+
+    const fourth = await reminders.runDue(AS_OF);
+    expect(fourth).toEqual({ dueSoon: 0, dueToday: 0, overdue: 0, skipped: 0 });
+    expect(await prisma.smsMessage.count()).toBe(4);
+  });
 });

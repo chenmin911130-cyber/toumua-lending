@@ -27,38 +27,6 @@ function day(offset: number) {
   return addCalendarDays(aucklandDay(), offset);
 }
 
-/**
- * Existing demo databases return before loans are rebuilt. Pending installments
- * for the reminder walkthrough are moved onto Auckland days without inserting
- * rows, so running the seed again leaves the same schedule.
- */
-async function alignReminderDates(prisma: PrismaService) {
-  const plans: Array<{ email: string; offsets: number[] }> = [
-    { email: "david.chen@toumua.nz", offsets: [0, 10, 17, 24] },
-    { email: "sione.tapu@toumua.nz", offsets: [-28, -21, -14, -7] },
-    { email: "sarah.tama@toumua.nz", offsets: [0, 10, 17, 24] },
-  ];
-  const today = aucklandDay();
-  for (const plan of plans) {
-    const borrower = await prisma.borrower.findFirst({ where: { email: plan.email } });
-    if (!borrower) continue;
-    const loans = await prisma.loan.findMany({
-      where: { borrowerId: borrower.id, status: "ACTIVE" },
-      include: { schedule: { where: { status: "PENDING" }, orderBy: { number: "asc" } } },
-    });
-    for (const loan of loans) {
-      for (let index = 0; index < loan.schedule.length; index += 1) {
-        const offset =
-          plan.offsets[index] ?? plan.offsets[plan.offsets.length - 1]! + 7 * (index - plan.offsets.length + 1);
-        const dueDate = new Date(`${addCalendarDays(today, offset)}T00:00:00.000Z`);
-        const entry = loan.schedule[index]!;
-        if (entry.dueDate.getTime() === dueDate.getTime()) continue;
-        await prisma.scheduleEntry.update({ where: { id: entry.id }, data: { dueDate } });
-      }
-    }
-  }
-}
-
 function actor(user: { id: string; name: string; email: string; role: string | null; status: string; emailVerifiedAt: Date | null; permissions?: { permission: string }[] }): AuthUser {
   return { ...toPublicUser(user as never, false), sessionId: "demo-seed" };
 }
@@ -67,6 +35,13 @@ async function main() {
   process.env.CALCULATION_POLICY = process.env.CALCULATION_POLICY ?? "demo";
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ["error", "warn"] });
   const prisma = app.get(PrismaService);
+  const existing = await prisma.application.count({ where: { number: { startsWith: "DEMO-" } } });
+  if (existing > 0) {
+    console.log("Demo data already present");
+    await app.close();
+    return;
+  }
+
   const locations = new Map<string, string>();
   for (const location of DEMO_LOCATIONS) {
     const row = await prisma.storageLocation.upsert({
@@ -81,14 +56,6 @@ async function main() {
       },
     });
     locations.set(location.code, row.id);
-  }
-
-  const existing = await prisma.application.count({ where: { number: { startsWith: "DEMO-" } } });
-  if (existing > 0) {
-    await alignReminderDates(prisma);
-    console.log("Demo data already present");
-    await app.close();
-    return;
   }
 
   const applications = app.get(ApplicationsService);
@@ -200,6 +167,9 @@ async function main() {
   }
 
   const sarah = await openFile("sarah.tama@toumua.nz", "2400.00", "Home repairs");
+  // Weekly, 4 periods. The first installment falls one period after firstPaymentDate.
+  // today−21 → dues today−14, today−7, today, today+7. The two repayments below
+  // clear the first two, so the next pending installment is due today.
   await valueAndSubmit(sarah.id, "4000.00", -21);
   const sarahDecision = await approve(sarah.id);
   const sarahLoanId = (sarahDecision as { loanId?: string }).loanId;
@@ -257,11 +227,13 @@ async function main() {
   await openFile("ana.folau@toumua.nz", "800.00", "Personal");
 
   const david = await openFile("david.chen@toumua.nz", "1500.00", "Vehicle");
+  // today−7 → first weekly installment is due today (DUE_TODAY).
   await valueAndSubmit(david.id, "2600.00", -7);
   const davidDecision = await approve(david.id);
   if (davidDecision.loanId) await storeAndDisburse(davidDecision.loanId, david.assetId, "SAFE-A-02");
 
   const sione = await openFile("sione.tapu@toumua.nz", "1600.00", "Family");
+  // today−21 → the first two weekly installments are already past due.
   await valueAndSubmit(sione.id, "2800.00", -21);
   const sioneDecision = await approve(sione.id);
   if (sioneDecision.loanId) await storeAndDisburse(sioneDecision.loanId, sione.assetId, "CAB-B-01");
@@ -311,7 +283,6 @@ async function main() {
   await valueAndSubmit(peter.id, "2500.00");
   await approve(peter.id);
 
-  await alignReminderDates(prisma);
   console.log("Demo applications seeded");
   await app.close();
 }
