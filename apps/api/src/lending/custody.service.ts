@@ -433,6 +433,9 @@ export class CustodyService {
     if (!storageLocationId) {
       return { storageLocationId: null, location: input.location?.trim() || null };
     }
+    // Two placements into the last free slot would both see the old count under
+    // READ COMMITTED. Hold the location row until this placement commits.
+    await tx.$queryRaw`SELECT "id" FROM "StorageLocation" WHERE "id" = ${storageLocationId} FOR UPDATE`;
     const location = await tx.storageLocation.findUnique({ where: { id: storageLocationId } });
     if (!location || !location.active) {
       throw validation("This storage location is not available");

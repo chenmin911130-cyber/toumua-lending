@@ -150,12 +150,20 @@ export class StorageLocationsService {
     assertManageStorageLocations(user);
     try {
       const row = await this.prisma.$transaction(async (tx) => {
+        // An intake can land while this update reads occupancy. Lock first so
+        // deactivation and a lower capacity both see placements that commit first.
+        await tx.$queryRaw`SELECT "id" FROM "StorageLocation" WHERE "id" = ${id} FOR UPDATE`;
         const current = await tx.storageLocation.findUnique({ where: { id } });
         if (!current) throw notFound("Storage location not found");
-        if (input.active === false && current.active) {
+        const deactivating = input.active === false && current.active;
+        const settingCapacity = typeof input.capacity === "number";
+        if (deactivating || settingCapacity) {
           const held = await assetsAtLocation(tx, id);
-          if (held.length > 0) {
+          if (deactivating && held.length > 0) {
             throw conflict("Move the stored assets out before deactivating this location");
+          }
+          if (settingCapacity && input.capacity != null && input.capacity < held.length) {
+            throw conflict("Capacity cannot be lower than the number of assets stored here");
           }
         }
         const updated = await tx.storageLocation.update({

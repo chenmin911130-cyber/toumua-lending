@@ -41,6 +41,22 @@ describe("storage locations, custody history, and borrower on assets", () => {
     await seedCashier(prisma, auth);
   });
 
+  /**
+   * supertest's in-process server occasionally resets a socket when two
+   * requests really are in flight at once. Retry only that transport artefact.
+   */
+  async function allowingSocketFlake<T>(run: () => Promise<T>): Promise<T> {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await run();
+      } catch (error) {
+        const code = (error as { code?: string }).code;
+        const retryable = code === "ECONNRESET" || code === "ECONNREFUSED" || code === "EPIPE";
+        if (!retryable || attempt >= 3) throw error;
+      }
+    }
+  }
+
   async function login(email: string, password: string): Promise<Agent> {
     const agent = await agentWithCsrf(app);
     const response = await post(agent, "/api/v1/auth/login", { email, password });
@@ -269,6 +285,63 @@ describe("storage locations, custody history, and borrower on assets", () => {
       storageLocationId: closed.id,
     });
     expect(inactive.status).toBe(422);
+  });
+
+  it("lets only one of two simultaneous intakes take the last free slot", async () => {
+    const manager = await login("manager@example.com", "Manager12345");
+    const safe = await createLocation(manager, {
+      code: "SAFE-A-01",
+      name: "Main safe",
+      kind: "SAFE",
+      capacity: 1,
+    });
+    const first = await valuedLoan("First Borrower");
+    const second = await valuedLoan("Second Borrower");
+    const intake = (loan: typeof first) =>
+      post(loan.valuer, `/api/v1/assets/${loan.assetId}/intake`, {
+        expectedVersion: loan.version,
+        receivedOn: "2026-09-18",
+        inspectedOn: "2026-09-18",
+        inspectionResult: "PASS",
+        storageLocationId: safe.id,
+      });
+    const [a, b] = await allowingSocketFlake(() => Promise.all([intake(first), intake(second)]));
+    expect([a.status, b.status].sort()).toEqual([201, 409]);
+    expect([a, b].find((response) => response.status === 409)?.body.message).toBe("This location is full");
+    const locations = await manager.get("/api/v1/storage-locations");
+    const row = locations.body.items.find((item: { code: string }) => item.code === "SAFE-A-01");
+    expect(row.occupied).toBe(1);
+  });
+
+  it("refuses to lower capacity below the number of stored assets", async () => {
+    const manager = await login("manager@example.com", "Manager12345");
+    const safe = await createLocation(manager, {
+      code: "SAFE-A-01",
+      name: "Main safe",
+      kind: "SAFE",
+      capacity: 10,
+    });
+    const first = await valuedLoan("First Borrower");
+    const second = await valuedLoan("Second Borrower");
+    for (const loan of [first, second]) {
+      const intake = await post(loan.valuer, `/api/v1/assets/${loan.assetId}/intake`, {
+        expectedVersion: loan.version,
+        receivedOn: "2026-09-18",
+        inspectedOn: "2026-09-18",
+        inspectionResult: "PASS",
+        storageLocationId: safe.id,
+      });
+      expect(intake.status).toBe(201);
+    }
+    const lowered = await patch(manager, `/api/v1/storage-locations/${safe.id}`, { capacity: 1 });
+    expect(lowered.status).toBe(409);
+    expect(lowered.body.message).toBe(
+      "Capacity cannot be lower than the number of assets stored here",
+    );
+    const locations = await manager.get("/api/v1/storage-locations");
+    const row = locations.body.items.find((item: { id: string }) => item.id === safe.id);
+    expect(row.capacity).toBe(10);
+    expect(row.occupied).toBe(2);
   });
 
   it("refuses to deactivate a location that still holds stored assets", async () => {
