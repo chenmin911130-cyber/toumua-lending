@@ -14,6 +14,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { assertDecideApplication, assertReviewDecision, isManager } from "./access";
 import { classifyApproval } from "./approval-policy";
 import { activePolicy, buildSchedule, DEMO_POLICY, demoAnnualRateBps, type Frequency } from "./calculation-policy";
+import { appliedAnnualRateBps, classifyLoyalty } from "./loyalty-policy";
 import { sum, toCents } from "./money";
 import { NotificationsService } from "../notifications/notifications.service";
 import { ContractsService } from "../contracts/contracts.service";
@@ -51,6 +52,12 @@ export class DecisionsService {
     // The brief gives the final approve/decline decision to the manager only.
     const canApprove = submitted && ready && manager;
     const canDecline = submitted && manager;
+    const settledCount = await this.prisma.loan.count({
+      where: { borrowerId: application.borrowerId as string, status: LoanStatus.SETTLED },
+    });
+    const loyaltyClass = classifyLoyalty({ settledCount });
+    const baseAnnualRateBps = activePolicy() === DEMO_POLICY ? demoAnnualRateBps() : 0;
+    const previewAnnualRateBps = appliedAnnualRateBps(baseAnnualRateBps, loyaltyClass.discountBps);
     const assets = application.assets.map((asset) => {
       const valuation = asset.valuations[0];
       const valuationAmount = valuation?.status === "COMPLETED" ? valuation.amount : null;
@@ -80,6 +87,13 @@ export class DecisionsService {
       canApprove,
       canDecline,
       allowedActions: this.allowedActions(application, checks, user),
+      loyalty: {
+        tier: loyaltyClass.tier,
+        settledCount,
+        discountBps: loyaltyClass.discountBps,
+        baseAnnualRateBps,
+        annualRateBps: previewAnnualRateBps,
+      },
     };
   }
 
@@ -131,8 +145,25 @@ export class DecisionsService {
     const frequency = terms.frequency as Frequency;
     const periods = terms.periods as number;
     const firstPaymentDate = terms.firstPaymentDate as Date;
-    const schedule = buildSchedule({ principal, frequency, periods, firstPaymentDate });
+    const settledCount = await this.prisma.loan.count({
+      where: { borrowerId: application.borrowerId as string, status: LoanStatus.SETTLED },
+    });
+    const loyalty = classifyLoyalty({ settledCount });
+    const baseAnnualRateBps = activePolicy() === DEMO_POLICY ? demoAnnualRateBps() : 0;
+    const annualRateBps = appliedAnnualRateBps(baseAnnualRateBps, loyalty.discountBps);
+    const schedule = buildSchedule({
+      principal,
+      frequency,
+      periods,
+      firstPaymentDate,
+      annualRateBps: activePolicy() === DEMO_POLICY ? annualRateBps : undefined,
+    });
     const policy = activePolicy() as string;
+    const frozenTerms = {
+      loyaltyTier: loyalty.tier,
+      discountBps: loyalty.discountBps,
+      annualRateBps,
+    };
 
     const result = await this.prisma.$transaction(async (tx) => {
       // Optimistic lock: only the first decision on this exact version wins.
@@ -151,7 +182,7 @@ export class DecisionsService {
           decidedById: user.id,
           reason: input.reason ?? null,
           publicNote: input.publicNote ?? null,
-          snapshot: this.snapshotOf(application),
+          snapshot: this.snapshotOf(application, frozenTerms),
         },
       });
 
@@ -169,7 +200,9 @@ export class DecisionsService {
           interestMethod: terms.interestMethod ?? null,
           policy,
           policyConfigured: true,
-          annualRateBps: policy === DEMO_POLICY ? demoAnnualRateBps() : 0,
+          loyaltyTier: loyalty.tier,
+          discountBps: loyalty.discountBps,
+          annualRateBps,
           schedule: {
             create: schedule.map((entry) => ({
               number: entry.number,
@@ -187,7 +220,14 @@ export class DecisionsService {
           objectType: "Application",
           objectId: application.id,
           before: { status: ApplicationStatus.SUBMITTED, version: input.expectedVersion },
-          after: { status: ApplicationStatus.APPROVED, loanId: loan.id, loanNumber: loan.number },
+          after: {
+            status: ApplicationStatus.APPROVED,
+            loanId: loan.id,
+            loanNumber: loan.number,
+            loyaltyTier: loyalty.tier,
+            discountBps: loyalty.discountBps,
+            annualRateBps,
+          },
           reason: input.reason ?? null,
         },
         tx,
@@ -386,6 +426,7 @@ export class DecisionsService {
   /** The exact reviewed state, retained with the decision for later comparison. */
   private snapshotOf(
     application: Awaited<ReturnType<DecisionsService["loadForDecision"]>>,
+    frozenTerms?: { loyaltyTier: string; discountBps: number; annualRateBps: number },
   ) {
     return {
       applicationId: application.id,
@@ -405,6 +446,7 @@ export class DecisionsService {
             periods: application.terms.periods,
             interestMethod: application.terms.interestMethod,
             policyConfigured: application.terms.policyConfigured,
+            ...(frozenTerms ?? {}),
           }
         : null,
       assets: application.assets.map((asset) => ({

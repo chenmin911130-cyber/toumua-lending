@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import type { CustomerLoanDetail, LoanSummary } from "@toumua/contracts";
 import { api, errorMessage } from "../api";
-import { formatDate, formatDateTime, statusLabel } from "../format";
+import { formatDate, formatDateTime, loyaltyRateLine, statusLabel } from "../format";
 import { AutomaticRepaymentsCard } from "./arrangements";
 
 type ListResponse = { items: LoanSummary[]; total: number };
@@ -60,6 +60,14 @@ export function CustomerLoanDetailPage() {
         {statusLabel(loan.status)}
         {loan.applicationNumber ? ` · Application ${loan.applicationNumber}` : ""}
       </p>
+      <p className="hint">
+        {loyaltyRateLine(
+          (loan.annualRateBps ?? 0) + loan.discountBps,
+          loan.discountBps,
+          loan.annualRateBps ?? 0,
+        )}
+      </p>
+      <p className="hint">Demo rates, subject to client confirmation</p>
       <LoanNav loanId={loanId} active="detail" />
       <section className="metrics" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
         <article>

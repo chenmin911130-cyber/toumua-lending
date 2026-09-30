@@ -382,6 +382,8 @@ model Loan {
   policyConfigured  Boolean    @default(false)
   /// Basis points frozen at approval. Null on rows approved before this column existed.
   annualRateBps     Int?
+  loyaltyTier       String     @default("STANDARD")
+  discountBps       Int        @default(0)
   version           Int        @default(1)
   disbursedAt       DateTime?
   disbursedById     String?
@@ -601,6 +603,8 @@ model ApplicationTerms {
   periods          Int?
   interestMethod   String?
   policyConfigured Boolean     @default(false)
+  loyaltyTier      String      @default("STANDARD")
+  discountBps      Int         @default(0)
   previewJson      Json?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt

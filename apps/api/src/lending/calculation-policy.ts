@@ -12,6 +12,7 @@
  *   test  — zero-interest fixture used by acceptance tests
  *   off   — block approvals and quotes
  */
+import { appliedAnnualRateBps, type LoyaltyTier } from "./loyalty-policy";
 import { add, compare, fromCents, isPositive, splitEvenly, subtract, sum, toCents } from "./money";
 
 export const TEST_POLICY = "test-zero-interest";
@@ -27,6 +28,7 @@ export type PolicyTerms = {
   frequency: Frequency;
   periods: number;
   firstPaymentDate: Date;
+  annualRateBps?: number;
 };
 
 export type ScheduleDraft = {
@@ -77,15 +79,21 @@ function periodsPerYear(frequency: Frequency): number {
 }
 
 /** Simple interest in cents: principal × bps/10000 × periods/periodsPerYear. */
-export function simpleInterest(principal: string, frequency: Frequency, periods: number): string {
-  const numer = toCents(principal) * demoAnnualRateBps() * periods;
+export function simpleInterest(
+  principal: string,
+  frequency: Frequency,
+  periods: number,
+  annualRateBps: number = demoAnnualRateBps(),
+): string {
+  const numer = toCents(principal) * annualRateBps * periods;
   const denom = 10000 * periodsPerYear(frequency);
   return fromCents(Math.round(numer / denom));
 }
 
 function payableTotal(terms: PolicyTerms): string {
   if (activePolicy() !== DEMO_POLICY) return terms.principal;
-  return add(terms.principal, simpleInterest(terms.principal, terms.frequency, terms.periods));
+  const rate = terms.annualRateBps ?? demoAnnualRateBps();
+  return add(terms.principal, simpleInterest(terms.principal, terms.frequency, terms.periods, rate));
 }
 
 /**
@@ -250,6 +258,7 @@ export function buildTermsPreview(
     periods?: number | null;
   },
   requestedAmount: string | null,
+  loyalty: { tier: LoyaltyTier; discountBps: number } = { tier: "STANDARD", discountBps: 0 },
 ) {
   const policy = activePolicy();
   if (!policy || !termsPolicyConfigured(input) || !requestedAmount || !input.periods) {
@@ -257,13 +266,23 @@ export function buildTermsPreview(
   }
   const firstPaymentDate = new Date(input.firstPaymentDate as string);
   if (Number.isNaN(firstPaymentDate.getTime())) return null;
+  const baseAnnualRateBps = policy === DEMO_POLICY ? demoAnnualRateBps() : 0;
+  const annualRateBps = appliedAnnualRateBps(baseAnnualRateBps, loyalty.discountBps);
   const schedule = buildSchedule({
     principal: requestedAmount,
     frequency: input.frequency as Frequency,
     periods: input.periods,
     firstPaymentDate,
+    annualRateBps: policy === DEMO_POLICY ? annualRateBps : undefined,
   });
   const demo = policy === DEMO_POLICY;
+  const interestAtBase = simpleInterest(requestedAmount, input.frequency as Frequency, input.periods, baseAnnualRateBps);
+  const interestAtApplied = simpleInterest(
+    requestedAmount,
+    input.frequency as Frequency,
+    input.periods,
+    annualRateBps,
+  );
   return {
     policy,
     requestedAmount,
@@ -272,7 +291,11 @@ export function buildTermsPreview(
     firstPaymentDate: input.firstPaymentDate,
     installment: schedule[0]?.amount ?? null,
     total: sum(schedule.map((entry) => entry.amount)),
-    annualRateBps: demo ? demoAnnualRateBps() : 0,
+    baseAnnualRateBps,
+    discountBps: loyalty.discountBps,
+    annualRateBps,
+    loyaltyTier: loyalty.tier,
+    interestSaved: subtract(interestAtBase, interestAtApplied),
     schedule: schedule.map((entry) => ({
       number: entry.number,
       dueDate: entry.dueDate.toISOString().slice(0, 10),

@@ -67,6 +67,16 @@ export function LoansIndexPage() {
             </Link>
           ))}
         </div>
+        <section className="mt-14 max-w-[640px]">
+          <h2 className="text-[22px] font-semibold text-text">Rewards for returning borrowers</h2>
+          <p className="mt-3 text-[16px] leading-relaxed text-text-secondary">
+            1 or 2 settled loans: Returning customer, 2.00% p.a. off the annual rate.
+          </p>
+          <p className="mt-2 text-[16px] leading-relaxed text-text-secondary">
+            3 or more settled loans: Loyal customer, 4.00% p.a. off the annual rate.
+          </p>
+          <p className="mt-3 text-[14px] text-text-secondary">Demo rates, subject to confirmation</p>
+        </section>
       </section>
     </MarketingShell>
   );

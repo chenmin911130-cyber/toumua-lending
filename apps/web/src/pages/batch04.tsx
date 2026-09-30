@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { Button, Field } from "@toumua/ui";
 import type { AssetHistoryEntry, CursorListResponse, LoanDetail, LoanSummary } from "@toumua/contracts";
 import { api, errorMessage, fieldError, postIdempotent } from "../api";
-import { aucklandBusinessDate } from "../format";
+import { aucklandBusinessDate, loyaltyRateLine } from "../format";
 import { ResourceGate, useAsyncResource } from "../load-state";
 import { useAuth } from "../auth";
 import { StorageLocationField } from "./storage";
@@ -61,6 +61,13 @@ type Review = {
     valuationStatus: string | null;
     valuationAmount?: string | null;
   }>;
+  loyalty?: {
+    tier: string;
+    settledCount: number;
+    discountBps: number;
+    baseAnnualRateBps: number;
+    annualRateBps: number;
+  };
 };
 
 function placeLabel(asset: Pick<AssetView, "storageLocation" | "storageLocationLabel">) {
@@ -139,6 +146,14 @@ export function StaffLoanDetailPage() {
       <Link to="/staff/loans">← Loans</Link>
       <h1>{loan.number}</h1>
       <p className="hint">{loan.borrowerName} · {loan.status.replaceAll("_", " ")} · balance {loan.balance}</p>
+      <p className="hint">
+        {loyaltyRateLine(
+          (loan.annualRateBps ?? 0) + loan.discountBps,
+          loan.discountBps,
+          loan.annualRateBps ?? 0,
+        )}
+      </p>
+      <p className="hint">Demo rates, subject to client confirmation</p>
       {loan.defaultReason ? <p className="hint">Default: {loan.defaultReason}</p> : null}
       {loan.overdueAmount !== "0.00" ? <p className="error">Overdue {loan.overdueAmount}</p> : null}
       <div className="hero-actions">
@@ -836,6 +851,18 @@ export function ApplicationReviewPage() {
         </p>
       )}
       <ul>{review.checks.map((check) => <li key={check.id}>{check.complete ? "✓" : "○"} {check.label}</li>)}</ul>
+      {review.loyalty ? (
+        <>
+          <p className="hint">
+            {loyaltyRateLine(
+              review.loyalty.baseAnnualRateBps,
+              review.loyalty.discountBps,
+              review.loyalty.annualRateBps,
+            )}
+          </p>
+          <p className="hint">Demo rates, subject to client confirmation</p>
+        </>
+      ) : null}
       {decided ? (
         <p className="hint">This application already has a decision.</p>
       ) : officerView ? null : (

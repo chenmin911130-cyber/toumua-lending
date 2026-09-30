@@ -19,6 +19,8 @@ export type ContractRenderInput = {
   borrowerAddress: string;
   principal: string;
   annualRateBps: number;
+  loyaltyTier?: "STANDARD" | "RETURNING" | "LOYAL";
+  discountBps?: number;
   frequency: string;
   periods: number;
   schedule: Array<{ number: number; dueDate: Date; amount: string }>;
@@ -61,6 +63,17 @@ function formatDue(date: Date): string {
     .trim();
 }
 
+function rateLine(input: ContractRenderInput): string {
+  const tier = input.loyaltyTier ?? "STANDARD";
+  const discountBps = input.discountBps ?? 0;
+  if (discountBps <= 0 || tier === "STANDARD") {
+    return `Annual rate: ${formatAnnualRate(input.annualRateBps)} simple interest.`;
+  }
+  const baseBps = input.annualRateBps + discountBps;
+  const label = tier === "LOYAL" ? "loyal-customer" : "returning-customer";
+  return `Annual rate: ${formatAnnualRate(baseBps)} p.a. less ${formatAnnualRate(discountBps)} ${label} discount = ${formatAnnualRate(input.annualRateBps)} p.a.`;
+}
+
 export function renderContract(input: ContractRenderInput): string {
   const rows = input.schedule
     .map(
@@ -99,7 +112,7 @@ export function renderContract(input: ContractRenderInput): string {
   <p>Address: ${escapeHtml(input.borrowerAddress)}</p>
   <h2>Loan terms</h2>
   <p>Principal: $${escapeHtml(input.principal)}</p>
-  <p>Annual rate: ${escapeHtml(formatAnnualRate(input.annualRateBps))} simple interest. Loyalty discount: none.</p>
+  <p>${escapeHtml(rateLine(input))}</p>
   <p>Fees: none are charged on this demonstration contract.</p>
   <p>Repayments: ${input.periods} ${escapeHtml(input.frequency.toLowerCase())} instalments.</p>
   <h2>Repayment schedule</h2>

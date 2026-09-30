@@ -61,6 +61,8 @@ export class ContractsService {
       borrowerAddress: loan.borrower.address,
       principal: loan.principal,
       annualRateBps: loan.annualRateBps ?? (activePolicy() === DEMO_POLICY ? demoAnnualRateBps() : 0),
+      loyaltyTier: loan.loyaltyTier as "STANDARD" | "RETURNING" | "LOYAL",
+      discountBps: loan.discountBps,
       frequency: loan.frequency,
       periods: loan.periods,
       schedule: loan.schedule.map((entry) => ({

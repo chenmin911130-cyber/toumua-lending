@@ -11,11 +11,23 @@ import type {
 import { api, downloadFile, errorMessage, fieldError, uploadFile } from "../api";
 import { CUSTOMER_SELF_APPLY } from "../features";
 import { useAuth } from "../auth";
-import { aucklandBusinessDate, aucklandDateTimeLocal, aucklandWallTimeToIso } from "../format";
+import {
+  aucklandBusinessDate,
+  aucklandDateTimeLocal,
+  aucklandWallTimeToIso,
+  loyaltyBadgeLabel,
+} from "../format";
 
 type BorrowerDetail = BorrowerSummary & {
   linkedUser: { id: string; name: string; email: string } | null;
   linkId: string | null;
+  loyalty?: { tier: string; settledCount: number; discountBps: number };
+};
+
+type TermsPreview = {
+  loyaltyTier?: string;
+  discountBps?: number;
+  interestSaved?: string;
 };
 
 const STEPS = [
@@ -150,6 +162,9 @@ export function BorrowersPage() {
 
       <Dialog open={drawer != null} onClose={() => setDrawer(null)} title={drawer === "new" ? "Add borrower" : "Edit borrower"}>
         <form className="stack" onSubmit={(event) => void save(event)}>
+          {detail?.loyalty ? (
+            <p className="hint">Loyalty: {loyaltyBadgeLabel(detail.loyalty.tier)}</p>
+          ) : null}
           <Field label="Full name" error={fieldError(error, "name")}>
             <input value={name} onChange={(event) => setName(event.target.value)} required data-control-id="S02-04" />
           </Field>
@@ -453,7 +468,7 @@ export function ApplicationWizardPage() {
   const [firstPaymentDate, setFirstPaymentDate] = useState("");
   const [frequency, setFrequency] = useState("MONTHLY");
   const [periods, setPeriods] = useState("12");
-  const [preview, setPreview] = useState<unknown>(null);
+  const [preview, setPreview] = useState<TermsPreview | null>(null);
 
   async function reload() {
     const detail = await api<ApplicationDetail>(`/applications/${id}`);
@@ -591,7 +606,7 @@ export function ApplicationWizardPage() {
         periods: Number.parseInt(periods, 10),
       }),
     });
-    setPreview(data.preview);
+    setPreview(data.preview as TermsPreview);
   }
 
   async function submitApplication() {
@@ -715,6 +730,16 @@ export function ApplicationWizardPage() {
               ? "Repayment schedule preview. Confirm rates with the office formula."
               : "Calculation policy is switched off. Approvals stay blocked until an official policy is enabled."}
           </p>
+          {app.terms?.loyaltyTier ? (
+            <p className="hint">Loyalty: {loyaltyBadgeLabel(app.terms.loyaltyTier)}</p>
+          ) : null}
+          {preview?.loyaltyTier ? (
+            <p className="hint">Preview loyalty: {loyaltyBadgeLabel(preview.loyaltyTier)}</p>
+          ) : null}
+          {preview?.interestSaved && preview.interestSaved !== "0.00" ? (
+            <p className="hint">Saves ${preview.interestSaved} interest on this loan</p>
+          ) : null}
+          <p className="hint">Demo rates, subject to client confirmation</p>
           <div className="hero-actions">
             <Button type="submit">Save terms</Button>
             <Button type="button" variant="secondary" onClick={() => void loadPreview()}>Preview schedule</Button>

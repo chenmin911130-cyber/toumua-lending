@@ -10,6 +10,7 @@ import {
   seedAdmin,
   seedCashier,
   seedLoanOfficer,
+  seedManager,
   seedValuationOfficer,
   startApp,
 } from "./helpers";
@@ -401,5 +402,195 @@ describe("LENDING batch 03", () => {
 
     // A loan officer still has access.
     expect((await loanOfficer.get("/api/v1/borrowers")).status).toBe(200);
+  });
+
+  it("freezes the loyalty tier from settled loans only", async () => {
+    await seedManager(prisma, auth);
+    const staff = await loginLoanOfficer();
+    const valAgent = await agentWithCsrf(app);
+    await post(valAgent, "/api/v1/auth/login", { email: "val@example.com", password: "Valuation12" });
+    const manager = await agentWithCsrf(app);
+    await post(manager, "/api/v1/auth/login", { email: "manager@example.com", password: "Manager12345" });
+
+    async function csrfOf(agent: Agent) {
+      return (await agent.get("/api/v1/auth/csrf")).body.token as string;
+    }
+
+    async function submitApplication(borrowerId: string) {
+      const application = await post(staff, "/api/v1/applications", { borrowerId });
+      expect(application.status).toBe(201);
+      const appId = application.body.id as string;
+      const details = await patch(staff, `/api/v1/applications/${appId}`, {
+        expectedVersion: application.body.version,
+        requestedAmount: "600.00",
+        purpose: "Emergency repair",
+        proposedTermMonths: 6,
+      });
+      expect(details.status).toBe(200);
+      const withAsset = await post(staff, `/api/v1/applications/${appId}/assets`, {
+        name: "Watch",
+        description: "Steel wristwatch",
+        condition: "Good",
+      });
+      expect(withAsset.status).toBe(201);
+      const assetId = withAsset.body.assets[0].id as string;
+      const photo = await staff
+        .post(`/api/v1/applications/${appId}/assets/${assetId}/photos`)
+        .set("x-csrf-token", await csrfOf(staff))
+        .attach("file", PNG_HEADER, { filename: "watch.png", contentType: "image/png" });
+      expect(photo.status).toBe(201);
+      const latest = await staff.get(`/api/v1/applications/${appId}`);
+      const termsBody = {
+        expectedVersion: latest.body.version,
+        firstPaymentDate: "2026-10-01",
+        frequency: "MONTHLY",
+        periods: 6,
+      };
+      const terms = await staff
+        .put(`/api/v1/applications/${appId}/terms`)
+        .set("x-csrf-token", await csrfOf(staff))
+        .send(termsBody);
+      expect(terms.status).toBe(200);
+      const valuations = await staff.get(`/api/v1/applications/${appId}/valuations`);
+      const completed = await post(valAgent, `/api/v1/valuations/${valuations.body.items[0].id}/complete`, {
+        expectedVersion: 1,
+        amount: "600.00",
+        valuationDate: "2026-09-18",
+        basis: "Comparable sales",
+        borrowerPresent: true,
+        loanOfficerId,
+        valuationOfficerId,
+        participatedAt: "2026-09-18T10:00:00.000Z",
+      });
+      expect(completed.status).toBe(201);
+      const ready = await staff.get(`/api/v1/applications/${appId}`);
+      const submitted = await post(staff, `/api/v1/applications/${appId}/submit`, {
+        expectedVersion: ready.body.version,
+      });
+      expect(submitted.status).toBe(201);
+      return { appId, termsBody };
+    }
+
+    async function approve(appId: string, version: number) {
+      const review = await manager.get(`/api/v1/applications/${appId}/review`);
+      return post(manager, `/api/v1/applications/${appId}/decision`, {
+        expectedVersion: version,
+        decision: "approve",
+        reviewed: true,
+      });
+    }
+
+    const borrower = await post(staff, "/api/v1/borrowers", {
+      name: "Loyal Alex",
+      phone: "+64 21 555 0808",
+      address: "1 Queen Street, Auckland",
+    });
+    expect(borrower.status).toBe(201);
+    const borrowerId = borrower.body.id as string;
+
+    const first = await submitApplication(borrowerId);
+    const approved1 = await approve(first.appId, (await manager.get(`/api/v1/applications/${first.appId}/review`)).body.version);
+    expect(approved1.status).toBe(201);
+    const loan1 = await prisma.loan.findUniqueOrThrow({ where: { id: approved1.body.loanId } });
+    expect(loan1.loyaltyTier).toBe("STANDARD");
+    expect(loan1.discountBps).toBe(0);
+    expect(loan1.annualRateBps).toBe(0);
+    expect(await prisma.loan.count({ where: { borrowerId } })).toBe(1);
+    expect(await prisma.loan.count({ where: { borrowerId, status: "SETTLED" } })).toBe(0);
+    const borrowerView = await staff.get(`/api/v1/borrowers/${borrowerId}`);
+    expect(borrowerView.body.loyalty).toEqual({ tier: "STANDARD", settledCount: 0, discountBps: 0 });
+
+    await prisma.loan.update({ where: { id: loan1.id }, data: { status: "DEFAULTED" } });
+    const second = await submitApplication(borrowerId);
+    const approved2 = await approve(second.appId, (await manager.get(`/api/v1/applications/${second.appId}/review`)).body.version);
+    expect(approved2.status).toBe(201);
+    const loan2 = await prisma.loan.findUniqueOrThrow({ where: { id: approved2.body.loanId } });
+    expect(loan2.loyaltyTier).toBe("STANDARD");
+    expect(loan2.discountBps).toBe(0);
+
+    await prisma.loan.update({ where: { id: loan1.id }, data: { status: "SETTLED" } });
+    const third = await submitApplication(borrowerId);
+    const preview = await staff
+      .post(`/api/v1/applications/${third.appId}/schedule-preview`)
+      .set("x-csrf-token", await csrfOf(staff))
+      .send({ ...third.termsBody, discountBps: 999 });
+    expect(preview.status).toBe(201);
+    expect(preview.body.preview.loyaltyTier).toBe("RETURNING");
+    expect(preview.body.preview.discountBps).toBe(200);
+    expect(preview.body.preview.annualRateBps).toBe(0);
+    expect(preview.body.preview.interestSaved).toBe("0.00");
+    const approved3 = await approve(third.appId, (await manager.get(`/api/v1/applications/${third.appId}/review`)).body.version);
+    expect(approved3.status).toBe(201);
+    const loan3Id = approved3.body.loanId as string;
+    const loan3 = await prisma.loan.findUniqueOrThrow({ where: { id: loan3Id } });
+    expect(loan3.loyaltyTier).toBe("RETURNING");
+    expect(loan3.discountBps).toBe(200);
+    expect(loan3.annualRateBps).toBe(0);
+    expect(await prisma.loan.count({ where: { borrowerId, status: "SETTLED" } })).toBe(1);
+
+    const scheduleAmounts = await prisma.scheduleEntry.findMany({
+      where: { loanId: loan3Id },
+      orderBy: { number: "asc" },
+      select: { amount: true },
+    });
+    const contractBefore = await prisma.loanContract.findFirstOrThrow({ where: { loanId: loan3Id } });
+    const bodyHtmlBefore = contractBefore.bodyHtml;
+
+    const previousTiers = process.env.LOYALTY_TIERS;
+    process.env.LOYALTY_TIERS =
+      '[{"tier":"RETURNING","minSettled":1,"discountBps":50},{"tier":"LOYAL","minSettled":3,"discountBps":999}]';
+    try {
+      const hash = await auth.hashPassword("Borrower12345");
+      const customer = await prisma.user.create({
+        data: {
+          email: "loyal@example.com",
+          emailNormalized: "loyal@example.com",
+          name: "Loyal Alex",
+          passwordHash: hash,
+          role: "CUSTOMER",
+          status: "ACTIVE",
+          emailVerifiedAt: new Date(),
+        },
+      });
+      await prisma.borrowerAccountLink.create({
+        data: { borrowerId, userId: customer.id, status: "ACTIVE", verificationMethod: "test" },
+      });
+      const customerAgent = await agentWithCsrf(app);
+      await post(customerAgent, "/api/v1/auth/login", { email: "loyal@example.com", password: "Borrower12345" });
+
+      const frozenLoan = await prisma.loan.findUniqueOrThrow({ where: { id: loan3Id } });
+      expect(frozenLoan.loyaltyTier).toBe("RETURNING");
+      expect(frozenLoan.discountBps).toBe(200);
+      expect(frozenLoan.annualRateBps).toBe(0);
+      const staffLoan = await staff.get(`/api/v1/loans/${loan3Id}`);
+      expect(staffLoan.body.loyaltyTier).toBe("RETURNING");
+      expect(staffLoan.body.discountBps).toBe(200);
+      expect(staffLoan.body.annualRateBps).toBe(0);
+      expect(staffLoan.body.schedule.map((row: { amount: string }) => row.amount)).toEqual(
+        scheduleAmounts.map((row) => row.amount),
+      );
+      const customerLoan = await customerAgent.get(`/api/v1/me/loans/${loan3Id}`);
+      expect(customerLoan.body.loyaltyTier).toBe("RETURNING");
+      expect(customerLoan.body.schedule.map((row: { amount: string }) => row.amount)).toEqual(
+        scheduleAmounts.map((row) => row.amount),
+      );
+      const contractAfter = await prisma.loanContract.findFirstOrThrow({ where: { loanId: loan3Id } });
+      expect(contractAfter.bodyHtml).toBe(bodyHtmlBefore);
+      const borrowerAfter = await staff.get(`/api/v1/borrowers/${borrowerId}`);
+      expect(borrowerAfter.body.loyalty.discountBps).toBe(50);
+      expect(borrowerAfter.body.loyalty.settledCount).toBe(1);
+    } finally {
+      if (previousTiers === undefined) delete process.env.LOYALTY_TIERS;
+      else process.env.LOYALTY_TIERS = previousTiers;
+    }
+
+    const audit = await prisma.auditEvent.findFirstOrThrow({
+      where: { action: "application.approve", objectId: third.appId },
+    });
+    expect(audit.after).toMatchObject({
+      loyaltyTier: "RETURNING",
+      discountBps: 200,
+      annualRateBps: 0,
+    });
   });
 });

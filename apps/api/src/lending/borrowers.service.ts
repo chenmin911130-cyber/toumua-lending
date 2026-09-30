@@ -3,6 +3,7 @@ import {
   BorrowerSummary,
   CursorListQuery,
   LinkAccountInput,
+  LoanStatus,
   SaveBorrowerInput,
   normalizeEmail,
 } from "@toumua/contracts";
@@ -10,6 +11,7 @@ import { AuthUser } from "../auth/session";
 import { conflict, forbidden, notFound, validation } from "../common/http";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { classifyLoyalty } from "./loyalty-policy";
 import { assertManageAccountLink, assertManageLending, assertRevokeAccountLink } from "./access";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NumbersService } from "./numbers.service";
@@ -79,12 +81,17 @@ export class BorrowersService {
     });
     if (!row) throw notFound("Borrower not found");
     const link = row.accountLinks[0];
+    const settledCount = await this.prisma.loan.count({
+      where: { borrowerId: row.id, status: LoanStatus.SETTLED },
+    });
+    const loyalty = classifyLoyalty({ settledCount });
     return {
       ...this.toSummary(row),
       linkedUser: link
         ? { id: link.user.id, name: link.user.name, email: link.user.email }
         : null,
       linkId: link?.id ?? null,
+      loyalty: { tier: loyalty.tier, settledCount, discountBps: loyalty.discountBps },
     };
   }
 

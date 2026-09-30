@@ -181,3 +181,21 @@ export function maskEmail(email: string) {
   if (!local || !domain) return email;
   return `${local[0] ?? ""}••••@${domain}`;
 }
+
+/** Basis points as a percent string (integer maths, no floating point). */
+export function formatBpsAsPercent(bps: number): string {
+  const abs = Math.abs(bps);
+  const whole = Math.trunc(abs / 100);
+  const frac = String(abs % 100).padStart(2, "0");
+  return `${whole}.${frac}%`;
+}
+
+export function loyaltyBadgeLabel(tier: string): string {
+  if (tier === "RETURNING") return "Returning";
+  if (tier === "LOYAL") return "Loyal";
+  return "Standard";
+}
+
+export function loyaltyRateLine(baseAnnualRateBps: number, discountBps: number, annualRateBps: number): string {
+  return `Base rate ${formatBpsAsPercent(baseAnnualRateBps)} · Loyalty −${formatBpsAsPercent(discountBps)} · Applied ${formatBpsAsPercent(annualRateBps)}`;
+}

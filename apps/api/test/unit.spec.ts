@@ -1,5 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { advance, buildSchedule, outstanding, quoteRepayment, quoteSettlement } from "../src/lending/calculation-policy";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  advance,
+  buildSchedule,
+  outstanding,
+  quoteRepayment,
+  quoteSettlement,
+  simpleInterest,
+} from "../src/lending/calculation-policy";
+import { renderContract } from "../src/contracts/contract-template";
+import { appliedAnnualRateBps, classifyLoyalty } from "../src/lending/loyalty-policy";
 import { classifyApproval } from "../src/lending/approval-policy";
 import { buildReadiness, isReadyForCustomerSubmit, isReadyForStaffSubmit, isReadyToSubmit, isValuationCovered } from "../src/lending/readiness";
 import {
@@ -298,6 +307,98 @@ describe("approval routing", () => {
         assetCount: 3,
       }).complex,
     ).toBe(true);
+  });
+});
+
+describe("loyalty policy", () => {
+  const previous = process.env.LOYALTY_TIERS;
+
+  afterEach(() => {
+    if (previous === undefined) delete process.env.LOYALTY_TIERS;
+    else process.env.LOYALTY_TIERS = previous;
+  });
+
+  it("classifies settled counts with default tiers", () => {
+    delete process.env.LOYALTY_TIERS;
+    expect(classifyLoyalty({ settledCount: 0 })).toEqual({ tier: "STANDARD", discountBps: 0 });
+    expect(classifyLoyalty({ settledCount: 1 })).toEqual({ tier: "RETURNING", discountBps: 200 });
+    expect(classifyLoyalty({ settledCount: 2 })).toEqual({ tier: "RETURNING", discountBps: 200 });
+    expect(classifyLoyalty({ settledCount: 3 })).toEqual({ tier: "LOYAL", discountBps: 400 });
+    expect(classifyLoyalty({ settledCount: 4 })).toEqual({ tier: "LOYAL", discountBps: 400 });
+  });
+
+  it("falls back when LOYALTY_TIERS is invalid", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    process.env.LOYALTY_TIERS = "not-json";
+    expect(classifyLoyalty({ settledCount: 3 })).toEqual({ tier: "LOYAL", discountBps: 400 });
+    expect(warn).toHaveBeenCalledWith("LOYALTY_TIERS is invalid; using the default tiers");
+    warn.mockRestore();
+  });
+
+  it("honours a custom single tier table", () => {
+    process.env.LOYALTY_TIERS = '[{"tier":"RETURNING","minSettled":1,"discountBps":50}]';
+    expect(classifyLoyalty({ settledCount: 1 })).toEqual({ tier: "RETURNING", discountBps: 50 });
+    expect(classifyLoyalty({ settledCount: 3 })).toEqual({ tier: "STANDARD", discountBps: 0 });
+  });
+
+  it("clamps applied annual rates", () => {
+    expect(appliedAnnualRateBps(2100, 200)).toBe(1900);
+    expect(appliedAnnualRateBps(100, 400)).toBe(0);
+    expect(appliedAnnualRateBps(0, 200)).toBe(0);
+  });
+
+  it("keeps default simple interest and applies discounted schedules", () => {
+    const previousPolicy = process.env.CALCULATION_POLICY;
+    process.env.CALCULATION_POLICY = "demo";
+    delete process.env.DEMO_ANNUAL_RATE_BPS;
+    try {
+      expect(simpleInterest("2000.00", "MONTHLY", 4)).toBe("140.00");
+      expect(simpleInterest("2000.00", "MONTHLY", 4, 1900)).toBe("126.67");
+      const schedule = buildSchedule({
+        principal: "2000.00",
+        frequency: "MONTHLY",
+        periods: 4,
+        firstPaymentDate: new Date("2026-10-01T00:00:00.000Z"),
+        annualRateBps: 1900,
+      });
+      expect(schedule.map((entry) => entry.amount)).toEqual(["531.66", "531.66", "531.66", "531.69"]);
+    } finally {
+      if (previousPolicy === undefined) delete process.env.CALCULATION_POLICY;
+      else process.env.CALCULATION_POLICY = previousPolicy;
+    }
+  });
+
+  it("renders loyalty lines in contracts", () => {
+    const base = {
+      number: "C-0001",
+      issuedAt: new Date("2026-10-01T00:00:00.000Z"),
+      borrowerName: "Alex",
+      borrowerNumber: "B-0001",
+      borrowerAddress: "1 Queen Street",
+      principal: "600.00",
+      frequency: "MONTHLY",
+      periods: 6,
+      schedule: [{ number: 1, dueDate: new Date("2026-11-01T00:00:00.000Z"), amount: "100.00" }],
+      assets: [],
+    };
+    const returning = renderContract({
+      ...base,
+      annualRateBps: 1900,
+      loyaltyTier: "RETURNING",
+      discountBps: 200,
+    });
+    expect(returning).toContain("21.00% p.a. less 2.00% returning-customer discount = 19.00% p.a.");
+    const plain = renderContract({ ...base, annualRateBps: 1900, discountBps: 0 });
+    expect(plain).toContain("Annual rate: 19.00% simple interest.");
+    expect(plain).not.toContain("Loyalty discount: none");
+    expect(plain).not.toContain(" less ");
+    const loyal = renderContract({
+      ...base,
+      annualRateBps: 1700,
+      loyaltyTier: "LOYAL",
+      discountBps: 400,
+    });
+    expect(loyal).toContain("loyal-customer");
   });
 });
 

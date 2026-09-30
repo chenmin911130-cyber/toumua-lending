@@ -3,7 +3,7 @@ import type { LoanSummary } from "@toumua/contracts";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import { CUSTOMER_SELF_APPLY } from "../features";
-import { firstName, formatDate, statusLabel } from "../format";
+import { firstName, formatBpsAsPercent, formatDate, statusLabel } from "../format";
 import { ResourceGate, useAsyncResource } from "../load-state";
 
 type ListResponse = { items: LoanSummary[]; total: number };
@@ -11,11 +11,12 @@ type ListResponse = { items: LoanSummary[]; total: number };
 export function CustomerHomePage() {
   const { user } = useAuth();
   const resource = useAsyncResource("home", async (_key, signal) => {
-    const [loanData, appData] = await Promise.all([
+    const [loanData, appData, borrowerData] = await Promise.all([
       api<ListResponse>("/me/loans", { signal }),
       api<ListResponse>("/me/applications", { signal }),
+      api<{ loyalty: { tier: string; discountBps: number } | null }>("/me/borrower", { signal }),
     ]);
-    return { loans: loanData, applications: appData };
+    return { loans: loanData, applications: appData, borrower: borrowerData };
   });
   const loans = resource.data?.loans ?? null;
   const applications = resource.data?.applications ?? null;
@@ -60,12 +61,20 @@ export function CustomerHomePage() {
   }
 
   const items = loans.items;
+  const loyalty = resource.data?.borrower?.loyalty ?? null;
+  const loyaltyBanner =
+    loyalty?.tier === "RETURNING"
+      ? `You're a Returning customer — your next loan gets ${formatBpsAsPercent(loyalty.discountBps)} p.a. off`
+      : loyalty?.tier === "LOYAL"
+        ? `You're a Loyal customer — your next loan gets ${formatBpsAsPercent(loyalty.discountBps)} p.a. off`
+        : null;
   return (
     <main className="page">
       <h1 className="serif" style={{ fontSize: 40, marginBottom: 8 }}>Welcome back, {firstName(user?.name ?? "there")}.</h1>
       <p className="hint" style={{ marginTop: 0 }}>
         {loans.total} loan{loans.total === 1 ? "" : "s"} linked to this account.
       </p>
+      {loyaltyBanner ? <p className="hint">{loyaltyBanner}</p> : null}
       <section className="stack" style={{ maxWidth: 720, marginTop: 32 }}>
         {items.map((loan) => (
           <article key={loan.id} className="card stack">

@@ -305,6 +305,9 @@ async function main() {
     }
   }
 
+  const lisaReturning = await openFile("lisa.wong@toumua.nz", "900.00", "Personal");
+  await valueAndSubmit(lisaReturning.id, "1800.00");
+
   const toma = await openFile("toma.vaka@toumua.nz", "2200.00", "Business");
   await valueAndSubmit(toma.id, "3600.00", -14);
   const tomaDecision = await approve(toma.id);

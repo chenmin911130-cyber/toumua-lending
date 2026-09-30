@@ -362,6 +362,9 @@ export class LoansService {
       frequency: string;
       periods: number;
       firstPaymentDate: Date;
+      loyaltyTier: string;
+      discountBps: number;
+      annualRateBps: number | null;
       disbursedAt: Date | null;
       settledAt: Date | null;
       defaultedAt: Date | null;
@@ -484,6 +487,9 @@ export class LoansService {
       }),
       contract: contractSummary(loan.contracts?.[0]),
       arrangement: arrangementSummary(loan.arrangements?.[0]),
+      loyaltyTier: loan.loyaltyTier,
+      discountBps: loan.discountBps,
+      annualRateBps: loan.annualRateBps,
     };
   }
 
@@ -512,6 +518,9 @@ export class LoansService {
       interestMethod: loan.interestMethod,
       policy: loan.policy,
       policyConfigured: loan.policyConfigured,
+      loyaltyTier: loan.loyaltyTier,
+      discountBps: loan.discountBps,
+      annualRateBps: loan.annualRateBps,
       defaultReason: loan.defaultReason,
       overdueAmount,
       schedule,

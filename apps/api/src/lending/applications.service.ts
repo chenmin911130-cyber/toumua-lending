@@ -8,6 +8,7 @@ import {
   PatchApplicationInput,
   SaveAssetInput,
   SaveBorrowerInput,
+  LoanStatus,
   SaveTermsInput,
   ValuationStatus,
 } from "@toumua/contracts";
@@ -25,6 +26,7 @@ import {
   isReadyForStaffSubmit,
 } from "./readiness";
 import { buildTermsPreview, termsPolicyConfigured } from "./calculation-policy";
+import { classifyLoyalty } from "./loyalty-policy";
 import { toCents } from "./money";
 import { UploadsService } from "./uploads.service";
 
@@ -130,7 +132,12 @@ export class ApplicationsService {
         },
       },
     });
-    return { borrower: link?.borrower ?? null };
+    if (!link?.borrower) return { borrower: null, loyalty: null };
+    const loyalty = await this.borrowerLoyalty(link.borrower.id);
+    return {
+      borrower: link.borrower,
+      loyalty: { tier: loyalty.tier, settledCount: loyalty.settledCount, discountBps: loyalty.discountBps },
+    };
   }
 
   async get(user: AuthUser, id: string) {
@@ -202,7 +209,11 @@ export class ApplicationsService {
       ? new Date(input.firstPaymentDate)
       : null;
     const policyConfigured = termsPolicyConfigured(input);
-    const previewJson = buildTermsPreview(input, application.requestedAmount);
+    const loyaltyState = await this.borrowerLoyalty(application.borrowerId as string);
+    const previewJson = buildTermsPreview(input, application.requestedAmount, {
+      tier: loyaltyState.tier,
+      discountBps: loyaltyState.discountBps,
+    });
     await this.prisma.$transaction(async (tx) => {
       // Re-check the version inside the transaction so two concurrent saves
       // cannot both pass the earlier check and silently overwrite each other.
@@ -222,6 +233,8 @@ export class ApplicationsService {
           periods: input.periods ?? null,
           interestMethod: input.interestMethod ?? null,
           policyConfigured,
+          loyaltyTier: loyaltyState.tier,
+          discountBps: loyaltyState.discountBps,
           previewJson: previewJson ?? undefined,
           version: 1,
         },
@@ -231,6 +244,8 @@ export class ApplicationsService {
           periods: input.periods ?? null,
           interestMethod: input.interestMethod ?? null,
           policyConfigured,
+          loyaltyTier: loyaltyState.tier,
+          discountBps: loyaltyState.discountBps,
           previewJson: previewJson ?? undefined,
           version: { increment: 1 },
         },
@@ -243,7 +258,11 @@ export class ApplicationsService {
     assertManageLending(user);
     const application = await this.prisma.application.findUnique({ where: { id } });
     if (!application) throw notFound("Application not found");
-    const preview = buildTermsPreview(input, application.requestedAmount);
+    const loyaltyState = await this.borrowerLoyalty(application.borrowerId as string);
+    const preview = buildTermsPreview(input, application.requestedAmount, {
+      tier: loyaltyState.tier,
+      discountBps: loyaltyState.discountBps,
+    });
     if (!preview) {
       throw validation("Complete repayment terms before requesting a preview");
     }
@@ -686,11 +705,21 @@ export class ApplicationsService {
             periods: row.terms.periods,
             interestMethod: row.terms.interestMethod,
             policyConfigured: row.terms.policyConfigured,
+            loyaltyTier: row.terms.loyaltyTier,
+            discountBps: row.terms.discountBps,
             previewAvailable: Boolean(row.terms.previewJson),
           }
         : null,
     };
     return attachReadiness(detail, raw);
+  }
+
+  private async borrowerLoyalty(borrowerId: string) {
+    const settledCount = await this.prisma.loan.count({
+      where: { borrowerId, status: LoanStatus.SETTLED },
+    });
+    const classified = classifyLoyalty({ settledCount });
+    return { settledCount, tier: classified.tier, discountBps: classified.discountBps };
   }
 
   private toSummary(row: {

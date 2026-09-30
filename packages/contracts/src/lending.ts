@@ -203,6 +203,8 @@ export type ApplicationDetail = ApplicationSummary & {
     periods: number | null;
     interestMethod: string | null;
     policyConfigured: boolean;
+    loyaltyTier: string;
+    discountBps: number;
     previewAvailable: boolean;
   } | null;
   readiness: ReadinessItem[];
@@ -577,6 +579,9 @@ export type CustomerLoanDetail = {
   frequency: string;
   periods: number;
   firstPaymentDate: string;
+  loyaltyTier: string;
+  discountBps: number;
+  annualRateBps: number | null;
   disbursedAt: string | null;
   settledAt: string | null;
   defaultedAt: string | null;
@@ -600,6 +605,9 @@ export type LoanDetail = LoanSummary & {
   interestMethod: string | null;
   policy: string;
   policyConfigured: boolean;
+  loyaltyTier: string;
+  discountBps: number;
+  annualRateBps: number | null;
   defaultReason?: string | null;
   overdueAmount: string;
   schedule: ScheduleEntryView[];
