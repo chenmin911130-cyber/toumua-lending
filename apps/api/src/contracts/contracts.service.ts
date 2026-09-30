@@ -248,25 +248,22 @@ export class ContractsService {
   }) {
     const signature = decodeSignaturePng(input.signaturePng);
     const signedAt = new Date();
+    // Raising the HTTP error inside the transaction has dropped the connection, and a retry then signs nothing.
     const result = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "LoanContract" WHERE id = ${input.contractId} FOR UPDATE`;
       const contract = await tx.loanContract.findUnique({
         where: { id: input.contractId },
         include: { loan: { include: { borrower: true } } },
       });
-      if (!contract) throw notFound("Contract not found");
-      if (contract.status === "SIGNED") throw conflict("This contract is already signed");
-      if (contract.status !== "ISSUED") {
-        throw conflict("This contract has been superseded and cannot be signed");
-      }
+      if (!contract) return { lost: "missing" as const };
+      if (contract.status === "SIGNED") return { lost: "signed" as const };
+      if (contract.status !== "ISSUED") return { lost: "void" as const };
       if (contract.contentSha256.toLowerCase() !== input.contentSha256.toLowerCase()) {
-        throw conflict("This contract has changed. Reload and review it again.");
+        return { lost: "hash" as const };
       }
       const expectedName = contract.borrowerName ?? contract.loan.borrower.name;
       if (input.typedName.trim().toLowerCase() !== expectedName.trim().toLowerCase()) {
-        throw validation("Type your full name as shown on the contract", {
-          typedName: ["Type your full name as shown on the contract"],
-        });
+        return { lost: "name" as const };
       }
       const signatureDoc = await this.documents.store(
         {
@@ -320,7 +317,7 @@ export class ContractsService {
           witnessedById: input.witnessId,
         },
       });
-      if (updated.count !== 1) throw conflict("This contract is already signed");
+      if (updated.count !== 1) return { lost: "signed" as const };
       await this.audit.write(
         {
           actorId: input.actorId,
@@ -340,6 +337,15 @@ export class ContractsService {
       );
       return { contract, signedDocId: signedDoc.id };
     });
+    if ("lost" in result) {
+      if (result.lost === "missing") throw notFound("Contract not found");
+      if (result.lost === "signed") throw conflict("This contract is already signed");
+      if (result.lost === "void") throw conflict("This contract has been superseded and cannot be signed");
+      if (result.lost === "hash") throw conflict("This contract has changed. Reload and review it again.");
+      throw validation("Type your full name as shown on the contract", {
+        typedName: ["Type your full name as shown on the contract"],
+      });
+    }
     try {
       await this.notifications.notifyLendingStaff(
         "Loan contract signed",
