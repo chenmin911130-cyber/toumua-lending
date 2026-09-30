@@ -88,6 +88,14 @@ enum CustodyEventType {
   SOLD
 }
 
+enum StorageLocationKind {
+  SAFE
+  LOCKED_CABINET
+  SHELF
+  SECURE_YARD
+  OFFSITE
+}
+
 enum ScheduleEntryStatus {
   PENDING
   PAID
@@ -491,24 +499,42 @@ model PaymentAttempt {
   @@index([initiatedById, status])
 }
 
+model StorageLocation {
+  id        String              @id @default(cuid())
+  code      String              @unique
+  name      String
+  kind      StorageLocationKind
+  secure    Boolean             @default(true)
+  capacity  Int?
+  notes     String?
+  active    Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  custodyEvents CustodyEvent[]
+}
+
 /// Append-only chain of physical collateral hand-offs.
 model CustodyEvent {
-  id               String           @id @default(cuid())
-  assetId          String
-  asset            ApplicationAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  loanId           String?
-  loan             Loan?            @relation(fields: [loanId], references: [id], onDelete: SetNull)
-  type             CustodyEventType
-  businessDate     DateTime
-  location         String?
-  inspectionResult String?
-  conditionNote    String?
-  reason           String?
-  recordedById     String
-  recordedBy       User             @relation("CustodyRecordedBy", fields: [recordedById], references: [id])
-  createdAt        DateTime         @default(now())
+  id                String           @id @default(cuid())
+  assetId           String
+  asset             ApplicationAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  loanId            String?
+  loan              Loan?            @relation(fields: [loanId], references: [id], onDelete: SetNull)
+  type              CustodyEventType
+  businessDate      DateTime
+  location          String?
+  storageLocationId String?
+  storageLocation   StorageLocation? @relation(fields: [storageLocationId], references: [id], onDelete: SetNull)
+  inspectionResult  String?
+  conditionNote     String?
+  reason            String?
+  recordedById      String
+  recordedBy        User             @relation("CustodyRecordedBy", fields: [recordedById], references: [id])
+  createdAt         DateTime         @default(now())
 
   @@index([assetId, createdAt])
+  @@index([storageLocationId])
 }
 
 model ApplicationAsset {

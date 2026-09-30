@@ -16,6 +16,8 @@ import { MoneyService } from "./money.service";
 import { NumbersService } from "./numbers.service";
 import { ReportsController } from "./reports.controller";
 import { ReportsService } from "./reports.service";
+import { StorageLocationsController } from "./storage-locations.controller";
+import { StorageLocationsService } from "./storage-locations.service";
 import { TransactionsController } from "./transactions.controller";
 import { UploadsController } from "./uploads.controller";
 import { UploadsService } from "./uploads.service";
@@ -36,6 +38,7 @@ import { NotificationsModule } from "../notifications/notifications.module";
     TransactionsController,
     CorrectionsController,
     ReportsController,
+    StorageLocationsController,
   ],
   providers: [
     NumbersService,
@@ -49,6 +52,7 @@ import { NotificationsModule } from "../notifications/notifications.module";
     MoneyService,
     CorrectionsService,
     ReportsService,
+    StorageLocationsService,
     AuditService,
   ],
   exports: [

@@ -270,12 +270,23 @@ export function StaffLayout({ children }: { children?: ReactNode }) {
         </NavLink>
         <nav className="staff-nav">
           <GlobalSearch />
-          {STAFF_NAV.map((item) => (
+          {STAFF_NAV.flatMap((item) => {
+            const links = [item];
+            if (
+              item.to === "/staff/collateral" &&
+              (user.role === "MANAGER" ||
+                user.role === "VALUATION_OFFICER" ||
+                user.role === "OWNER")
+            ) {
+              links.push({ to: "/staff/storage", label: "Storage" });
+            }
+            return links;
+          }).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.end}
-              data-control-id={item.controlId}
+              end={"end" in item ? item.end : undefined}
+              data-control-id={"controlId" in item ? item.controlId : undefined}
             >
               {item.label}
             </NavLink>

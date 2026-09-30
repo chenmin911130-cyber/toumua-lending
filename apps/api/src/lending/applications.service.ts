@@ -253,20 +253,30 @@ export class ApplicationsService {
   async addAsset(user: AuthUser, applicationId: string, input: SaveAssetInput) {
     await this.assertEditor(user, applicationId);
     const count = await this.prisma.applicationAsset.count({ where: { applicationId } });
-    const asset = await this.prisma.applicationAsset.create({
-      data: {
-        applicationId,
-        name: input.name.trim(),
-        description: input.description.trim(),
-        condition: input.condition.trim(),
-        category: input.category?.trim() || null,
-        identifier: input.identifier?.trim() || null,
-        sortOrder: count,
-      },
-    });
-    await this.prisma.application.update({
-      where: { id: applicationId },
-      data: { version: { increment: 1 } },
+    const fields = assetFieldValues(input);
+    const asset = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.applicationAsset.create({
+        data: {
+          applicationId,
+          ...fields,
+          sortOrder: count,
+        },
+      });
+      await tx.application.update({
+        where: { id: applicationId },
+        data: { version: { increment: 1 } },
+      });
+      await this.audit.write(
+        {
+          actorId: user.id,
+          action: "asset.create",
+          objectType: "ApplicationAsset",
+          objectId: created.id,
+          after: fields,
+        },
+        tx,
+      );
+      return created;
     });
     await this.ensureValuation(applicationId, asset.id);
     return user.isStaff ? this.loadDetail(applicationId) : this.toCustomerDetail(applicationId);
@@ -283,19 +293,30 @@ export class ApplicationsService {
       where: { id: assetId, applicationId },
     });
     if (!asset) throw notFound("Asset not found");
-    await this.prisma.applicationAsset.update({
-      where: { id: assetId },
-      data: {
-        name: input.name.trim(),
-        description: input.description.trim(),
-        condition: input.condition.trim(),
-        category: input.category?.trim() || null,
-        identifier: input.identifier?.trim() || null,
-      },
-    });
-    await this.prisma.application.update({
-      where: { id: applicationId },
-      data: { version: { increment: 1 } },
+    const next = assetFieldValues(input);
+    const changes = changedAssetFields(asset, next);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.applicationAsset.update({
+        where: { id: assetId },
+        data: next,
+      });
+      await tx.application.update({
+        where: { id: applicationId },
+        data: { version: { increment: 1 } },
+      });
+      if (Object.keys(changes.after).length > 0) {
+        await this.audit.write(
+          {
+            actorId: user.id,
+            action: "asset.update",
+            objectType: "ApplicationAsset",
+            objectId: assetId,
+            before: changes.before,
+            after: changes.after,
+          },
+          tx,
+        );
+      }
     });
     await this.invalidateValuationIfCompleted(assetId);
     return user.isStaff ? this.loadDetail(applicationId) : this.toCustomerDetail(applicationId);
@@ -311,12 +332,30 @@ export class ApplicationsService {
       where: { assetId },
       select: { storageKey: true },
     });
-    await this.prisma.applicationAsset.delete({ where: { id: assetId } });
-    this.uploads.removeFilesForAsset(photos.map((photo) => photo.storageKey));
-    await this.prisma.application.update({
-      where: { id: applicationId },
-      data: { version: { increment: 1 } },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.applicationAsset.delete({ where: { id: assetId } });
+      await tx.application.update({
+        where: { id: applicationId },
+        data: { version: { increment: 1 } },
+      });
+      await this.audit.write(
+        {
+          actorId: user.id,
+          action: "asset.delete",
+          objectType: "ApplicationAsset",
+          objectId: assetId,
+          before: {
+            name: asset.name,
+            description: asset.description,
+            condition: asset.condition,
+            category: asset.category,
+            identifier: asset.identifier,
+          },
+        },
+        tx,
+      );
     });
+    this.uploads.removeFilesForAsset(photos.map((photo) => photo.storageKey));
     return user.isStaff ? this.loadDetail(applicationId) : this.toCustomerDetail(applicationId);
   }
 
@@ -681,4 +720,39 @@ export class ApplicationsService {
       updatedAt: row.updatedAt.toISOString(),
     };
   }
+}
+
+const ASSET_AUDIT_FIELDS = ["name", "description", "condition", "category", "identifier"] as const;
+
+function assetFieldValues(input: SaveAssetInput) {
+  return {
+    name: input.name.trim(),
+    description: input.description.trim(),
+    condition: input.condition.trim(),
+    category: input.category?.trim() || null,
+    identifier: input.identifier?.trim() || null,
+  };
+}
+
+function changedAssetFields(
+  current: {
+    name: string;
+    description: string;
+    condition: string;
+    category: string | null;
+    identifier: string | null;
+  },
+  next: ReturnType<typeof assetFieldValues>,
+) {
+  const before: Record<string, string | null> = {};
+  const after: Record<string, string | null> = {};
+  for (const field of ASSET_AUDIT_FIELDS) {
+    const previous = current[field] ?? null;
+    const updated = next[field] ?? null;
+    if (previous !== updated) {
+      before[field] = previous;
+      after[field] = updated;
+    }
+  }
+  return { before, after };
 }

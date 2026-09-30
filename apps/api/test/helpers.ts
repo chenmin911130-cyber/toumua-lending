@@ -103,6 +103,7 @@ export async function resetDb(prisma: PrismaService) {
       "PaymentAttempt",
       "ScheduleEntry",
       "CustodyEvent",
+      "StorageLocation",
       "ApplicationDecision",
       "Loan",
       "AssetPhoto",

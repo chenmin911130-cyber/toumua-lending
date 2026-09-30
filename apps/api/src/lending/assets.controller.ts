@@ -28,6 +28,11 @@ export class AssetsController {
     return this.custodyService.list(user, query as never);
   }
 
+  @Get(":id/history")
+  history(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    return this.custodyService.history(user, id);
+  }
+
   @Get(":id")
   get(@CurrentUser() user: AuthUser, @Param("id") id: string) {
     return this.custodyService.get(user, id);

@@ -324,6 +324,7 @@ export const intakeSchema = z
     inspectionResult: z.enum(["PASS", "FAIL"]),
     inspectionNote: z.string().trim().max(2000).optional().nullable(),
     location: z.string().trim().max(200).optional().nullable(),
+    storageLocationId: z.string().trim().min(1).optional().nullable(),
     conditionNote: z.string().trim().max(2000).optional().nullable(),
   })
   .superRefine((value, context) => {
@@ -335,10 +336,14 @@ export const intakeSchema = z
         message: "Explain what did not match the valuation",
       });
     }
-    if (value.inspectionResult === "PASS" && !value.location?.trim()) {
+    if (
+      value.inspectionResult === "PASS" &&
+      !value.storageLocationId?.trim() &&
+      !value.location?.trim()
+    ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["location"],
+        path: ["storageLocationId"],
         message: "A storage location is required to store the asset",
       });
     }
@@ -346,14 +351,88 @@ export const intakeSchema = z
 
 export type IntakeInput = z.infer<typeof intakeSchema>;
 
-export const custodyUpdateSchema = z.object({
-  expectedVersion: z.number().int().positive(),
-  location: z.string().trim().min(1, "Storage location is required").max(200),
-  conditionNote: z.string().trim().max(2000).optional().nullable(),
-  reason: z.string().trim().min(1, "A reason is required").max(1000),
-});
+export const custodyUpdateSchema = z
+  .object({
+    expectedVersion: z.number().int().positive(),
+    location: z.string().trim().max(200).optional().nullable(),
+    storageLocationId: z.string().trim().min(1).optional().nullable(),
+    conditionNote: z.string().trim().max(2000).optional().nullable(),
+    reason: z.string().trim().min(1, "A reason is required").max(1000),
+  })
+  .superRefine((value, context) => {
+    if (!value.storageLocationId?.trim() && !value.location?.trim()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["storageLocationId"],
+        message: "A storage location is required",
+      });
+    }
+  });
 
 export type CustodyUpdateInput = z.infer<typeof custodyUpdateSchema>;
+
+export const StorageLocationKind = {
+  SAFE: "SAFE",
+  LOCKED_CABINET: "LOCKED_CABINET",
+  SHELF: "SHELF",
+  SECURE_YARD: "SECURE_YARD",
+  OFFSITE: "OFFSITE",
+} as const;
+export type StorageLocationKind = (typeof StorageLocationKind)[keyof typeof StorageLocationKind];
+
+export const storageLocationSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .regex(/^[A-Z0-9-]{2,20}$/, "Use 2–20 characters: A–Z, 0–9 or hyphen"),
+  name: z.string().trim().min(1, "Name is required").max(100),
+  kind: z.enum(["SAFE", "LOCKED_CABINET", "SHELF", "SECURE_YARD", "OFFSITE"]),
+  secure: z.boolean().optional(),
+  capacity: z.number().int().positive().optional().nullable(),
+  notes: z.string().trim().max(2000).optional().nullable(),
+  active: z.boolean().optional(),
+});
+
+export type StorageLocationInput = z.infer<typeof storageLocationSchema>;
+
+export const storageLocationUpdateSchema = storageLocationSchema.partial().refine(
+  (value) => Object.values(value).some((item) => item !== undefined),
+  { message: "No changes to save" },
+);
+
+export type StorageLocationUpdateInput = z.infer<typeof storageLocationUpdateSchema>;
+
+export const storageLocationListQuerySchema = z.object({
+  active: z.enum(["true", "false"]).optional(),
+});
+
+export type StorageLocationListQuery = z.infer<typeof storageLocationListQuerySchema>;
+
+export type StorageLocationView = {
+  id: string;
+  code: string;
+  name: string;
+  kind: StorageLocationKind;
+  secure: boolean;
+  capacity: number | null;
+  notes: string | null;
+  active: boolean;
+  occupied: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type StorageLocationAssetView = {
+  id: string;
+  name: string;
+  borrowerName: string | null;
+  borrowerNumber: string | null;
+  loanNumber: string | null;
+};
+
+export type StorageLocationDetail = StorageLocationView & {
+  assets: StorageLocationAssetView[];
+};
 
 export const disbursementSchema = z
   .object({
@@ -500,12 +579,27 @@ export type CustodyEventView = {
   createdAt: string;
 };
 
+export type AssetStorageLocation = {
+  id: string;
+  code: string;
+  name: string;
+  kind: StorageLocationKind;
+  secure: boolean;
+};
+
+export type AssetBorrower = {
+  id: string;
+  number: string;
+  name: string;
+};
+
 export type AssetView = {
   id: string;
   applicationId: string;
   applicationNumber: string | null;
   loanId: string | null;
   loanNumber: string | null;
+  borrower: AssetBorrower | null;
   name: string;
   description: string;
   condition: string;
@@ -516,13 +610,24 @@ export type AssetView = {
   photoCount: number;
   valuationAmount: string | null;
   valuationStatus: ValuationStatus | null;
-  storageLocation: string | null;
+  storageLocation: AssetStorageLocation | null;
+  storageLocationLabel: string | null;
   receivedOn: string | null;
   inspectedOn: string | null;
   inspectionResult: string | null;
   saleDraft: Record<string, unknown> | null;
   custody: CustodyEventView[];
   allowedActions: AllowedAction[];
+};
+
+export type AssetHistoryEntry = {
+  at: string;
+  actor: string | null;
+  kind: "audit" | "custody";
+  action: string;
+  summary: string;
+  before: unknown;
+  after: unknown;
 };
 
 export type ReadinessCheck = {

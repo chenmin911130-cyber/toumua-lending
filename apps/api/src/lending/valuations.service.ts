@@ -120,12 +120,14 @@ export class ValuationsService {
       where: { id: valuation.assetId },
       data: { status: AssetStatus.VALUED },
     });
+    // Keep the existing valuation.complete event (including basis) instead of
+    // writing a second asset.valuation row for the same completion.
     await this.audit.write({
       actorId: user.id,
       action: "valuation.complete",
       objectType: "Valuation",
       objectId: row.id,
-      after: { status: row.status, amount: row.amount },
+      after: { status: row.status, amount: row.amount, basis: row.basis },
     });
     return row;
   }

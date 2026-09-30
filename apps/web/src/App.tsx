@@ -67,6 +67,7 @@ import {
   CustomerApplicationDetailPage,
   ValuationPage,
 } from "./pages/lending";
+import { StaffStoragePage } from "./pages/storage";
 import { ActivityLogPage, StaffAccountsPage, StaffHomePage } from "./pages/staff";
 
 export function App() {
@@ -122,6 +123,7 @@ export function App() {
         <Route path="/staff/applications/:id/valuation" element={<ValuationPage />} />
         <Route path="/staff/applications/:id/review" element={<ApplicationReviewPage />} />
         <Route path="/staff/collateral" element={<StaffCollateralPage />} />
+        <Route path="/staff/storage" element={<StaffStoragePage />} />
         <Route path="/staff/collateral/:id" element={<StaffCollateralDetailPage />} />
         <Route path="/staff/collateral/:id/return" element={<StaffReturnPage />} />
         <Route path="/staff/collateral/:id/sale" element={<StaffSalePage />} />

@@ -100,6 +100,16 @@ export function assertManageCustody(user: PublicUser) {
   assertRole(user, CUSTODY_ROLES, "a valuation officer");
 }
 
+const STORAGE_LOCATION_ROLES = new Set<string>([
+  BusinessRole.MANAGER,
+  BusinessRole.VALUATION_OFFICER,
+]);
+
+/** Creating and retiring organised storage places. */
+export function assertManageStorageLocations(user: PublicUser) {
+  assertRole(user, STORAGE_LOCATION_ROLES, "a manager or valuation officer");
+}
+
 /** Posting money to the ledger is a cashier action. */
 export function assertPostMoney(user: PublicUser) {
   assertRole(user, CASHIER_ROLES, "a cashier");

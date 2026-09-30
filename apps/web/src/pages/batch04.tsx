@@ -1,11 +1,12 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Button, Field } from "@toumua/ui";
-import type { CursorListResponse, LoanDetail, LoanSummary } from "@toumua/contracts";
+import type { AssetHistoryEntry, CursorListResponse, LoanDetail, LoanSummary } from "@toumua/contracts";
 import { api, errorMessage, fieldError, postIdempotent } from "../api";
 import { aucklandBusinessDate } from "../format";
 import { ResourceGate, useAsyncResource } from "../load-state";
 import { useAuth } from "../auth";
+import { StorageLocationField } from "./storage";
 
 type AssetView = {
   id: string;
@@ -13,7 +14,15 @@ type AssetView = {
   loanNumber: string | null;
   status: string;
   version: number;
-  storageLocation: string | null;
+  storageLocation: {
+    id: string;
+    code: string;
+    name: string;
+    kind: string;
+    secure: boolean;
+  } | null;
+  storageLocationLabel: string | null;
+  borrower: { id: string; number: string; name: string } | null;
   valuationStatus: string | null;
   custody: Array<{
     id: string;
@@ -52,6 +61,16 @@ type Review = {
     valuationAmount?: string | null;
   }>;
 };
+
+function placeLabel(asset: Pick<AssetView, "storageLocation" | "storageLocationLabel">) {
+  if (asset.storageLocation) return `${asset.storageLocation.code} · ${asset.storageLocation.name}`;
+  return asset.storageLocationLabel ?? "—";
+}
+
+function borrowerLabel(borrower: AssetView["borrower"]) {
+  if (!borrower) return "—";
+  return `${borrower.name} (${borrower.number})`;
+}
 
 /** Action flags come from the server so the UI cannot offer a refused action. */
 function actionFor(loan: LoanDetail, id: string) {
@@ -346,26 +365,46 @@ export function StaffRepaymentPage() {
 
 export function StaffCollateralPage() {
   const [data, setData] = useState<CursorListResponse<AssetView> | null>(null);
+  const [query, setQuery] = useState("");
+  const [submitted, setSubmitted] = useState("");
   const [error, setError] = useState<unknown>(null);
   useEffect(() => {
-    void api<CursorListResponse<AssetView>>("/assets").then(setData).catch(setError);
-  }, []);
+    const path = submitted ? `/assets?q=${encodeURIComponent(submitted)}` : "/assets";
+    void api<CursorListResponse<AssetView>>(path).then(setData).catch(setError);
+  }, [submitted]);
   return (
     <main className="staff-page">
       <h1>Collateral</h1>
+      <form
+        className="hero-actions"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setSubmitted(query.trim());
+        }}
+      >
+        <Field label="Search">
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Asset, borrower name or number"
+          />
+        </Field>
+        <Button type="submit">Search</Button>
+      </form>
       {error ? <p className="error">{errorMessage(error, "Could not load collateral")}</p> : null}
       <table className="data-table">
-        <thead><tr><th>Asset</th><th>Loan</th><th>Status</th><th>Location</th></tr></thead>
+        <thead><tr><th>Asset</th><th>Borrower</th><th>Loan</th><th>Status</th><th>Location</th></tr></thead>
         <tbody>
           {data?.items.length ? data.items.map((row) => (
             <tr key={row.id}>
               <td><Link to={`/staff/collateral/${row.id}`}>{row.name}</Link></td>
+              <td>{borrowerLabel(row.borrower)}</td>
               <td>{row.loanNumber ?? "—"}</td>
               <td>{row.status}</td>
-              <td>{row.storageLocation ?? "—"}</td>
+              <td>{placeLabel(row)}</td>
             </tr>
           )) : (
-            <tr><td colSpan={4} className="empty-row">No collateral items yet.</td></tr>
+            <tr><td colSpan={5} className="empty-row">No collateral items yet.</td></tr>
           )}
         </tbody>
       </table>
@@ -375,17 +414,28 @@ export function StaffCollateralPage() {
 
 export function StaffCollateralDetailPage() {
   const { id = "" } = useParams();
+  const { user } = useAuth();
   const [asset, setAsset] = useState<AssetView | null>(null);
+  const [tab, setTab] = useState<"overview" | "history">("overview");
+  const [history, setHistory] = useState<AssetHistoryEntry[] | null>(null);
   const [receivedOn, setReceivedOn] = useState(() => aucklandBusinessDate());
   const [inspectedOn, setInspectedOn] = useState(() => aucklandBusinessDate());
   const [inspectionResult, setInspectionResult] = useState("PASS");
   const [inspectionNote, setInspectionNote] = useState("");
-  const [location, setLocation] = useState("Vault A");
+  const [storageLocationId, setStorageLocationId] = useState("");
+  const [relocateLocationId, setRelocateLocationId] = useState("");
+  const [relocateReason, setRelocateReason] = useState("");
   const [error, setError] = useState<unknown>(null);
+  const canRelocate = user?.role === "VALUATION_OFFICER";
 
   useEffect(() => {
     void api<AssetView>(`/assets/${id}`).then(setAsset).catch(setError);
   }, [id]);
+
+  useEffect(() => {
+    if (tab !== "history") return;
+    void api<AssetHistoryEntry[]>(`/assets/${id}/history`).then(setHistory).catch(setError);
+  }, [tab, id, asset?.version]);
 
   async function intake(event: FormEvent) {
     event.preventDefault();
@@ -401,10 +451,32 @@ export function StaffCollateralDetailPage() {
           inspectionResult,
           // A failed inspection must explain itself; a pass must name a location.
           inspectionNote: inspectionResult === "FAIL" ? inspectionNote : undefined,
-          location: inspectionResult === "PASS" ? location : undefined,
+          storageLocationId: inspectionResult === "PASS" ? storageLocationId : undefined,
         }),
       });
       setAsset(saved);
+      setHistory(null);
+    } catch (err) {
+      setError(err);
+    }
+  }
+
+  async function relocate(event: FormEvent) {
+    event.preventDefault();
+    if (!asset) return;
+    setError(null);
+    try {
+      const saved = await api<AssetView>(`/assets/${id}/custody`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          expectedVersion: asset.version,
+          storageLocationId: relocateLocationId,
+          reason: relocateReason,
+        }),
+      });
+      setAsset(saved);
+      setRelocateReason("");
+      setHistory(null);
     } catch (err) {
       setError(err);
     }
@@ -419,57 +491,97 @@ export function StaffCollateralDetailPage() {
     <main className="staff-page">
       <Link to="/staff/collateral">← Collateral</Link>
       <h1>{asset.name}</h1>
-      <p className="hint">{asset.loanNumber ?? "No loan"} · {asset.status} · valuation {asset.valuationStatus ?? "none"}</p>
+      <p className="hint">
+        {borrowerLabel(asset.borrower)} · {asset.loanNumber ?? "No loan"} · {asset.status} · valuation {asset.valuationStatus ?? "none"}
+      </p>
       <div className="hero-actions">
+        <button type="button" className={tab === "overview" ? "btn btn-primary" : "btn btn-secondary"} onClick={() => setTab("overview")}>Overview</button>
+        <button type="button" className={tab === "history" ? "btn btn-primary" : "btn btn-secondary"} onClick={() => setTab("history")}>History</button>
         {returnAction?.allowed ? <Link className="btn btn-secondary" to={`/staff/collateral/${id}/return`}>Return</Link> : null}
         {saleAction?.allowed ? <Link className="btn btn-secondary" to={`/staff/collateral/${id}/sale`}>Record sale</Link> : null}
       </div>
-      {asset.status === "STORED" ? (
-        <p className="hint">Stored at {asset.storageLocation}</p>
-      ) : intakeAction?.allowed ? (
-        <form className="card stack" onSubmit={(event) => void intake(event)}>
-          <Field label="Received on">
-            <input type="date" value={receivedOn} onChange={(e) => setReceivedOn(e.target.value)} required />
-          </Field>
-          <Field label="Inspected on">
-            <input type="date" value={inspectedOn} onChange={(e) => setInspectedOn(e.target.value)} required />
-          </Field>
-          <Field label="Inspection result">
-            <select value={inspectionResult} onChange={(e) => setInspectionResult(e.target.value)}>
-              <option value="PASS">Pass — matches the valuation</option>
-              <option value="FAIL">Fail — does not match</option>
-            </select>
-          </Field>
-          {inspectionResult === "PASS" ? (
-            <Field label="Storage location">
-              <input value={location} onChange={(e) => setLocation(e.target.value)} required />
-            </Field>
+      {tab === "history" ? (
+        history ? (
+          history.length ? (
+            <table className="data-table">
+              <thead><tr><th>When</th><th>Who</th><th>What happened</th></tr></thead>
+              <tbody>
+                {history.map((entry, index) => (
+                  <tr key={`${entry.at}-${entry.kind}-${entry.action}-${index}`}>
+                    <td>{entry.at.replace("T", " ").slice(0, 16)}</td>
+                    <td>{entry.actor ?? "—"}</td>
+                    <td>{entry.summary}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           ) : (
-            <Field label="What did not match" error={fieldError(error, "inspectionNote")}>
-              <input value={inspectionNote} onChange={(e) => setInspectionNote(e.target.value)} required />
-            </Field>
-          )}
-          {error ? <p className="error">{errorMessage(error, "Could not confirm intake")}</p> : null}
-          <Button type="submit">Confirm intake</Button>
-        </form>
+            <p className="hint">No history yet.</p>
+          )
+        ) : (
+          <p className="hint">Loading history…</p>
+        )
       ) : (
-        <p className="hint">{intakeAction?.reason ?? "This asset cannot be taken into custody yet."}</p>
+        <>
+          {asset.status === "STORED" ? (
+            <>
+              <p className="hint">Stored at {placeLabel(asset)}</p>
+              {canRelocate ? (
+                <form className="card stack" onSubmit={(event) => void relocate(event)}>
+                  <h2>Move to another location</h2>
+                  <StorageLocationField value={relocateLocationId} onChange={setRelocateLocationId} />
+                  <Field label="Reason" error={fieldError(error, "reason")}>
+                    <input value={relocateReason} onChange={(event) => setRelocateReason(event.target.value)} required />
+                  </Field>
+                  {error ? <p className="error">{errorMessage(error, "Could not move the asset")}</p> : null}
+                  <Button type="submit">Move asset</Button>
+                </form>
+              ) : null}
+            </>
+          ) : intakeAction?.allowed ? (
+            <form className="card stack" onSubmit={(event) => void intake(event)}>
+              <Field label="Received on">
+                <input type="date" value={receivedOn} onChange={(e) => setReceivedOn(e.target.value)} required />
+              </Field>
+              <Field label="Inspected on">
+                <input type="date" value={inspectedOn} onChange={(e) => setInspectedOn(e.target.value)} required />
+              </Field>
+              <Field label="Inspection result">
+                <select value={inspectionResult} onChange={(e) => setInspectionResult(e.target.value)}>
+                  <option value="PASS">Pass — matches the valuation</option>
+                  <option value="FAIL">Fail — does not match</option>
+                </select>
+              </Field>
+              {inspectionResult === "PASS" ? (
+                <StorageLocationField value={storageLocationId} onChange={setStorageLocationId} />
+              ) : (
+                <Field label="What did not match" error={fieldError(error, "inspectionNote")}>
+                  <input value={inspectionNote} onChange={(e) => setInspectionNote(e.target.value)} required />
+                </Field>
+              )}
+              {error ? <p className="error">{errorMessage(error, "Could not confirm intake")}</p> : null}
+              <Button type="submit">Confirm intake</Button>
+            </form>
+          ) : (
+            <p className="hint">{intakeAction?.reason ?? "This asset cannot be taken into custody yet."}</p>
+          )}
+          {asset.custody.length ? (
+            <table className="data-table">
+              <thead><tr><th>Date</th><th>Event</th><th>Location</th><th>Recorded by</th></tr></thead>
+              <tbody>
+                {asset.custody.map((event) => (
+                  <tr key={event.id}>
+                    <td>{event.businessDate}</td>
+                    <td>{event.type}</td>
+                    <td>{event.location ?? "—"}</td>
+                    <td>{event.recordedBy ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : null}
+        </>
       )}
-      {asset.custody.length ? (
-        <table className="data-table">
-          <thead><tr><th>Date</th><th>Event</th><th>Location</th><th>Recorded by</th></tr></thead>
-          <tbody>
-            {asset.custody.map((event) => (
-              <tr key={event.id}>
-                <td>{event.businessDate}</td>
-                <td>{event.type}</td>
-                <td>{event.location ?? "—"}</td>
-                <td>{event.recordedBy ?? "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : null}
     </main>
   );
 }

@@ -14,6 +14,14 @@ import { ValuationsService } from "../src/lending/valuations.service";
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
+const DEMO_LOCATIONS = [
+  { code: "SAFE-A-01", name: "Main safe", kind: "SAFE" as const, secure: true, capacity: 10 },
+  { code: "SAFE-A-02", name: "Main safe lower shelf", kind: "SAFE" as const, secure: true, capacity: 10 },
+  { code: "CAB-B-01", name: "Locked cabinet B", kind: "LOCKED_CABINET" as const, secure: true, capacity: 8 },
+  { code: "YARD-01", name: "Secure vehicle yard", kind: "SECURE_YARD" as const, secure: true, capacity: 6 },
+  { code: "OFF-01", name: "Off-site storage (partner)", kind: "OFFSITE" as const, secure: true, capacity: 20 },
+];
+
 function day(offset: number) {
   const date = new Date();
   date.setUTCDate(date.getUTCDate() + offset);
@@ -28,6 +36,22 @@ async function main() {
   process.env.CALCULATION_POLICY = process.env.CALCULATION_POLICY ?? "demo";
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ["error", "warn"] });
   const prisma = app.get(PrismaService);
+  const locations = new Map<string, string>();
+  for (const location of DEMO_LOCATIONS) {
+    const row = await prisma.storageLocation.upsert({
+      where: { code: location.code },
+      create: location,
+      update: {
+        name: location.name,
+        kind: location.kind,
+        secure: location.secure,
+        capacity: location.capacity,
+        active: true,
+      },
+    });
+    locations.set(location.code, row.id);
+  }
+
   const existing = await prisma.application.count({ where: { number: { startsWith: "DEMO-" } } });
   if (existing > 0) {
     console.log("Demo data already present");
@@ -123,14 +147,16 @@ async function main() {
     });
   }
 
-  async function storeAndDisburse(loanId: string, assetId: string) {
+  async function storeAndDisburse(loanId: string, assetId: string, locationCode: string) {
+    const storageLocationId = locations.get(locationCode);
+    if (!storageLocationId) throw new Error(`Missing storage location ${locationCode}`);
     const loan = await prisma.loan.findUniqueOrThrow({ where: { id: loanId } });
     await custody.intake(valuer, assetId, {
       expectedVersion: loan.version,
       receivedOn: day(-1),
       inspectedOn: day(-1),
       inspectionResult: "PASS",
-      location: "Vault A",
+      storageLocationId,
     });
     const current = await prisma.loan.findUniqueOrThrow({ where: { id: loanId } });
     return money.disburse(
@@ -146,7 +172,7 @@ async function main() {
   const sarahDecision = await approve(sarah.id);
   const sarahLoanId = (sarahDecision as { loanId?: string }).loanId;
   if (!sarahLoanId) throw new Error("Sarah loan was not created");
-  await storeAndDisburse(sarahLoanId, sarah.assetId);
+  await storeAndDisburse(sarahLoanId, sarah.assetId, "SAFE-A-01");
   const sarahLoan = await loans.get(cashier, sarahLoanId);
   const first = sarahLoan.schedule?.[0];
   const second = sarahLoan.schedule?.[1];
@@ -201,18 +227,18 @@ async function main() {
   const david = await openFile("david.chen@toumua.nz", "1500.00", "Vehicle");
   await valueAndSubmit(david.id, "2600.00", -7);
   const davidDecision = await approve(david.id);
-  if (davidDecision.loanId) await storeAndDisburse(davidDecision.loanId, david.assetId);
+  if (davidDecision.loanId) await storeAndDisburse(davidDecision.loanId, david.assetId, "SAFE-A-02");
 
   const sione = await openFile("sione.tapu@toumua.nz", "1600.00", "Family");
   await valueAndSubmit(sione.id, "2800.00", -21);
   const sioneDecision = await approve(sione.id);
-  if (sioneDecision.loanId) await storeAndDisburse(sioneDecision.loanId, sione.assetId);
+  if (sioneDecision.loanId) await storeAndDisburse(sioneDecision.loanId, sione.assetId, "CAB-B-01");
 
   const lisa = await openFile("lisa.wong@toumua.nz", "1200.00", "Personal");
   await valueAndSubmit(lisa.id, "2000.00", -40);
   const lisaDecision = await approve(lisa.id);
   if (lisaDecision.loanId) {
-    await storeAndDisburse(lisaDecision.loanId, lisa.assetId);
+    await storeAndDisburse(lisaDecision.loanId, lisa.assetId, "SAFE-A-01");
     const detail = await loans.get(cashier, lisaDecision.loanId);
     for (const [index, entry] of detail.schedule.entries()) {
       const current = await prisma.loan.findUniqueOrThrow({ where: { id: lisaDecision.loanId } });
@@ -230,7 +256,7 @@ async function main() {
   await valueAndSubmit(toma.id, "3600.00", -14);
   const tomaDecision = await approve(toma.id);
   if (tomaDecision.loanId) {
-    await storeAndDisburse(tomaDecision.loanId, toma.assetId);
+    await storeAndDisburse(tomaDecision.loanId, toma.assetId, "YARD-01");
     const current = await prisma.loan.findUniqueOrThrow({ where: { id: tomaDecision.loanId } });
     await loans.declareDefault(manager, tomaDecision.loanId, {
       expectedVersion: current.version,
