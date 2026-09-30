@@ -99,6 +99,9 @@ Deploy as a **new** Railway project with a **new** Postgres plugin (do not point
    start: `pnpm --filter @toumua/web preview`  
    env: `API_PROXY_TARGET=http://${{api.RAILWAY_PRIVATE_DOMAIN}}:${{api.PORT}}`
 5. Generate a public domain on **web**; set that URL as `PUBLIC_WEB_URL` on **api** and redeploy.
+6. After the first deploy, run demo seed on the **api** service (one-off shell or `railway run` from the repo root with `DATABASE_URL` set):  
+   `pnpm db:seed-demo` — creates staff/customer logins **and** five demo storage locations (required for collateral intake).  
+   Optional full classroom walkthrough: `pnpm seed:demo` (accounts, locations, and sample applications/loans).
 
 ## Notes
 

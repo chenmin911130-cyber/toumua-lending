@@ -643,6 +643,104 @@ footer .brand-sub {
   color: #fff;
 }
 
+.combobox {
+  position: relative;
+  width: 100%;
+}
+.combobox input {
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  width: 100%;
+  background: #fff;
+}
+.combobox input:focus {
+  outline: 2px solid #9ad4d7;
+  border-color: var(--teal);
+}
+.combobox-list {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  max-height: min(320px, 50vh);
+  overflow: auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.combobox-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink);
+}
+.combobox-option:hover,
+.combobox-option-active {
+  background: var(--mint);
+}
+.combobox-option-title {
+  font-weight: 600;
+  color: var(--navy);
+}
+.combobox-option-meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+.combobox-option-badge {
+  margin-top: 2px;
+}
+.combobox-empty {
+  padding: 12px 10px;
+}
+.pill-muted {
+  background: #f2f4f7;
+  color: var(--muted);
+}
+.borrower-picker-selected {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #f6fbfb;
+}
+.borrower-picker-selected-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.borrower-picker-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.linkish {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--teal);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 @media print {
   header, nav, .staff-sidebar, .staff-mobile-bar, .offline-banner, .no-print, .hero-actions, .btn { display: none !important; }
   .staff-main, .page, .staff-page { padding: 0 !important; }
