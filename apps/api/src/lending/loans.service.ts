@@ -164,44 +164,89 @@ export class LoansService {
     const loan = await this.loadLoan(loanId);
     const assets = loan.application.assets;
     const stored = assets.filter((asset) => asset.status === AssetStatus.STORED);
+    const assetsStored = assets.length > 0 && stored.length === assets.length;
+    const assetsDetail =
+      assets.length === 0
+        ? "No assets on this application"
+        : `${stored.length}/${assets.length} stored`;
     const current = loan.contracts[0];
     const signed = current?.status === "SIGNED";
+    const contractDetail = signed
+      ? undefined
+      : current
+        ? "Sign the current contract before disbursement"
+        : "A manager needs to issue the loan contract";
+
+    // After funding, readiness gates disbursement (ready=false) but checklist
+    // marks completed steps so UI/API consumers do not show false "○" items.
+    if (loan.disbursedAt !== null) {
+      const fundedOn = loan.disbursedAt.toISOString().slice(0, 10);
+      return {
+        ready: false,
+        items: [
+          {
+            id: "status",
+            label: "Loan funded",
+            complete: true,
+            ok: false,
+            detail: loan.status.replaceAll("_", " "),
+          },
+          {
+            id: "assets",
+            label: "All security assets stored",
+            complete: assetsStored,
+            ok: assetsStored,
+            detail: assetsDetail,
+          },
+          {
+            id: "not-disbursed",
+            label: "Disbursement recorded",
+            complete: true,
+            ok: false,
+            detail: fundedOn,
+          },
+          {
+            id: "contract_signed",
+            label: "Loan contract signed",
+            complete: signed,
+            ok: signed,
+            detail: contractDetail,
+          },
+        ],
+      };
+    }
+
+    const unfunded = loan.status === LoanStatus.APPROVED_UNFUNDED;
     const items = [
       {
         id: "status",
         label: "Loan awaiting disbursement",
-        complete: loan.status === LoanStatus.APPROVED_UNFUNDED,
-        ok: loan.status === LoanStatus.APPROVED_UNFUNDED,
+        complete: unfunded,
+        ok: unfunded,
+        detail: unfunded ? undefined : `Status is ${loan.status.replaceAll("_", " ")}`,
       },
       {
         id: "assets",
         label: "All security assets stored",
-        complete: assets.length > 0 && stored.length === assets.length,
-        ok: assets.length > 0 && stored.length === assets.length,
-        detail:
-          assets.length === 0
-            ? "No assets on this application"
-            : `${stored.length}/${assets.length} stored`,
+        complete: assetsStored,
+        ok: assetsStored,
+        detail: assetsDetail,
       },
       {
         id: "not-disbursed",
         label: "No disbursement recorded",
-        complete: loan.disbursedAt === null,
-        ok: loan.disbursedAt === null,
+        complete: true,
+        ok: true,
       },
       {
         id: "contract_signed",
         label: "Loan contract signed",
         complete: signed,
         ok: signed,
-        detail: signed
-          ? undefined
-          : current
-            ? "Sign the current contract before disbursement"
-            : "A manager needs to issue the loan contract",
+        detail: contractDetail,
       },
     ];
-    return { ready: items.every((item) => item.complete), items };
+    return { ready: items.every((item) => item.ok), items };
   }
 
   async listForCustomer(userId: string) {
