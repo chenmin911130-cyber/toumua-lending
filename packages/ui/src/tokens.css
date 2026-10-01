@@ -191,7 +191,6 @@ footer .brand-sub {
 .simple-header a { color: var(--teal); font-weight: 600; text-decoration: none; }
 .avatar-circle-staff { background: rgba(255,255,255,0.12); color: #fff; }
 .staff-sidebar .avatar-chip { color: #fff; padding: 12px 10px 0; }
-.staff-brand strong { display: block; font-size: 16px; }
 .auth-error {
   background: #fdecea;
   color: var(--danger);
@@ -425,16 +424,28 @@ footer .brand-sub {
   display: flex;
   flex-direction: column;
 }
-.staff-brand { display: flex; gap: 10px; align-items: center; padding: 0 10px 28px; text-decoration: none; color: #fff; }
-.staff-mark {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--teal);
-  display: inline-flex;
+.staff-sidebar .brand-logo.staff-brand {
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
+  text-align: left;
+  padding: 0 10px 28px;
+  text-decoration: none;
+  color: #fff;
+}
+.staff-sidebar .staff-brand .brand-wordmark {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.staff-sidebar .staff-brand .brand-name {
+  font-size: 16px;
   font-weight: 700;
+}
+.staff-sidebar .staff-brand .brand-sub {
+  color: #9bb0bf;
+  font-size: 12px;
+  font-weight: 400;
 }
 .staff-sub { color: #9bb0bf; font-size: 12px; }
 .staff-nav { display: flex; flex-direction: column; gap: 4px; }

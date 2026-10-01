@@ -261,13 +261,7 @@ export function StaffLayout({ children }: { children?: ReactNode }) {
   return (
     <div className="staff-shell" data-shell="staff">
       <aside className="staff-sidebar">
-        <NavLink to="/staff" className="staff-brand" data-control-id="GLOBAL-01">
-          <span className="staff-mark">T</span>
-          <span>
-            <strong>Toumu’a</strong>
-            <div className="staff-sub">Lending workspace</div>
-          </span>
-        </NavLink>
+        <Logo to="/staff" className="staff-brand" subtitle="Lending workspace" />
         <nav className="staff-nav">
           <GlobalSearch />
           {STAFF_NAV.flatMap((item) => {
