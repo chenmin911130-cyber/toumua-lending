@@ -323,10 +323,27 @@ export function StaffDisbursementPage() {
     <main className="staff-page">
       <Link to={`/staff/loans/${id}`}>← Loan</Link>
       <h1>Disbursement</h1>
-      <ul>{readiness.items.map((item) => <li key={item.id}>{item.complete ? "✓" : "○"} {item.label}{item.detail ? ` — ${item.detail}` : ""}</li>)}</ul>
       {loan.disbursedAt ? (
-        <p className="hint">Already disbursed on {loan.disbursedAt.slice(0, 10)}.</p>
+        <div className="card stack">
+          <p>
+            Disbursement completed on <strong>{loan.disbursedAt.slice(0, 10)}</strong>. Loan status:{" "}
+            <strong>{loan.status}</strong>.
+          </p>
+          <p className="hint">Pre-disbursement checks are hidden after funding. Record repayments or view transactions from the loan.</p>
+          <p>
+            <Link to={`/staff/loans/${id}/repayment`}>Record repayment</Link>
+            {" · "}
+            <Link to={`/staff/loans/${id}`}>Loan details</Link>
+            {" · "}
+            <Link to="/staff/transactions">All transactions</Link>
+          </p>
+        </div>
       ) : (
+        <>
+          <ul>{readiness.items.map((item) => <li key={item.id}>{item.complete ? "✓" : "○"} {item.label}{item.detail ? ` — ${item.detail}` : ""}</li>)}</ul>
+        </>
+      )}
+      {!loan.disbursedAt ? (
         <form className="card stack" onSubmit={(event) => void submit(event)}>
           <Field label="Business date" id="business-date">
             <input id="business-date" type="date" value={businessDate} onChange={(e) => setBusinessDate(e.target.value)} required />
@@ -344,7 +361,7 @@ export function StaffDisbursementPage() {
           {result ? <p className="hint">Receipt {result} issued.</p> : null}
           <Button type="submit" disabled={!readiness.ready}>Confirm disbursement</Button>
         </form>
-      )}
+      ) : null}
     </main>
   );
 }
