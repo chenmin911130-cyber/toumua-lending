@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { Link } from "react-router-dom";
 import { Calculator, ChevronRight, X } from "lucide-react";
 import {
-  ESTIMATE_ANNUAL_RATE,
   LOAN_AMOUNT_DEFAULT,
   LOAN_AMOUNT_MAX,
   LOAN_AMOUNT_MIN,
@@ -57,7 +56,7 @@ export function LoanCalculator({ boundsRef }: Props) {
 
   const term = LOAN_TERMS[termIndex];
   const estimate = useMemo(() => calcEstimate(amount, term.months), [amount, term.months]);
-  const ratePercent = Math.round(ESTIMATE_ANNUAL_RATE * 100);
+  const ratePercent = Math.round(estimate.annualRate * 100);
   const detailsId = "loan-estimate-details";
 
   const sliderPercent =
@@ -252,11 +251,11 @@ export function LoanCalculator({ boundsRef }: Props) {
             </div>
             <div className="flex justify-between gap-3">
               <dt>Establishment and other fees</dt>
-              <dd className="font-semibold text-text">Not included</dd>
+              <dd className="font-semibold text-text">None</dd>
             </div>
           </dl>
           <p className="mt-2 text-[13px] leading-relaxed text-text-muted">
-            Estimate only. Final terms are confirmed by our office. {estimate.weeks} weekly
+            Simple interest. 10% a year under $500, 20% from $500. {estimate.weeks} weekly
             payments.
           </p>
 

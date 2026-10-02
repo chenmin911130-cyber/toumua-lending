@@ -460,10 +460,9 @@ export class MoneyService {
         where: { loanId },
         orderBy: { number: "asc" },
       });
-      // Sale proceeds may legitimately exceed the debt: selling the security can
-      // recover more than the balance, and the surplus awaits the official
-      // settlement policy. Charge the plan only up to what is owed and keep the
-      // remainder visible as surplus rather than refusing the real sale amount.
+      // Sale proceeds may exceed the debt. Charge the plan only up to what is
+      // owed. The remainder is surplus payable to the borrower. A lower sale
+      // leaves the unpaid balance owing.
       const outstandingBefore = outstanding(
         fresh.map((entry) => ({
           id: entry.id,
@@ -527,6 +526,8 @@ export class MoneyService {
             method: input.method,
             balanceAfter,
             surplus,
+            surplusToBorrower: surplus,
+            shortfallStillOwed: balanceAfter,
             allocations: quote.allocations,
           },
         },

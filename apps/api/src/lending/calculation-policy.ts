@@ -1,16 +1,22 @@
 /**
  * Loan calculation policy.
  *
- * Alice has not yet supplied the official interest, fee, allocation or
- * settlement rules. Until that arrives we run a labelled demo policy so
- * approvals and quotes work in the COMP721 workspace. Nothing here may be
- * presented as the office's real business rule. Swap this module (or set
- * CALCULATION_POLICY=off) when the official formula is confirmed.
+ * Office reply, October 2026, with the gaps filled in for the COMP721 assignment:
+ *   - 10% p.a. when the principal is under $500, 20% p.a. from $500.
+ *     The reply stopped at $1,000; larger loans keep the 20% band.
+ *   - Simple interest for the loan term (principal × annual rate × term / year).
+ *     Not compound, and not a separate daily or monthly charge.
+ *   - Fees are fixed. No amount was given, so no fee is added.
+ *   - Default has no missed-payment count. A manager still declares it.
+ *   - If the loan is unpaid, the lender may sell the security.
+ *     Surplus is paid to the borrower. A shortfall stays owing.
  *
  * CALCULATION_POLICY:
- *   demo  — simple interest placeholder (default outside automated tests)
+ *   demo  — the office simple-interest bands (default outside automated tests)
  *   test  — zero-interest fixture used by acceptance tests
  *   off   — block approvals and quotes
+ *
+ * DEMO_ANNUAL_RATE_BPS, when set, replaces the bands with one rate for every amount.
  */
 import { appliedAnnualRateBps, type LoyaltyTier } from "./loyalty-policy";
 import { add, compare, fromCents, isPositive, splitEvenly, subtract, sum, toCents } from "./money";
@@ -18,8 +24,10 @@ import { add, compare, fromCents, isPositive, splitEvenly, subtract, sum, toCent
 export const TEST_POLICY = "test-zero-interest";
 export const DEMO_POLICY = "demo-simple-interest";
 
-/** Homepage estimate uses 21% p.a. Same ballpark until Alice confirms a rate. */
-export const DEMO_ANNUAL_RATE_BPS_DEFAULT = 2100;
+/** 10% p.a. Principal strictly under $500. */
+export const RATE_UNDER_500_BPS = 1000;
+/** 20% p.a. Principal of $500 or more, including amounts above $1,000. */
+export const RATE_FROM_500_BPS = 2000;
 
 export type Frequency = "WEEKLY" | "FORTNIGHTLY" | "MONTHLY";
 
@@ -62,14 +70,22 @@ export function termsPolicyConfigured(input: {
   return hasFields && isPolicyConfigured();
 }
 
-export function demoAnnualRateBps(): number {
+/** Explicit single-rate override, or null when the office bands should apply. */
+export function demoAnnualRateBps(): number | null {
   const raw = (process.env.DEMO_ANNUAL_RATE_BPS ?? "").trim();
-  if (!raw) return DEMO_ANNUAL_RATE_BPS_DEFAULT;
+  if (!raw) return null;
   const value = Number(raw);
   if (!Number.isInteger(value) || value < 0 || value > 10000) {
     throw new Error("DEMO_ANNUAL_RATE_BPS must be an integer from 0 to 10000");
   }
   return value;
+}
+
+/** Office annual rate in basis points for this principal. */
+export function officeAnnualRateBps(principal: string): number {
+  const override = demoAnnualRateBps();
+  if (override !== null) return override;
+  return toCents(principal) < 50_000 ? RATE_UNDER_500_BPS : RATE_FROM_500_BPS;
 }
 
 function periodsPerYear(frequency: Frequency): number {
@@ -83,16 +99,17 @@ export function simpleInterest(
   principal: string,
   frequency: Frequency,
   periods: number,
-  annualRateBps: number = demoAnnualRateBps(),
+  annualRateBps?: number,
 ): string {
-  const numer = toCents(principal) * annualRateBps * periods;
+  const rate = annualRateBps ?? officeAnnualRateBps(principal);
+  const numer = toCents(principal) * rate * periods;
   const denom = 10000 * periodsPerYear(frequency);
   return fromCents(Math.round(numer / denom));
 }
 
 function payableTotal(terms: PolicyTerms): string {
   if (activePolicy() !== DEMO_POLICY) return terms.principal;
-  const rate = terms.annualRateBps ?? demoAnnualRateBps();
+  const rate = terms.annualRateBps ?? officeAnnualRateBps(terms.principal);
   return add(terms.principal, simpleInterest(terms.principal, terms.frequency, terms.periods, rate));
 }
 
@@ -239,15 +256,19 @@ export function isSettlementPolicyConfigured(): boolean {
 export function quoteSettlement(balanceBefore: string, saleProceeds: string) {
   const surplusOrShortfall = subtract(saleProceeds, balanceBefore);
   const configured = isSettlementPolicyConfigured();
+  const surplusToBorrower = compare(surplusOrShortfall, "0.00") > 0 ? surplusOrShortfall : "0.00";
+  const shortfallStillOwed =
+    compare(surplusOrShortfall, "0.00") < 0 ? fromCents(-toCents(surplusOrShortfall)) : "0.00";
   return {
     policy: configured ? activePolicy() : null,
     balanceBefore,
     saleProceeds,
     surplusOrShortfall,
+    surplusToBorrower,
+    shortfallStillOwed,
     pendingSettlement: !configured,
-    reason: configured
-      ? undefined
-      : "Official settlement policy is not configured",
+    settlementRule: "Surplus is paid to the borrower. A shortfall remains owing.",
+    reason: configured ? undefined : "Official settlement policy is not configured",
   };
 }
 
@@ -266,7 +287,7 @@ export function buildTermsPreview(
   }
   const firstPaymentDate = new Date(input.firstPaymentDate as string);
   if (Number.isNaN(firstPaymentDate.getTime())) return null;
-  const baseAnnualRateBps = policy === DEMO_POLICY ? demoAnnualRateBps() : 0;
+  const baseAnnualRateBps = policy === DEMO_POLICY ? officeAnnualRateBps(requestedAmount) : 0;
   const annualRateBps = appliedAnnualRateBps(baseAnnualRateBps, loyalty.discountBps);
   const schedule = buildSchedule({
     principal: requestedAmount,
@@ -302,7 +323,7 @@ export function buildTermsPreview(
       amount: entry.amount,
     })),
     note: demo
-      ? "Demo schedule only. Replace these rates when the office supplies the official formula."
+      ? "Simple interest for the loan term. 10% p.a. under $500, 20% p.a. from $500. No fee is added."
       : "Test-only schedule preview. Production policy is not configured.",
   };
 }

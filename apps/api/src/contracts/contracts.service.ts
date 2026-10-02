@@ -7,7 +7,7 @@ import { conflict, notFound, validation } from "../common/http";
 import { PrismaService } from "../prisma/prisma.service";
 import { DocumentsService, sniffDocument } from "../documents/documents.service";
 import { assertManageLending, assertReissueContract, assertReadLedger } from "../lending/access";
-import { activePolicy, DEMO_POLICY, demoAnnualRateBps } from "../lending/calculation-policy";
+import { activePolicy, DEMO_POLICY, officeAnnualRateBps } from "../lending/calculation-policy";
 import { NumbersService } from "../lending/numbers.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { renderContract, renderSignedContract, sha256Text } from "./contract-template";
@@ -60,7 +60,9 @@ export class ContractsService {
       borrowerNumber: loan.borrower.number,
       borrowerAddress: loan.borrower.address,
       principal: loan.principal,
-      annualRateBps: loan.annualRateBps ?? (activePolicy() === DEMO_POLICY ? demoAnnualRateBps() : 0),
+      annualRateBps:
+        loan.annualRateBps ??
+        (activePolicy() === DEMO_POLICY ? officeAnnualRateBps(loan.principal) : 0),
       loyaltyTier: loan.loyaltyTier as "STANDARD" | "RETURNING" | "LOYAL",
       discountBps: loan.discountBps,
       frequency: loan.frequency,

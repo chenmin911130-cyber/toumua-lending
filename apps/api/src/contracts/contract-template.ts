@@ -5,9 +5,9 @@ import { aucklandDay } from "../common/dates";
 export const CONTRACT_CLAUSES = [
   "This demonstration agreement records a secured loan between the lender and the borrower named above.",
   "The borrower will repay the principal and the stated interest in the instalments listed in the schedule.",
-  "Each instalment is due on the date shown. A missed instalment may be treated as a default after the office has contacted the borrower.",
+  "Each instalment is due on the date shown. There is no set number of missed payments that puts the loan in default. The office may declare a default.",
   "The listed assets are security for the loan. The borrower confirms they may offer those assets and will not sell or pawn them while the loan is outstanding.",
-  "If the loan is in default and is not put right, the office may sell the security and apply the proceeds to the amount still owed, as described in the loan terms.",
+  "If the loan is not repaid, the lender may sell the security. The proceeds pay what is still owed. Any surplus is paid to the borrower. Any shortfall remains owing.",
   "The borrower confirms they have read this contract, including the schedule and the security list, before signing.",
 ];
 
@@ -113,7 +113,7 @@ export function renderContract(input: ContractRenderInput): string {
   <h2>Loan terms</h2>
   <p>Principal: $${escapeHtml(input.principal)}</p>
   <p>${escapeHtml(rateLine(input))}</p>
-  <p>Fees: none are charged on this demonstration contract.</p>
+  <p>Fees: none. Any office fee is a fixed amount, not a percentage of the loan.</p>
   <p>Repayments: ${input.periods} ${escapeHtml(input.frequency.toLowerCase())} instalments.</p>
   <h2>Repayment schedule</h2>
   <table>

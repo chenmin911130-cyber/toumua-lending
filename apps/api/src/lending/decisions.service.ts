@@ -13,7 +13,7 @@ import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { assertDecideApplication, assertReviewDecision, isManager } from "./access";
 import { classifyApproval } from "./approval-policy";
-import { activePolicy, buildSchedule, DEMO_POLICY, demoAnnualRateBps, type Frequency } from "./calculation-policy";
+import { activePolicy, buildSchedule, DEMO_POLICY, officeAnnualRateBps, type Frequency } from "./calculation-policy";
 import { appliedAnnualRateBps, classifyLoyalty } from "./loyalty-policy";
 import { sum, toCents } from "./money";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -56,7 +56,10 @@ export class DecisionsService {
       where: { borrowerId: application.borrowerId as string, status: LoanStatus.SETTLED },
     });
     const loyaltyClass = classifyLoyalty({ settledCount });
-    const baseAnnualRateBps = activePolicy() === DEMO_POLICY ? demoAnnualRateBps() : 0;
+    const baseAnnualRateBps =
+      activePolicy() === DEMO_POLICY && application.requestedAmount
+        ? officeAnnualRateBps(application.requestedAmount)
+        : 0;
     const previewAnnualRateBps = appliedAnnualRateBps(baseAnnualRateBps, loyaltyClass.discountBps);
     const assets = application.assets.map((asset) => {
       const valuation = asset.valuations[0];
@@ -149,7 +152,7 @@ export class DecisionsService {
       where: { borrowerId: application.borrowerId as string, status: LoanStatus.SETTLED },
     });
     const loyalty = classifyLoyalty({ settledCount });
-    const baseAnnualRateBps = activePolicy() === DEMO_POLICY ? demoAnnualRateBps() : 0;
+    const baseAnnualRateBps = activePolicy() === DEMO_POLICY ? officeAnnualRateBps(principal) : 0;
     const annualRateBps = appliedAnnualRateBps(baseAnnualRateBps, loyalty.discountBps);
     const schedule = buildSchedule({
       principal,

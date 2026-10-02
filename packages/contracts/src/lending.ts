@@ -924,7 +924,10 @@ export type SettlementQuoteView = {
   balanceBefore: string;
   saleProceeds: string;
   surplusOrShortfall: string;
+  surplusToBorrower: string;
+  shortfallStillOwed: string;
   pendingSettlement: boolean;
+  settlementRule: string;
   reason?: string;
 };
 

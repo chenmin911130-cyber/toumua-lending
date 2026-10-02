@@ -149,8 +149,8 @@ export function ResponsibleLendingPage() {
         consumer credit. Our office records that process before a written offer is made.
       </p>
       <p>
-        Estimates on the homepage use a labelled illustrative interest rate so a repayment example
-        can be shown. They are not the official office formula and they exclude fees.
+        Homepage estimates use simple interest: 10% a year under $500, and 20% a year from $500.
+        No fee is added.
       </p>
       <p>
         Repayments are recorded by a cashier in the office. The website does not collect card or
@@ -175,13 +175,13 @@ export function DisclosuresPage() {
       <ul className="list-disc space-y-2 pl-5">
         <li>Product name on this website: {SITE_NAME}.</li>
         <li>No FSP number or NZBN is claimed on this website.</li>
-        <li>Interest shown in the calculator is a 21% p.a. illustrative estimate.</li>
-        <li>Establishment, default, and other fees are not included in that estimate.</li>
+        <li>Interest is simple: 10% a year under $500, and 20% a year from $500.</li>
+        <li>No fee is added. Any office fee is a fixed amount, not a percentage of the loan.</li>
         <li>Office contact: {CONTACT_PHONE}, {CONTACT_EMAIL}, {CONTACT_ADDRESS}.</li>
       </ul>
       <p>
-        If the office supplies official rates, fees, and licence numbers, those values replace
-        the estimates shown here.
+        Licence numbers are not shown here. The rate bands above are the figures used in estimates
+        and in new loan contracts.
       </p>
     </LegalArticle>
   );

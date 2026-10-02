@@ -1,6 +1,7 @@
-/** Illustrative rate for homepage estimates only — not a live offer. */
-/** Tuned so $10,000 over 36 months ≈ $87/week in the homepage estimate. */
-export const ESTIMATE_ANNUAL_RATE = 0.21;
+/** Office simple-interest bands. Under $500 is 10% p.a. From $500 is 20% p.a. */
+export function annualRateForAmount(principal: number): number {
+  return principal < 500 ? 0.1 : 0.2;
+}
 
 export const LOAN_AMOUNT_MIN = 1_000;
 export const LOAN_AMOUNT_MAX = 50_000;
@@ -30,23 +31,21 @@ export function weeksForTerm(months: number): number {
 export function calcWeeklyRepayment(
   principal: number,
   months: number,
-  annualRate = ESTIMATE_ANNUAL_RATE,
+  annualRate = annualRateForAmount(principal),
 ): number {
   if (principal <= 0 || months <= 0) return 0;
-  const monthlyRate = annualRate / 12;
-  const factor = Math.pow(1 + monthlyRate, months);
-  const monthly =
-    (principal * monthlyRate * factor) / (factor - 1);
-  return Math.round((monthly * 12) / 52);
+  const weeks = weeksForTerm(months);
+  const interest = principal * annualRate * (weeks / 52);
+  return Math.round((principal + interest) / weeks);
 }
 
 export function calcEstimate(
   principal: number,
   months: number,
-  annualRate = ESTIMATE_ANNUAL_RATE,
+  annualRate = annualRateForAmount(principal),
 ) {
-  const weekly = calcWeeklyRepayment(principal, months, annualRate);
   const weeks = weeksForTerm(months);
+  const weekly = calcWeeklyRepayment(principal, months, annualRate);
   const totalPayable = weekly * weeks;
   const totalInterest = Math.max(0, totalPayable - principal);
   return { weekly, weeks, totalPayable, totalInterest, annualRate };

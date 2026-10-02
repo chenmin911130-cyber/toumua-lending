@@ -5,6 +5,7 @@ import {
   outstanding,
   quoteRepayment,
   quoteSettlement,
+  officeAnnualRateBps,
   simpleInterest,
 } from "../src/lending/calculation-policy";
 import { renderContract } from "../src/contracts/contract-template";
@@ -203,7 +204,15 @@ describe("demo calculation policy", () => {
     delete process.env.DEMO_ANNUAL_RATE_BPS;
   });
 
-  it("adds 21% simple interest and splits evenly: 2000 over 4 months", () => {
+  it("uses 10% under $500 and 20% from $500, including amounts above $1000", () => {
+    expect(officeAnnualRateBps("499.99")).toBe(1000);
+    expect(officeAnnualRateBps("500.00")).toBe(2000);
+    expect(officeAnnualRateBps("2000.00")).toBe(2000);
+    expect(simpleInterest("400.00", "MONTHLY", 4)).toBe("13.33");
+    expect(simpleInterest("2000.00", "MONTHLY", 4)).toBe("133.33");
+  });
+
+  it("adds 20% simple interest and splits evenly: 2000 over 4 months", () => {
     const schedule = buildSchedule({
       principal: "2000.00",
       frequency: "MONTHLY",
@@ -211,20 +220,26 @@ describe("demo calculation policy", () => {
       firstPaymentDate: new Date("2026-10-01T00:00:00.000Z"),
     });
     expect(schedule.map((entry) => entry.amount)).toEqual([
-      "535.00",
-      "535.00",
-      "535.00",
-      "535.00",
+      "533.33",
+      "533.33",
+      "533.33",
+      "533.34",
     ]);
-    expect(sum(schedule.map((entry) => entry.amount))).toBe("2140.00");
+    expect(sum(schedule.map((entry) => entry.amount))).toBe("2133.33");
   });
 
-  it("records surplus on a demo settlement instead of leaving it pending", () => {
-    const quote = quoteSettlement("200.00", "350.00");
-    expect(quote.policy).toBe("demo-simple-interest");
-    expect(quote.surplusOrShortfall).toBe("150.00");
-    expect(quote.pendingSettlement).toBe(false);
-    expect(quote.reason).toBeUndefined();
+  it("pays surplus to the borrower and leaves a shortfall owing", () => {
+    const surplus = quoteSettlement("200.00", "350.00");
+    expect(surplus.policy).toBe("demo-simple-interest");
+    expect(surplus.surplusOrShortfall).toBe("150.00");
+    expect(surplus.surplusToBorrower).toBe("150.00");
+    expect(surplus.shortfallStillOwed).toBe("0.00");
+    expect(surplus.pendingSettlement).toBe(false);
+    expect(surplus.reason).toBeUndefined();
+
+    const shortfall = quoteSettlement("200.00", "80.00");
+    expect(shortfall.surplusToBorrower).toBe("0.00");
+    expect(shortfall.shortfallStillOwed).toBe("120.00");
   });
 });
 
@@ -352,7 +367,7 @@ describe("loyalty policy", () => {
     process.env.CALCULATION_POLICY = "demo";
     delete process.env.DEMO_ANNUAL_RATE_BPS;
     try {
-      expect(simpleInterest("2000.00", "MONTHLY", 4)).toBe("140.00");
+      expect(simpleInterest("2000.00", "MONTHLY", 4)).toBe("133.33");
       expect(simpleInterest("2000.00", "MONTHLY", 4, 1900)).toBe("126.67");
       const schedule = buildSchedule({
         principal: "2000.00",
